@@ -95,7 +95,7 @@ export default function VideoChat({
   return (
     <div className="relative flex flex-col h-screen w-full bg-black text-white">
       {/* Remote User Video (background) */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 z-0">
         {hasPermissions && isCameraOn ? (
            <video
              ref={remoteVideoRef}
@@ -124,7 +124,7 @@ export default function VideoChat({
       </div>
 
       {/* Local User Video (picture-in-picture) */}
-      <div className="absolute top-4 right-4 h-48 w-36 rounded-lg overflow-hidden border-2 border-primary">
+      <div className="absolute top-4 right-4 h-48 w-36 rounded-lg overflow-hidden border-2 border-primary z-10">
          {hasPermissions && isCameraOn ? (
             <video
               ref={localVideoRef}
