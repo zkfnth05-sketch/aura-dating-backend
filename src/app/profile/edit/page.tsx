@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { currentUser } from '@/lib/data';
 import Image from 'next/image';
@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { X, Plus, Video } from 'lucide-react';
+import { X, Plus, Video, Camera, ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import CameraDialog from '@/components/camera-dialog';
 
 const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
   <div className="py-6">
@@ -45,6 +47,7 @@ const allValues = {
 export default function ProfileEditPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState({
     name: currentUser.name,
@@ -59,7 +62,10 @@ export default function ProfileEditPage() {
     hobbies: currentUser.hobbies,
     interests: currentUser.interests,
   });
+
+  const [images, setImages] = useState<string[]>([currentUser.photoUrl]);
   const [aiEnhancement, setAiEnhancement] = useState(true);
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
 
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
     setProfile(prev => {
@@ -82,6 +88,28 @@ export default function ProfileEditPage() {
     });
     router.push('/profile');
   };
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImages(prev => [...prev, e.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoTaken = (dataUri: string) => {
+    setImages(prev => [...prev, dataUri]);
+    setIsCameraDialogOpen(false);
+  };
+  
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -96,23 +124,58 @@ export default function ProfileEditPage() {
             <Switch checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div className="relative aspect-square rounded-lg overflow-hidden group">
-              <Image src={currentUser.photoUrl} alt="My profile photo" fill className="object-cover"/>
-              <div className="absolute top-1 right-1">
-                <Button variant="destructive" size="icon" className="w-6 h-6 rounded-full bg-black/50">
-                  <X className="h-4 w-4" />
-                </Button>
+            {images.map((src, index) => (
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+                <Image src={src} alt={`My profile photo ${index + 1}`} fill className="object-cover"/>
+                <div className="absolute top-1 right-1">
+                  <Button variant="destructive" size="icon" onClick={() => removeImage(index)} className="w-6 h-6 rounded-full bg-black/50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700">
-              <Plus className="text-zinc-500" />
-            </div>
+            ))}
+            
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700">
+                  <Plus className="text-zinc-500" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
+                <DialogHeader>
+                  <DialogTitle>사진 추가</DialogTitle>
+                  <DialogDescription>
+                    프로필에 사진을 추가하는 방법을 선택하세요.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <Button variant="outline" onClick={() => setIsCameraDialogOpen(true)}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    사진 촬영
+                  </Button>
+                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    앨범에서 선택
+                  </Button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+
           </div>
            <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
             <Video className="mr-2 h-4 w-4" />
             동영상 추가
           </Button>
         </Section>
+        
+        <CameraDialog isOpen={isCameraDialogOpen} onClose={() => setIsCameraDialogOpen(false)} onPhotoTaken={handlePhotoTaken} />
 
         <Section title="이름">
           <Input 
