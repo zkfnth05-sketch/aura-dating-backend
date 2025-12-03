@@ -18,7 +18,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        // Combine stored data with initial photo data
+        const parsedData = JSON.parse(storedUser);
+        setUser(prevUser => ({
+          ...prevUser, // This keeps initial photos
+          ...parsedData, // This applies stored text changes
+        }));
       }
     } catch (error) {
       console.error("Failed to parse user from localStorage", error);
@@ -33,8 +38,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
         try {
           // Create a copy of the user object for storing in localStorage
           const userToStore = { ...updatedUser };
-          // Remove the large photo data URI before saving to avoid quota errors
+          
+          // Remove all large photo data URIs and URLs before saving to avoid quota errors
           delete userToStore.photoDataUri;
+          delete userToStore.photoUrls;
+          delete userToStore.photoUrl; // also remove single photoUrl if it's a data URI
+
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
         } catch (error) {
           console.error("Failed to save user to localStorage", error);
