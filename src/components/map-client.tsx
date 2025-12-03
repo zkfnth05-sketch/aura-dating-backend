@@ -1,119 +1,112 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { User } from '@/lib/types';
-import { Slider } from '@/components/ui/slider';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
 
 interface MapClientProps {
   users: User[];
 }
 
 const mapStyles: google.maps.MapTypeStyle[] = [
-  { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
-  {
-    featureType: 'administrative.locality',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'geometry',
-    stylers: [{ color: '#263c3f' }],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#6b9a76' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'geometry',
-    stylers: [{ color: '#38414e' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'geometry.stroke',
-    stylers: [{ color: '#212a37' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#9ca5b3' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry',
-    stylers: [{ color: '#746855' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'geometry.stroke',
-    stylers: [{ color: '#1f2835' }],
-  },
-  {
-    featureType: 'road.highway',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#f3d19c' }],
-  },
-  {
-    featureType: 'transit',
-    elementType: 'geometry',
-    stylers: [{ color: '#2f3948' }],
-  },
-  {
-    featureType: 'transit.station',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [{ color: '#17263c' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#515c6d' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.stroke',
-    stylers: [{ color: '#17263c' }],
-  },
+    { elementType: 'geometry', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.stroke', stylers: [{ color: '#242f3e' }] },
+    { elementType: 'labels.text.fill', stylers: [{ color: '#746855' }] },
+    {
+      featureType: 'administrative.locality',
+      elementType: 'labels.text.fill',
+      stylers: [{ color: '#d59563' }],
+    },
+    {
+      featureType: 'poi',
+      elementType: 'labels.text.fill',
+      stylers: [{ color: '#d59563' }],
+    },
+    {
+      featureType: 'poi.park',
+      elementType: 'geometry',
+      stylers: [{ color: '#263c3f' }],
+    },
+    {
+      featureType: 'poi.park',
+      elementType: 'labels.text.fill',
+      stylers: [{ color: '#6b9a76' }],
+    },
+    {
+      featureType: 'road',
+      elementType: 'geometry',
+      stylers: [{ color: '#38414e' }],
+    },
+    {
+      featureType: 'road',
+      elementType: 'geometry.stroke',
+      stylers: [{ color: '#212a37' }],
+    },
+    {
+      featureType: 'road',
+      elementType: 'labels.text.fill',
+      stylers: [{ color: '#9ca5b3' }],
+    },
+    {
+      featureType: 'road.highway',
+      elementType: 'geometry',
+      stylers: [{ color: '#746855' }],
+    },
+    {
+      featureType: 'road.highway',
+      elementType: 'geometry.stroke',
+      stylers: [{ color: '#1f2835' }],
+    },
+    {
+      featureType: 'road.highway',
+      elementType: 'labels.text.fill',
+      stylers: [{ color: '#f3d19c' }],
+    },
+    {
+      featureType: 'transit',
+      elementType: 'geometry',
+      stylers: [{ color: '#2f3948' }],
+    },
+    {
+      featureType: 'transit.station',
+      elementType: 'labels.text.fill',
+      stylers: [{ color: '#d59563' }],
+    },
+    {
+      featureType: 'water',
+      elementType: 'geometry',
+      stylers: [{ color: '#17263c' }],
+    },
+    {
+      featureType: 'water',
+      elementType: 'labels.text.fill',
+      stylers: [{ color: '#515c6d' }],
+    },
+    {
+      featureType: 'water',
+      elementType: 'labels.text.stroke',
+      stylers: [{ color: '#17263c' }],
+    },
 ];
 
+const distanceOptions = [
+    { label: '1km', zoom: 14 },
+    { label: '5km', zoom: 12 },
+    { label: '10km', zoom: 11 },
+    { label: '25km', zoom: 10 },
+    { label: '50km', zoom: 9 },
+    { label: '100km', zoom: 8 },
+];
 
 export default function MapClient({ users }: MapClientProps) {
   const router = useRouter();
+  const [currentUser] = users;
   const [zoom, setZoom] = useState(11);
-  const [center, setCenter] = useState({ lat: users[0].lat, lng: users[0].lng });
-
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCenter({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          setZoom(14); // Zoom in closer when location is found
-        },
-        () => {
-          console.log("Geolocation permission denied. Using default location.");
-        }
-      );
-    }
-  }, []);
+  const [center] = useState({ lat: currentUser.lat, lng: currentUser.lng });
 
   const handleMarkerClick = (userId: string) => {
     if(userId === 'current-user') {
@@ -125,16 +118,20 @@ export default function MapClient({ users }: MapClientProps) {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="bg-background/95 p-4 pb-2">
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-muted-foreground">거리</span>
-          <Slider
-            min={8}
-            max={15}
-            step={1}
-            value={[zoom]}
-            onValueChange={(value) => setZoom(value[0])}
-          />
+      <div className="absolute top-28 left-1/2 -translate-x-1/2 z-10 w-full max-w-sm px-4">
+        <div className="bg-black/50 backdrop-blur-sm rounded-full p-1 flex justify-around items-center text-white text-sm font-semibold">
+          {distanceOptions.map(option => (
+            <button
+              key={option.label}
+              onClick={() => setZoom(option.zoom)}
+              className={cn(
+                'py-2 px-4 rounded-full transition-colors duration-200',
+                zoom === option.zoom ? 'bg-primary text-primary-foreground' : 'bg-transparent text-white/80'
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
       <div className="flex-1">
