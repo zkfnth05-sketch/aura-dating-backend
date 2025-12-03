@@ -291,9 +291,9 @@ export default function ProfileEditPage() {
       </main>
 
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-zinc-800">
-        <div className="container flex items-center justify-between">
-            <Button variant="ghost" onClick={() => router.back()}>취소</Button>
-            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8">저장</Button>
+        <div className="flex w-full gap-2">
+            <Button variant="secondary" onClick={() => router.back()} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">취소</Button>
+            <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">저장</Button>
         </div>
         <div className="text-center mt-4">
             <Button variant="link" className="text-xs text-zinc-500">회원탈퇴</Button>
