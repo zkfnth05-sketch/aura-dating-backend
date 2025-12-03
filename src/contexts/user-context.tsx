@@ -59,9 +59,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         
         try {
           const userToStore = { ...updatedUser };
-          delete userToStore.photoDataUri;
-          delete userToStore.photoUrls;
-          delete userToStore.photoUrl;
+          // Don't store large data URIs in localStorage
+          if (userToStore.photoUrls) {
+            userToStore.photoUrls = userToStore.photoUrls.filter(url => !url.startsWith('data:'));
+          }
+          if (userToStore.photoUrl && userToStore.photoUrl.startsWith('data:')) {
+            // Find the first non-data URI to set as the main photoUrl
+            userToStore.photoUrl = userToStore.photoUrls?.find(url => !url.startsWith('data:')) || prevUser.photoUrl;
+          }
 
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
         } catch (error) {

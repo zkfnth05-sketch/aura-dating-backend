@@ -96,7 +96,7 @@ export function NotificationSimulator() {
       clearTimeout(videoCallTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notificationSettings]);
+  }, [notificationSettings, router, toast]);
 
   return null;
 }

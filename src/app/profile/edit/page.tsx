@@ -118,7 +118,6 @@ export default function ProfileEditPage() {
   };
 
   const processAndAddImage = async (dataUri: string) => {
-    let finalUri = dataUri;
     const newImageIndex = images.length;
     setImages(prev => [...prev, dataUri]);
 
@@ -126,10 +125,9 @@ export default function ProfileEditPage() {
       setIsEnhancing(newImageIndex);
       try {
         const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
-        finalUri = result.enhancedPhotoDataUri;
         setImages(prev => {
           const newImages = [...prev];
-          newImages[newImageIndex] = finalUri;
+          newImages[newImageIndex] = result.enhancedPhotoDataUri;
           return newImages;
         });
       } catch (error) {
@@ -139,6 +137,7 @@ export default function ProfileEditPage() {
           title: "AI 보정 실패",
           description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
         });
+        // Keep the original image on failure, it's already in the state
       } finally {
         setIsEnhancing(null);
       }

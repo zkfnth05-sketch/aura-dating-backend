@@ -65,7 +65,7 @@ export default function VideoChat({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [stream]);
 
   const toggleMic = () => {
     if (stream) {
