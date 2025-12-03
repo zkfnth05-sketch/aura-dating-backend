@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { User } from '@/lib/types';
 import { currentUser } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,10 +11,75 @@ import { Badge } from '@/components/ui/badge';
 import Header from './layout/header';
 import DateCourseForm from './date-course-form';
 import { calculateCompatibility } from '@/lib/utils';
+import { getAIRecommendationReason } from '@/app/actions/ai-actions';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 interface AiPageClientProps {
   recommendedUsers: User[];
 }
+
+const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: User }) => {
+  const router = useRouter();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const { score, commonalities } = calculateCompatibility(currentUser, user);
+
+  const handleCardClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    setIsGenerating(true);
+    try {
+      const result = await getAIRecommendationReason({ currentUser, potentialMatch: user });
+      const reason = result.reason;
+      router.push(`/users/${user.id}?reason=${encodeURIComponent(reason)}`);
+    } catch (error) {
+      console.error("Failed to generate AI recommendation reason:", error);
+      // If AI fails, navigate without the reason
+      router.push(`/users/${user.id}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <Link href={`/users/${user.id}`} onClick={handleCardClick}>
+      <Card className="overflow-hidden relative group cursor-pointer">
+        {isGenerating && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/70">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-white text-sm mt-2">AI 추천 이유 생성 중...</p>
+          </div>
+        )}
+        <div className="relative aspect-[3/4]">
+          <Image
+            src={user.photoUrl}
+            alt={`Profile of ${user.name}`}
+            fill
+            className="object-cover"
+            data-ai-hint="person portrait"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+        </div>
+
+        <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
+          <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
+            {score}% 일치
+          </Badge>
+
+          {commonalities.length > 0 && (
+            <Badge variant="secondary" className="bg-black/50 text-white border-none text-xs py-1">
+              공통점 {commonalities.length}개
+            </Badge>
+          )}
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+          <p className="font-semibold truncate">{user.name}, {user.age}</p>
+        </div>
+      </Card>
+    </Link>
+  );
+};
+
 
 export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
 
@@ -24,13 +89,13 @@ export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
       <main className="flex-1 container py-8">
         <Tabs defaultValue="ideal-type" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 border-b border-border/40 rounded-none">
-            <TabsTrigger 
-              value="ideal-type" 
+            <TabsTrigger
+              value="ideal-type"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground"
             >
               AI 추천 이상형찾기
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="date-course"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground"
             >
@@ -39,44 +104,9 @@ export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
           </TabsList>
           <TabsContent value="ideal-type" className="mt-6">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {recommendedUsers.map((user) => {
-                const { score, commonalities } = calculateCompatibility(currentUser, user);
-
-                return (
-                  <Link href={`/users/${user.id}`} key={user.id}>
-                    <Card 
-                      className="overflow-hidden relative group cursor-pointer"
-                    >
-                      <div className="relative aspect-[3/4]">
-                        <Image
-                          src={user.photoUrl}
-                          alt={`Profile of ${user.name}`}
-                          fill
-                          className="object-cover"
-                          data-ai-hint="person portrait"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                      </div>
-                      
-                      <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
-                        <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
-                            {score}% 일치
-                        </Badge>
-
-                        {commonalities.length > 0 && (
-                           <Badge variant="secondary" className="bg-black/50 text-white border-none text-xs py-1">
-                                공통점 {commonalities.length}개
-                           </Badge>
-                        )}
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                        <p className="font-semibold truncate">{user.name}, {user.age}</p>
-                      </div>
-                    </Card>
-                  </Link>
-                )
-              })}
+              {recommendedUsers.map((user) => (
+                <RecommendedUserCard key={user.id} user={user} currentUser={currentUser} />
+              ))}
             </div>
           </TabsContent>
           <TabsContent value="date-course" className="mt-6">

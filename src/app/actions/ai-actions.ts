@@ -10,6 +10,11 @@ import {
     DateCourseInput,
     DateCourseOutput,
 } from '@/ai/flows/date-course-flow';
+import {
+    getRecommendationReason,
+    RecommendationReasonInput,
+    RecommendationReasonOutput,
+} from '@/ai/flows/recommendation-reason-flow';
 
 export async function getEnhancedPhoto(
     input: EnhancePhotoInput
@@ -32,5 +37,17 @@ export async function getDateCourse(
     } catch (error) {
         console.error('AI Date Course recommendation failed:', error);
         throw new Error('Failed to get AI date course recommendation.');
+    }
+}
+
+export async function getAIRecommendationReason(
+    input: RecommendationReasonInput
+    ): Promise<RecommendationReasonOutput> {
+    try {
+        const result = await getRecommendationReason(input);
+        return result;
+    } catch (error) {
+        console.error('AI Recommendation Reason generation failed:', error);
+        throw new Error('Failed to get AI recommendation reason.');
     }
 }

@@ -7,8 +7,8 @@ import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft } from 'lucide-react';
-import { notFound, useRouter, useParams } from 'next/navigation';
+import { ArrowLeft, Sparkles } from 'lucide-react';
+import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
 
@@ -21,10 +21,22 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
   </div>
 );
 
+const AIReasonSection = ({ reason }: { reason: string }) => (
+    <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4">
+        <h3 className="flex items-center font-semibold text-primary text-sm mb-3">
+            <Sparkles className="h-4 w-4 mr-2 text-primary/80" />
+            AI 추천 이유
+        </h3>
+        <p className="text-sm text-foreground/80">{reason}</p>
+    </div>
+)
+
 export default function UserProfilePage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const userId = params.userId as string;
+  const recommendationReason = searchParams.get('reason');
 
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,6 +122,7 @@ export default function UserProfilePage() {
           </div>
 
           <div className="container relative z-10 px-4 mt-6">
+            {recommendationReason && <AIReasonSection reason={recommendationReason} />}
             <div className="bg-card p-4 rounded-lg">
 
               <ProfileSection title="소개">
