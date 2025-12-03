@@ -51,14 +51,16 @@ export default function ProfilePage() {
         {/* <Header /> */}
         <main className="flex-1">
           <div className="relative w-full aspect-[3/4] max-h-[70vh] cursor-pointer" onClick={() => handleImageClick(0)}>
-            <Image
-              src={allPhotos[0]}
-              alt={`Profile of ${currentUser.name}`}
-              fill
-              className="object-cover"
-              data-ai-hint="person portrait"
-              priority
-            />
+            {allPhotos[0] && (
+              <Image
+                src={allPhotos[0]}
+                alt={`Profile of ${currentUser.name}`}
+                fill
+                className="object-cover"
+                data-ai-hint="person portrait"
+                priority
+              />
+            )}
           </div>
           
           <div className="container relative z-10 px-4">
