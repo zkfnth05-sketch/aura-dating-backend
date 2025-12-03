@@ -60,15 +60,15 @@ export default function HotPage() {
               HOT 회원
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="new" className="mt-0">
-            <div className="grid grid-cols-2 gap-px bg-background">
+          <TabsContent value="new" className="mt-0 p-4">
+            <div className="grid grid-cols-2 gap-4">
                 {newUsers.map((user, index) => (
                     <UserCard key={`new-${user.id}-${index}`} user={user} uniqueKey={`new-${user.id}-${index}`} />
                 ))}
             </div>
           </TabsContent>
-          <TabsContent value="hot" className="mt-0">
-            <div className="grid grid-cols-2 gap-px bg-background">
+          <TabsContent value="hot" className="mt-0 p-4">
+            <div className="grid grid-cols-2 gap-4">
                 {hotUsers.map((user, index) => (
                     <UserCard key={`hot-${user.id}-${index}`} user={user} uniqueKey={`hot-${user.id}-${index}`} />
                 ))}
