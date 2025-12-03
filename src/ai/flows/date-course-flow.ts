@@ -74,6 +74,10 @@ export async function recommendDateCourse(input: DateCourseInput): Promise<DateC
         }
     });
 
+    // This is a bit of a trick. We return the text-only result first,
+    // and then asynchronously update the steps with images as they are generated.
+    // The client-side will need to handle this progressive enhancement.
+    // For this implementation, we will wait for all, but this structure allows for future enhancement.
     const stepsWithImages = await Promise.all(imagePromises);
 
     return {

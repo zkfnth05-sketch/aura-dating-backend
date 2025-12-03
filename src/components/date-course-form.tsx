@@ -3,9 +3,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Loader2, Bus, Car, Plane, Footprints } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Bus, Car, Plane, Footprints, Wallet, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
@@ -25,6 +25,8 @@ import { Calendar } from './ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { getDateCourse } from '@/app/actions/ai-actions';
 import { DateCourseOutput } from '@/ai/flows/date-course-flow';
+import { Skeleton } from './ui/skeleton';
+
 
 const formSchema = z.object({
   destination: z.string().min(1, '여행지를 입력해주세요.'),
@@ -73,23 +75,25 @@ export default function DateCourseForm() {
     setIsLoading(true);
     setResult(null);
     setShowForm(false);
+
     try {
-      const response = await getDateCourse({
-          ...values,
-          date: format(values.date, 'yyyy-MM-dd')
-      });
-      setResult(response);
+        const response = await getDateCourse({
+            ...values,
+            date: format(values.date, 'yyyy-MM-dd')
+        });
+        setResult(response);
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: '오류 발생',
-        description: '데이트 코스를 생성하는 데 실패했습니다. 다시 시도해주세요.',
-      });
-      setShowForm(true); // Show form again on error
+        toast({
+            variant: 'destructive',
+            title: '오류 발생',
+            description: '데이트 코스를 생성하는 데 실패했습니다. 다시 시도해주세요.',
+        });
+        setShowForm(true); // Show form again on error
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   }
+
 
   if (isLoading) {
     return (
@@ -105,30 +109,34 @@ export default function DateCourseForm() {
       <div>
         <div className="text-center my-8">
             <h2 className="text-3xl font-bold text-primary">{result.title}</h2>
-            {result.steps.length > 0 && <p className="text-muted-foreground mt-4 px-4">{result.steps[0].description.substring(0,100)}...</p>}
+            <p className="text-muted-foreground mt-4 px-4">{result.summaryAndMessage.split('\n')[0]}</p>
         </div>
         <div className="space-y-8">
             {result.steps.map((step, index) => (
-                <Card key={index} className="overflow-hidden bg-card border-border/40 p-6">
-                    <h3 className="text-xl font-bold text-foreground mb-4">{step.time} - {step.title}</h3>
-                     {step.imageDataUri && (
-                        <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden mb-4">
-                            <Image
-                                src={step.imageDataUri}
-                                alt={step.title}
-                                fill
-                                className="object-cover"
-                            />
-                        </div>
-                    )}
-                    <div className="space-y-4 text-sm">
-                        <p className="text-muted-foreground">{step.description}</p>
-                        <div className="space-y-3 pt-2 text-foreground/90">
+                <Card key={index} className="overflow-hidden bg-card border-border/40">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-bold text-foreground">{step.time} - {step.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-0">
+                        {step.imageDataUri ? (
+                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden mb-4">
+                                <Image
+                                    src={step.imageDataUri}
+                                    alt={step.title}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </div>
+                        ) : (
+                            <Skeleton className="w-full aspect-[4/3] rounded-lg mb-4" />
+                        )}
+                        <p className="text-muted-foreground mb-4">{step.description}</p>
+                        <div className="space-y-3 pt-2 text-foreground/90 border-t border-border/20">
                             <p><span className="font-semibold text-foreground">찾아가는 길:</span> <span className="text-muted-foreground">{step.directions}</span></p>
                             <p><span className="font-semibold text-foreground">예상 비용:</span> <span className="text-muted-foreground">{step.cost}</span></p>
                             <p><span className="font-semibold text-foreground">💖 로맨틱 팁:</span> <span className="text-muted-foreground">{step.romanticTip}</span></p>
                         </div>
-                    </div>
+                    </CardContent>
                 </Card>
             ))}
         </div>
@@ -342,5 +350,3 @@ export default function DateCourseForm() {
     </div>
   );
 }
-
-    
