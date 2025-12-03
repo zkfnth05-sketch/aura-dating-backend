@@ -19,17 +19,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { getDateCourse } from '@/app/actions/ai-actions';
 import { DateCourseOutput } from '@/ai/flows/date-course-flow';
@@ -43,10 +35,14 @@ const formSchema = z.object({
     required_error: '데이트 날짜를 선택해주세요.',
   }),
   transportation: z.string(),
+  cost: z.string(),
+  dateType: z.string(),
 });
 
 const partySizes = ['2명', '3명~4명', '5명 이상'];
 const transportations = ['대중교통', '렌터카', '자가용', '항공기', '도보/자전거', '상관없음'];
+const costs = ['~3만원', '5만원', '7~8만원', '10만원', '20만원', '상관없음'];
+const dateTypes = ['음주가무', '모험', '휴식', '문화체험', '맛집탐방', '상관없음'];
 
 export default function DateCourseForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -59,6 +55,8 @@ export default function DateCourseForm() {
       partySize: '2명',
       duration: '',
       transportation: '상관없음',
+      cost: '상관없음',
+      dateType: '상관없음',
     },
   });
 
@@ -196,6 +194,58 @@ export default function DateCourseForm() {
                 <FormControl>
                   <div className="flex flex-wrap gap-2">
                     {transportations.map((item) => (
+                      <Button
+                        key={item}
+                        type="button"
+                        variant={field.value === item ? 'default' : 'secondary'}
+                        onClick={() => field.onChange(item)}
+                        className="rounded-full"
+                      >
+                        {item}
+                      </Button>
+                    ))}
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        
+        <FormField
+            control={form.control}
+            name="cost"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel>1인당 데이트 비용</FormLabel>
+                <FormControl>
+                  <div className="flex flex-wrap gap-2">
+                    {costs.map((item) => (
+                      <Button
+                        key={item}
+                        type="button"
+                        variant={field.value === item ? 'default' : 'secondary'}
+                        onClick={() => field.onChange(item)}
+                        className="rounded-full"
+                      >
+                        {item}
+                      </Button>
+                    ))}
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+        <FormField
+            control={form.control}
+            name="dateType"
+            render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel>선호하는 데이트 유형</FormLabel>
+                <FormControl>
+                  <div className="flex flex-wrap gap-2">
+                    {dateTypes.map((item) => (
                       <Button
                         key={item}
                         type="button"

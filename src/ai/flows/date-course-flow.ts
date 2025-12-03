@@ -16,6 +16,8 @@ const DateCourseInputSchema = z.object({
   duration: z.string().describe('The duration of the date.'),
   date: z.string().describe('The date of the date.'),
   transportation: z.string().describe('The mode of transportation.'),
+  cost: z.string().describe('The budget per person for the date.'),
+  dateType: z.string().describe('The preferred type of date.'),
 });
 export type DateCourseInput = z.infer<typeof DateCourseInputSchema>;
 
@@ -43,11 +45,13 @@ User Preferences:
 - Duration: {{{duration}}}
 - Date: {{{date}}}
 - Transportation: {{{transportation}}}
+- Budget per person: {{{cost}}}
+- Preferred Date Type: {{{dateType}}}
 
 Please provide a detailed plan including:
 - A catchy title for the date course.
 - A timeline with specific activities and locations.
-- Recommendations for restaurants or cafes if applicable.
+- Recommendations for restaurants or cafes if applicable, keeping the budget in mind.
 - Any other tips to make the date special.
 
 Generate the response in Markdown format.`,
