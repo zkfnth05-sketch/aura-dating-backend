@@ -35,7 +35,7 @@ export default function UserProfilePage({ params }: { params: { userId: string }
       setUser(foundUser);
     }
     setIsLoading(false);
-  }, [params.userId]);
+  }, [params]);
   
   if (isLoading) {
       return (
