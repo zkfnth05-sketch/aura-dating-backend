@@ -32,8 +32,8 @@ export default function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 text-xs w-full',
-                isActive ? 'text-primary' : 'text-muted-foreground'
+                'flex flex-col items-center justify-center gap-1 text-xs w-full transition-colors duration-200',
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary'
               )}
             >
               <item.icon className="h-5 w-5" />
