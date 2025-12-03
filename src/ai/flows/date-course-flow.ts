@@ -21,23 +21,65 @@ const DateCourseInputSchema = z.object({
 });
 export type DateCourseInput = z.infer<typeof DateCourseInputSchema>;
 
-const DateCourseOutputSchema = z.object({
-  recommendation: z.string().describe('The detailed date course recommendation, including places to visit, activities, and a timeline. The response must be in Markdown format.'),
+const DateCourseStepSchema = z.object({
+    time: z.string().describe("The time for this step in the date course (e.g., '14:00')."),
+    title: z.string().describe("The title of the activity for this step."),
+    description: z.string().describe("A detailed description of the activity."),
+    directions: z.string().describe("How to get there."),
+    cost: z.string().describe("Estimated cost per person."),
+    romanticTip: z.string().describe("A romantic tip to make the moment special."),
+    imagePrompt: z.string().describe("A short, descriptive prompt for an AI image generator to create a relevant, photorealistic image for this activity. Example: 'A cozy cafe with warm lighting' or 'A couple walking on a beach at sunset'."),
 });
-export type DateCourseOutput = z.infer<typeof DateCourseOutputSchema>;
+
+const DateCourseOutputSchema = z.object({
+    title: z.string().describe("A catchy overall title for the date course."),
+    totalCost: z.string().describe("A summary of the total estimated cost for the date."),
+    steps: z.array(DateCourseStepSchema).describe("An array of detailed steps for the date course. Include at least 4-5 steps."),
+});
+
+export type DateCourseOutput = z.infer<typeof DateCourseOutputSchema> & {
+    steps: (z.infer<typeof DateCourseStepSchema> & { imageDataUri?: string })[];
+};
 
 
 export async function recommendDateCourse(input: DateCourseInput): Promise<DateCourseOutput> {
-    return dateCourseFlow(input);
+    const textResult = await dateCourseFlow(input);
+
+    const imagePromises = textResult.steps.map(async (step) => {
+        try {
+            const { media } = await ai.generate({
+                model: 'googleai/imagen-4.0-fast-generate-001',
+                prompt: `${step.imagePrompt}, photorealistic, high quality`,
+            });
+            return {
+                ...step,
+                imageDataUri: media?.url,
+            };
+        } catch (error) {
+            console.error(`Image generation failed for step: ${step.title}`, error);
+            // In case of an error, return the step without an image
+            return {
+                ...step,
+                imageDataUri: undefined,
+            };
+        }
+    });
+
+    const stepsWithImages = await Promise.all(imagePromises);
+
+    return {
+        ...textResult,
+        steps: stepsWithImages,
+    };
 }
 
 
 const prompt = ai.definePrompt({
-  name: 'dateCoursePrompt',
+  name: 'dateCourseTextPrompt',
   input: { schema: DateCourseInputSchema },
   output: { schema: DateCourseOutputSchema },
   prompt: `You are an expert date planner. Based on the user's preferences, create a perfect and detailed date course.
-The response must be in Korean and formatted in Markdown.
+The response must be in Korean.
 
 User Preferences:
 - Destination/Atmosphere: {{{destination}}}
@@ -48,30 +90,22 @@ User Preferences:
 - Budget per person: {{{cost}}}
 - Preferred Date Type: {{{dateType}}}
 
-Please provide a detailed plan with the following structure for each timeline entry in Markdown:
-
-- A catchy overall title for the date course.
-- For each timeline entry, provide:
-  - Time and Title (e.g., ### 14:00 - 아늑한 카페에서 여유로운 시작)
-  - A placeholder image URL from unsplash. It should be relevant to the activity. Format: ![Description](https://images.unsplash.com/...)
-  - A detailed description of the activity.
-  - **찾아가는 길**: How to get there.
-  - **예상 비용**: Estimated cost per person.
-  - **💖 로맨틱 팁**: A romantic tip to make the moment special.
-- Include at least 4-5 timeline entries.
+Please provide a detailed plan. The output must be a JSON object that follows the specified schema.
+- Create a catchy overall title for the date course.
+- Create at least 4-5 timeline entries in the 'steps' array.
+- For each step, provide all the required fields: 'time', 'title', 'description', 'directions', 'cost', 'romanticTip', and a suitable 'imagePrompt'.
 - Conclude with a summary of the total estimated cost.
 
-Example for one timeline entry:
-
-### 21:00 - 야경이 보이는 루프탑 바 또는 로맨틱 디저트 카페
-![루프탑 바](https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800)
-빛나는 도시 야경을 배경으로 달콤한 칵테일이나 맛있는 디저트를 즐기며, 서로에게 속삭이듯 하루를 마무리하는 시간입니다. 눈부신 야경처럼 두 분의 사랑도 영원히 빛나길 바랍니다.
-
-**찾아가는 길**: 레스토랑에서 택시나 대중교통으로 이동 가능한 거리에 있는, 야경이 아름다운 루프탑 바나 아늑하고 특별한 디저트 카페를 찾아보세요.
-
-**예상 비용**: 1인당 20,000원 ~ 40,000원 (칵테일/음료 및 디저트 포함)
-
-**💖 로맨틱 팁**: 서로에게 오늘 하루 중 가장 좋았던 순간을 이야기해주고, 다음 데이트를 기약하는 설레는 대화를 나눠보세요. 작은 약속들이 쌓여 큰 행복이 될 거예요.
+Example for one step object in the array:
+{
+  "time": "21:00",
+  "title": "야경이 보이는 루프탑 바",
+  "description": "빛나는 도시 야경을 배경으로 달콤한 칵테일을 즐기며 하루를 마무리하는 시간입니다. 눈부신 야경처럼 두 분의 사랑도 영원히 빛나길 바랍니다.",
+  "directions": "레스토랑에서 택시로 10분 거리에 있는 '더 그리핀' 바",
+  "cost": "1인당 30,000원",
+  "romanticTip": "서로에게 오늘 하루 중 가장 좋았던 순간을 이야기해주고, 다음 데이트를 기약하는 설레는 대화를 나눠보세요.",
+  "imagePrompt": "A couple enjoying cocktails at a glamorous rooftop bar at night, with a sparkling city skyline in the background."
+}
 
 Generate the entire course now based on the user's preferences.`,
 });
@@ -79,7 +113,7 @@ Generate the entire course now based on the user's preferences.`,
 
 const dateCourseFlow = ai.defineFlow(
   {
-    name: 'dateCourseFlow',
+    name: 'dateCourseTextFlow',
     inputSchema: DateCourseInputSchema,
     outputSchema: DateCourseOutputSchema,
   },

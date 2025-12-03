@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Utensils, MapPin, Wallet, Sparkles, Ship, TramFront, Bus, Car, Plane, Footprints, Bike } from 'lucide-react';
+import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,10 +23,9 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { getDateCourse } from '@/app/actions/ai-actions';
 import { DateCourseOutput } from '@/ai/flows/date-course-flow';
-import ReactMarkdown from 'react-markdown';
 
 const formSchema = z.object({
   destination: z.string().min(1, '여행지를 입력해주세요.'),
@@ -43,6 +43,15 @@ const partySizes = ['2명', '3명~4명', '5명 이상'];
 const transportations = ['대중교통', '렌터카', '자가용', '항공기', '도보/자전거', '상관없음'];
 const costs = ['~3만원', '5만원', '7~8만원', '10만원', '20만원', '상관없음'];
 const dateTypes = ['음주가무', '모험', '휴식', '문화체험', '맛집탐방', '상관없음'];
+
+const transportationIcons = {
+    '대중교통': <Bus className="mr-2 h-4 w-4" />,
+    '렌터카': <Car className="mr-2 h-4 w-4" />,
+    '자가용': <Car className="mr-2 h-4 w-4" />,
+    '항공기': <Plane className="mr-2 h-4 w-4" />,
+    '도보/자전거': <Footprints className="mr-2 h-4 w-4" />,
+    '상관없음': <Car className="mr-2 h-4 w-4" />,
+} as const;
 
 export default function DateCourseForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -94,19 +103,49 @@ export default function DateCourseForm() {
 
   if (result) {
     return (
-        <div>
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>AI 추천 데이트 코스</CardTitle>
-                </CardHeader>
-                <CardContent className="prose dark:prose-invert max-w-none">
-                    <ReactMarkdown>{result.recommendation}</ReactMarkdown>
-                </CardContent>
-            </Card>
-            <Button onClick={() => { setResult(null); setShowForm(true); }} className="w-full mt-4">
-                새로운 코스 추천받기
-            </Button>
+      <div>
+        <div className="text-center my-8">
+            <h2 className="text-2xl font-bold text-primary">{result.title}</h2>
+            <p className="text-muted-foreground mt-1">{result.totalCost}</p>
         </div>
+        <div className="space-y-6">
+            {result.steps.map((step, index) => (
+                <Card key={index} className="overflow-hidden">
+                     {step.imageDataUri && (
+                        <div className="relative w-full h-48">
+                            <Image
+                                src={step.imageDataUri}
+                                alt={step.title}
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+                    )}
+                    <CardHeader>
+                        <CardTitle className="text-lg">{step.time} - {step.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                        <p className="text-muted-foreground">{step.description}</p>
+                        <div className="flex items-start gap-2">
+                           <MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0"/>
+                           <p><span className="font-semibold">찾아가는 길:</span> {step.directions}</p>
+                        </div>
+                         <div className="flex items-start gap-2">
+                           <Wallet className="h-4 w-4 mt-1 text-primary flex-shrink-0"/>
+                           <p><span className="font-semibold">예상 비용:</span> {step.cost}</p>
+                        </div>
+                         <div className="flex items-start gap-2">
+                           <Sparkles className="h-4 w-4 mt-1 text-primary flex-shrink-0"/>
+                           <p><span className="font-semibold">💖 로맨틱 팁:</span> {step.romanticTip}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+        <Button onClick={() => { setResult(null); setShowForm(true); }} className="w-full mt-8">
+            새로운 코스 추천받기
+        </Button>
+    </div>
     );
   }
 
@@ -231,6 +270,7 @@ export default function DateCourseForm() {
                         onClick={() => field.onChange(item)}
                         className="rounded-full"
                       >
+                         {transportationIcons[item as keyof typeof transportationIcons]}
                         {item}
                       </Button>
                     ))}
