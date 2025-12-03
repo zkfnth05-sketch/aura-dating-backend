@@ -39,6 +39,10 @@ export const potentialMatches: User[] = [
     hobbies: ['그림 그리기', '독서', '요가'],
     interests: ['미술사', '다큐멘터리', 'K-Pop'],
     gender: '여성',
+    relationship: ['가벼운 만남'],
+    values: ['창의성', '평온함'],
+    communication: ['깊은 대화', '유머러스'],
+    lifestyle: ['예술가', '웰빙'],
     photoUrl: imageMap.get('user-1')!,
   },
   {
@@ -50,6 +54,10 @@ export const potentialMatches: User[] = [
     hobbies: ['달리기', '요리', '기타 연주'],
     interests: ['강아지', '액션 영화', '수제 맥주'],
     gender: '남성',
+    relationship: ['진지한 관계'],
+    values: ['안정', '열정'],
+    communication: ['직설적', '진솔함'],
+    lifestyle: ['활동적', '미니멀리스트'],
     photoUrl: imageMap.get('user-2')!,
   },
   {
@@ -61,6 +69,10 @@ export const potentialMatches: User[] = [
     hobbies: ['여행', '블로깅', '비디오 게임'],
     interests: ['매운 음식', '90년대 R&B', '공포 영화'],
     gender: '여성',
+    relationship: ['새로운 친구', '대화 상대'],
+    values: ['모험', '유머'],
+    communication: ['유머러스', '따뜻함'],
+    lifestyle: ['탐험가', '활동적'],
     photoUrl: imageMap.get('user-3')!,
   },
   {
@@ -72,6 +84,10 @@ export const potentialMatches: User[] = [
     hobbies: ['작곡', '커피 시음', '사이클링'],
     interests: ['라이브 음악', '철학', '미니멀리즘'],
     gender: '남성',
+    relationship: ['대화 상대'],
+    values: ['창의성', '진정성'],
+    communication: ['깊은 대화', '진솔함'],
+    lifestyle: ['예술가', '웰빙'],
     photoUrl: imageMap.get('user-4')!,
   },
   {
@@ -83,6 +99,10 @@ export const potentialMatches: User[] = [
     hobbies: ['재봉', '중고 쇼핑', '정원 가꾸기'],
     interests: ['지속가능한 패션', '고전 영화', '팟캐스트'],
     gender: '여성',
+    relationship: ['새로운 친구'],
+    values: ['성장', '안정'],
+    communication: ['따뜻함', '진솔함'],
+    lifestyle: ['미니멀리스트', '집순이'],
     photoUrl: imageMap.get('user-5')!,
   },
    {
@@ -94,6 +114,10 @@ export const potentialMatches: User[] = [
     hobbies: ['독서', '스케치', '와인 시음'],
     interests: ['현대 건축', '재즈 음악', '역사'],
     gender: '남성',
+    relationship: ['진지한 관계', '대화 상대'],
+    values: ['안정', '평온함'],
+    communication: ['깊은 대화', '직설적'],
+    lifestyle: ['웰빙', '예술가'],
     photoUrl: imageMap.get('user-6')!,
   },
   {
@@ -105,6 +129,10 @@ export const potentialMatches: User[] = [
     hobbies: ['등산', '맛집 탐방', '콘서트'],
     interests: ['인디 음악', '코미디 쇼', '여행'],
     gender: '여성',
+    relationship: ['가벼운 만남', '새로운 친구'],
+    values: ['모험', '유머'],
+    communication: ['유머러스', '따뜻함'],
+    lifestyle: ['활동적', '탐험가'],
     photoUrl: imageMap.get('user-7')!,
   }
 ];

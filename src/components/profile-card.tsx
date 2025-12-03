@@ -1,6 +1,7 @@
 import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { Badge } from './ui/badge';
 
 type ProfileCardProps = {
   user: User;
@@ -18,6 +19,15 @@ export default function ProfileCard({ user, isActive, swipeState }: ProfileCardP
     opacity: isActive ? 1 : 0,
     zIndex: isActive ? 10 : 0,
   };
+
+  const allTags = [
+    ...(user.relationship || []),
+    ...(user.values || []),
+    ...(user.communication || []),
+    ...(user.lifestyle || []),
+    ...(user.hobbies || []),
+    ...(user.interests || []),
+  ];
 
   return (
     <div
@@ -41,10 +51,10 @@ export default function ProfileCard({ user, isActive, swipeState }: ProfileCardP
         </h2>
         <p className="text-white/80 mt-1 drop-shadow-md line-clamp-2">{user.bio}</p>
         <div className="flex flex-wrap gap-2 mt-4">
-          {[...user.hobbies, ...user.interests].slice(0, 4).map((item) => (
-            <div key={item} className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full">
+          {allTags.slice(0, 4).map((item) => (
+            <Badge key={item} variant="secondary" className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full border-0">
               {item}
-            </div>
+            </Badge>
           ))}
         </div>
       </div>

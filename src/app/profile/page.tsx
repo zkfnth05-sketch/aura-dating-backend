@@ -119,6 +119,36 @@ export default function ProfilePage() {
                 </ProfileSection>
               )}
 
+              {currentUser.values && currentUser.values.length > 0 && (
+                <ProfileSection title="가치관">
+                  <div className="flex flex-wrap gap-2">
+                    {currentUser.values.map(item => (
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
+
+              {currentUser.communication && currentUser.communication.length > 0 && (
+                <ProfileSection title="소통 스타일">
+                  <div className="flex flex-wrap gap-2">
+                    {currentUser.communication.map(item => (
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
+
+              {currentUser.lifestyle && currentUser.lifestyle.length > 0 && (
+                <ProfileSection title="라이프스타일">
+                  <div className="flex flex-wrap gap-2">
+                    {currentUser.lifestyle.map(item => (
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
+
               <ProfileSection title="관심사">
                 <div className="flex flex-wrap gap-2">
                   {currentUser.interests.map(interest => (
