@@ -41,7 +41,7 @@ const generateEnhancementPrompt = (gender: '남성' | '여성' | '기타') => {
         specificInstruction = 'Make the man in the photo very handsome. ';
     }
 
-    return `${specificInstruction}Enhance this user's profile picture for a high-end dating app. Improve the lighting and composition to make the person look more stylish, confident, and attractive. Give the photo a polished, professional, and slightly more glamorous feel, while ensuring the person's core features remain recognizable. Make them look their absolute best. The output must be a photorealistic image.`;
+    return `${specificInstruction}Enhance this user's profile picture for a high-end dating app. Improve the lighting and composition to make the person look more stylish, sexy, have a balanced body, confident, and attractive. Give the photo a polished, professional, and slightly more glamorous feel, while ensuring the person's core features remain recognizable. Make them look their absolute best. The output must be a photorealistic image.`;
 };
 
 
