@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { cn, formatLastSeen } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
@@ -55,6 +55,9 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
   const audioChunksRef = useRef<Blob[]>([]);
 
   const [isCallActive, setIsCallActive] = useState(false);
+  
+  const otherUser = match.user;
+  const [lastSeenText, setLastSeenText] = useState(formatLastSeen(otherUser.lastSeen));
 
 
   const handleSendMessage = (e: React.FormEvent, text?: string) => {
@@ -175,7 +178,13 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
     }
   }, [messages]);
 
-  const otherUser = match.user;
+  useEffect(() => {
+    const interval = setInterval(() => {
+        setLastSeenText(formatLastSeen(otherUser.lastSeen));
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [otherUser.lastSeen]);
 
   if (isCallActive) {
     return (
@@ -202,7 +211,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
           </Avatar>
           <div>
             <p className="font-semibold">{otherUser.name}</p>
-            <p className="text-xs text-muted-foreground">온라인</p>
+            <p className="text-xs text-muted-foreground">{lastSeenText}</p>
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setIsCallActive(true)}>

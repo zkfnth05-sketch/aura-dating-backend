@@ -54,3 +54,37 @@ export function calculateCompatibility(user1: User, user2: User): { score: numbe
     commonalities: [...new Set(commonalities)], // Return unique commonalities
   };
 }
+
+/**
+ * Formats the last seen date into a relative time string.
+ */
+export function formatLastSeen(lastSeen?: 'Online' | string): string {
+    if (!lastSeen) {
+        return '오래 전';
+    }
+    if (lastSeen === 'Online') {
+        return '온라인';
+    }
+
+    const now = new Date();
+    const lastSeenDate = new Date(lastSeen);
+    const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
+
+    if (diffInSeconds < 60) {
+        return '방금 전';
+    }
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+        return `${diffInMinutes}분 전`;
+    }
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+        return `${diffInHours}시간 전`;
+    }
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) {
+        return `${diffInDays}일 전`;
+    }
+    
+    return lastSeenDate.toLocaleDateString('ko-KR');
+}
