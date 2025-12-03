@@ -7,13 +7,12 @@ import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BrainCircuit, Sparkles } from 'lucide-react';
+import { ArrowLeft, BrainCircuit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
-import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
-import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
-import { Skeleton } from '@/components/ui/skeleton';
+import AIAnalysisDialog from '@/components/ai-analysis-dialog';
+
 
 // Helper components for page structure
 const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -35,9 +34,7 @@ export default function UserProfilePage() {
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  const [aiAnalysis, setAiAnalysis] = useState<AIMatchEnhancementOutput | null>(null);
-  const [isAiLoading, setIsAiLoading] = useState(true);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
 
 
   useEffect(() => {
@@ -45,17 +42,9 @@ export default function UserProfilePage() {
     
     if (foundUser) {
       setUser(foundUser);
-      
-      setIsAiLoading(true);
-      setAiError(null);
-      getAIMatchAnalysis({ userProfile1: currentUser, userProfile2: foundUser })
-        .then(setAiAnalysis)
-        .catch(() => setAiError('AI 분석에 실패했습니다.'))
-        .finally(() => setIsAiLoading(false));
-
     }
     setIsLoading(false);
-  }, [userId, currentUser]);
+  }, [userId]);
   
   if (isLoading) {
       return (
@@ -121,22 +110,10 @@ export default function UserProfilePage() {
           <div className="container relative z-10 px-4 mt-6">
             <div className="bg-card p-4 rounded-lg">
                 
-              <div className="bg-yellow-900/20 border border-primary/50 rounded-lg p-4 mb-6">
-                  <h3 className="font-semibold text-primary text-sm mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    AI 추천 이유
-                  </h3>
-                  {isAiLoading ? (
-                      <div className="space-y-2">
-                          <Skeleton className="h-4 w-full bg-yellow-200/10" />
-                          <Skeleton className="h-4 w-3/4 bg-yellow-200/10" />
-                      </div>
-                  ) : aiError ? (
-                    <p className="text-sm text-destructive">{aiError}</p>
-                  ) : (
-                    <p className="text-sm text-foreground/90">{aiAnalysis?.analysis}</p>
-                  )}
-              </div>
+              <Button onClick={() => setIsAiDialogOpen(true)} className="w-full mb-6 bg-yellow-900/20 text-primary hover:bg-yellow-900/40 border border-primary/50">
+                <BrainCircuit className="mr-2 h-4 w-4" />
+                AI 매치 분석 보기
+              </Button>
 
               <ProfileSection title="소개">
                 <p className="text-sm text-foreground/80">{user.bio}</p>
@@ -208,6 +185,14 @@ export default function UserProfilePage() {
         images={allPhotos}
         startIndex={selectedImageIndex}
       />
+      {isAiDialogOpen && user && (
+        <AIAnalysisDialog
+            isOpen={isAiDialogOpen}
+            onClose={() => setIsAiDialogOpen(false)}
+            user1={currentUser}
+            user2={user}
+        />
+      )}
     </>
   );
 }
