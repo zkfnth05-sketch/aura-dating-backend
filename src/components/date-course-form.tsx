@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Loader2, Utensils, MapPin, Wallet, Sparkles, Ship, TramFront, Bus, Car, Plane, Footprints, Bike, PartyPopper } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Bus, Car, Plane, Footprints } from 'lucide-react';
 import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -23,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { getDateCourse } from '@/app/actions/ai-actions';
 import { DateCourseOutput } from '@/ai/flows/date-course-flow';
 
@@ -110,9 +109,10 @@ export default function DateCourseForm() {
         </div>
         <div className="space-y-8">
             {result.steps.map((step, index) => (
-                <Card key={index} className="overflow-hidden bg-card border-border/40">
+                <Card key={index} className="overflow-hidden bg-card border-border/40 p-6">
+                    <h3 className="text-xl font-bold text-foreground mb-4">{step.time} - {step.title}</h3>
                      {step.imageDataUri && (
-                        <div className="relative w-full h-56">
+                        <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden mb-4">
                             <Image
                                 src={step.imageDataUri}
                                 alt={step.title}
@@ -121,26 +121,14 @@ export default function DateCourseForm() {
                             />
                         </div>
                     )}
-                    <CardHeader>
-                        <CardTitle className="text-xl text-primary/90">{step.time} - {step.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-sm">
-                        <p className="text-foreground/80">{step.description}</p>
-                        <div className="space-y-3 pt-2">
-                            <div className="flex items-start gap-3">
-                               <MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0"/>
-                               <p><span className="font-semibold text-foreground">찾아가는 길:</span> <span className="text-muted-foreground">{step.directions}</span></p>
-                            </div>
-                             <div className="flex items-start gap-3">
-                               <Wallet className="h-4 w-4 mt-0.5 text-primary flex-shrink-0"/>
-                               <p><span className="font-semibold text-foreground">예상 비용:</span> <span className="text-muted-foreground">{step.cost}</span></p>
-                            </div>
-                             <div className="flex items-start gap-3">
-                               <Sparkles className="h-4 w-4 mt-0.5 text-primary flex-shrink-0"/>
-                               <p><span className="font-semibold text-foreground">💖 로맨틱 팁:</span> <span className="text-muted-foreground">{step.romanticTip}</span></p>
-                            </div>
+                    <div className="space-y-4 text-sm">
+                        <p className="text-muted-foreground">{step.description}</p>
+                        <div className="space-y-3 pt-2 text-foreground/90">
+                            <p><span className="font-semibold text-foreground">찾아가는 길:</span> <span className="text-muted-foreground">{step.directions}</span></p>
+                            <p><span className="font-semibold text-foreground">예상 비용:</span> <span className="text-muted-foreground">{step.cost}</span></p>
+                            <p><span className="font-semibold text-foreground">💖 로맨틱 팁:</span> <span className="text-muted-foreground">{step.romanticTip}</span></p>
                         </div>
-                    </CardContent>
+                    </div>
                 </Card>
             ))}
         </div>
@@ -354,3 +342,5 @@ export default function DateCourseForm() {
     </div>
   );
 }
+
+    
