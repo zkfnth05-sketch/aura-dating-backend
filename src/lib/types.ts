@@ -8,6 +8,7 @@ export type User = {
   interests: string[];
   photoUrl: string;
   photoDataUri?: string; // For AI flow
+  photoUrls?: string[];
 };
 
 export type Match = {

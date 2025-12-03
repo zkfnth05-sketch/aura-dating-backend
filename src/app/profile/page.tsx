@@ -39,6 +39,10 @@ export default function ProfilePage() {
   const handleSettingChange = (id: keyof typeof settings) => (checked: boolean) => {
     setSettings(prev => ({...prev, [id]: checked}));
   };
+  
+  const mainPhoto = currentUser.photoUrls?.[0] || currentUser.photoUrl;
+  const otherPhotos = currentUser.photoUrls?.slice(1) || [];
+
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -47,14 +51,14 @@ export default function ProfilePage() {
       <main className="flex-1">
         <div className="relative w-full h-[60svh]">
           <Image
-            src={currentUser.photoUrl}
+            src={mainPhoto}
             alt={`Profile of ${currentUser.name}`}
             fill
             className="object-cover"
             data-ai-hint="person portrait"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           <div className="absolute bottom-4 left-4 text-white">
             <h1 className="text-3xl font-bold">
               {currentUser.name}, {currentUser.age}
@@ -62,8 +66,24 @@ export default function ProfilePage() {
             <p className="text-white/80">{currentUser.location}</p>
           </div>
         </div>
-
+        
         <div className="container relative z-10 px-4 -mt-16">
+            <div className="grid grid-cols-3 gap-1">
+                {otherPhotos.map((photoUrl, index) => (
+                    <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                        <Image 
+                            src={photoUrl}
+                            alt={`More photo of ${currentUser.name} ${index + 1}`}
+                            fill
+                            className="object-cover"
+                            data-ai-hint="person portrait"
+                        />
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <div className="container relative z-10 px-4 mt-6">
           {showLocationBanner && (
             <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">

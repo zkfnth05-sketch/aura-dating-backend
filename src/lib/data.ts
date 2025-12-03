@@ -13,6 +13,15 @@ export const currentUser: User = {
   hobbies: ['등산', '사진', '코딩'],
   interests: ['인디 음악', 'SF 영화', '커피'],
   photoUrl: imageMap.get('current-user')!,
+  photoUrls: [
+    imageMap.get('current-user')!,
+    "https://images.unsplash.com/photo-1554151228-14d9def656e4?q=80&w=1972&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1974&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1557053910-d9eadeed1c58?q=80&w=1974&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=1978&auto=format&fit=crop",
+  ]
 };
 
 export const potentialMatches: User[] = [
