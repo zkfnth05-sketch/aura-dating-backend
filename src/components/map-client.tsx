@@ -96,7 +96,7 @@ const mapStyles: google.maps.MapTypeStyle[] = [
 export default function MapClient({ users }: MapClientProps) {
   const router = useRouter();
   const [zoom, setZoom] = useState(11);
-  const seoulCenter = { lat: 37.5665, lng: 126.9780 };
+  const center = { lat: users[0].lat, lng: users[0].lng };
 
   const handleMarkerClick = (userId: string) => {
     if(userId === 'current-user') {
@@ -122,7 +122,7 @@ export default function MapClient({ users }: MapClientProps) {
       </div>
       <div className="flex-1">
         <Map
-          defaultCenter={seoulCenter}
+          defaultCenter={center}
           zoom={zoom}
           mapId={'dating-app-map-style'}
           disableDefaultUI={true}
