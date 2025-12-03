@@ -12,7 +12,7 @@ export default function Header() {
             GoldChic
           </span>
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="hidden md:flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/" aria-label="Swipe">
               <Flame className="h-5 w-5 text-foreground/80 hover:text-primary transition-colors" />
