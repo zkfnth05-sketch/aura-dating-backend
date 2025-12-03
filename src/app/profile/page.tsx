@@ -109,6 +109,16 @@ export default function ProfilePage() {
                 <p className="text-sm text-foreground/80">{currentUser.bio}</p>
               </ProfileSection>
 
+              {currentUser.relationship && currentUser.relationship.length > 0 && (
+                <ProfileSection title="찾는 관계">
+                  <div className="flex flex-wrap gap-2">
+                    {currentUser.relationship.map(item => (
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
+
               <ProfileSection title="관심사">
                 <div className="flex flex-wrap gap-2">
                   {currentUser.interests.map(interest => (
