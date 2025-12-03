@@ -216,6 +216,7 @@ export const matches: Match[] = [
     user: potentialMatches.find(u => u.id === 'user-1')!,
     lastMessage: '안녕하세요! 그리신 그림들 정말 멋져요.',
     lastMessageTimestamp: '오전 10:42',
+    unreadCount: 1,
   },
   {
     id: 'match-2',
@@ -223,6 +224,7 @@ export const matches: Match[] = [
     user: potentialMatches.find(u => u.id === 'user-2')!,
     lastMessage: '강아지가 너무 귀여워요! 이름이 뭐예요?',
     lastMessageTimestamp: '어제',
+    unreadCount: 2,
   },
 ];
 

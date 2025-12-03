@@ -27,6 +27,7 @@ export type Match = {
   user: User;
   lastMessage: string;
   lastMessageTimestamp: string;
+  unreadCount?: number;
 };
 
 export type Message = {

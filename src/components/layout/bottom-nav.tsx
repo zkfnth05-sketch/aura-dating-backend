@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Map, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { matches } from '@/lib/data';
 
 const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -37,6 +39,14 @@ const navItems = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    // In a real app, this would be fetched from an API or a global state manager.
+    // For now, we calculate it from the static data.
+    const totalUnread = matches.reduce((acc, match) => acc + (match.unreadCount || 0), 0);
+    setUnreadCount(totalUnread);
+  }, []);
 
   // Hide bottom nav on specific pages
   if (pathname.startsWith('/chat/') || pathname.startsWith('/profile/edit') || pathname.startsWith('/users/')) {
@@ -49,12 +59,14 @@ export default function BottomNav() {
         {navItems.map((item) => {
           const isActive =
             item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);
+          const isMatchesLink = item.href === '/matches';
+          
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 text-xs w-full transition-colors duration-200 h-full',
+                'relative flex flex-col items-center justify-center gap-1 text-xs w-full transition-colors duration-200 h-full',
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary'
               )}
             >
@@ -63,6 +75,12 @@ export default function BottomNav() {
                 "font-medium",
                 isActive && "font-bold"
               )}>{item.label}</span>
+
+              {isMatchesLink && unreadCount > 0 && (
+                <div className="absolute top-2 right-1/2 translate-x-[24px] flex items-center justify-center h-4 min-w-[16px] rounded-full bg-red-500 text-white text-[10px] px-1 font-bold">
+                  {unreadCount}
+                </div>
+              )}
             </Link>
           );
         })}
