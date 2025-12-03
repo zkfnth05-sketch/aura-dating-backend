@@ -3,14 +3,23 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
+import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
+import { Skeleton } from '@/components/ui/skeleton';
+
+type AnalysisState = {
+  isLoading: boolean;
+  data: AIMatchEnhancementOutput | null;
+  error: string | null;
+};
 
 type ProfileCardProps = {
   user: User;
   isActive: boolean;
   swipeState: 'left' | 'right' | null;
+  analysis?: AnalysisState;
 };
 
-export default function ProfileCard({ user, isActive, swipeState }: ProfileCardProps) {
+export default function ProfileCard({ user, isActive, swipeState, analysis }: ProfileCardProps) {
   const cardStyle = {
     transform: `
       translateX(${swipeState === 'left' ? '-150%' : swipeState === 'right' ? '150%' : '0'}) 
@@ -30,6 +39,8 @@ export default function ProfileCard({ user, isActive, swipeState }: ProfileCardP
     ...(user.interests || []),
   ];
 
+  const commonalitiesCount = (analysis?.data?.sharedHobbies?.length || 0) + (analysis?.data?.sharedInterests?.length || 0);
+
   return (
     <div
       className={cn(
@@ -47,6 +58,25 @@ export default function ProfileCard({ user, isActive, swipeState }: ProfileCardP
           priority={isActive}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        
+        <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
+            {analysis?.isLoading ? (
+                <Skeleton className="h-6 w-20 rounded-md bg-white/30" />
+            ) : analysis?.data ? (
+                <Badge className="bg-primary/90 text-primary-foreground text-xs py-1 backdrop-blur-sm">
+                    {analysis.data.compatibilityScore}% 일치
+                </Badge>
+            ) : null}
+
+            {analysis?.isLoading ? (
+                <Skeleton className="h-6 w-24 rounded-md bg-black/40" />
+            ) : commonalitiesCount > 0 ? (
+                <Badge variant="secondary" className="bg-black/50 text-white border-none text-xs py-1 backdrop-blur-sm">
+                    공통점 {commonalitiesCount}개
+                </Badge>
+            ) : null}
+        </div>
+
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
           <h2 className="text-3xl font-bold drop-shadow-lg">
             {user.name}, <span className="font-light">{user.age}, {user.gender}</span>

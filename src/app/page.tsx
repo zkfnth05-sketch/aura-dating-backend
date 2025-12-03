@@ -1,15 +1,45 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { potentialMatches } from '@/lib/data';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
+import { useUser } from '@/contexts/user-context';
+import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
+import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
+
+type AnalysisState = {
+  isLoading: boolean;
+  data: AIMatchEnhancementOutput | null;
+  error: string | null;
+};
 
 export default function HomePage() {
   const [users, setUsers] = useState(potentialMatches);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
+
+  const { user: currentUser } = useUser();
+  const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisState>>({});
+
+  useEffect(() => {
+    users.forEach(user => {
+      // Don't re-fetch if data already exists or is loading
+      if (!analysisResults[user.id]) {
+        setAnalysisResults(prev => ({ ...prev, [user.id]: { isLoading: true, data: null, error: null } }));
+        
+        getAIMatchAnalysis({ userProfile1: currentUser, userProfile2: user })
+          .then(data => {
+            setAnalysisResults(prev => ({ ...prev, [user.id]: { isLoading: false, data, error: null } }));
+          })
+          .catch(() => {
+            setAnalysisResults(prev => ({ ...prev, [user.id]: { isLoading: false, data: null, error: '분석 실패' } }));
+          });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, users]);
 
   const handleAction = (action: 'like' | 'dislike' | 'superlike') => {
     if (currentIndex >= users.length) return;
@@ -42,6 +72,7 @@ export default function HomePage() {
           ) : (
             users.map((user, index) => {
               const isActive = index === currentIndex;
+              const analysis = analysisResults[user.id];
               // Prevent non-active cards from being clickable
               if (index < currentIndex) return null;
               
@@ -51,6 +82,7 @@ export default function HomePage() {
                     user={user}
                     isActive={isActive}
                     swipeState={isActive ? swipeState : null}
+                    analysis={analysis}
                   />
                 </div>
               );
