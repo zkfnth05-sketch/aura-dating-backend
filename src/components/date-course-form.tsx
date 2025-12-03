@@ -3,9 +3,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Loader2, Bus, Car, Plane, Footprints, Wallet, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Bus, Car, Plane, Footprints, Wallet } from 'lucide-react';
 import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
@@ -131,7 +131,7 @@ export default function DateCourseForm() {
                             <Skeleton className="w-full aspect-[4/3] rounded-lg mb-4" />
                         )}
                         <p className="text-muted-foreground mb-4">{step.description}</p>
-                        <div className="space-y-3 pt-2 text-foreground/90 border-t border-border/20">
+                        <div className="space-y-3 pt-4 text-foreground/90 border-t border-border/20">
                             <p><span className="font-semibold text-foreground">찾아가는 길:</span> <span className="text-muted-foreground">{step.directions}</span></p>
                             <p><span className="font-semibold text-foreground">예상 비용:</span> <span className="text-muted-foreground">{step.cost}</span></p>
                             <p><span className="font-semibold text-foreground">💖 로맨틱 팁:</span> <span className="text-muted-foreground">{step.romanticTip}</span></p>

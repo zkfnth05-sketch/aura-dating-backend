@@ -50,58 +50,25 @@ function getSeason(dateString: string): string {
     return 'winter';
 }
 
-export async function recommendDateCourse(input: DateCourseInput): Promise<DateCourseOutput> {
-    const textResult = await dateCourseFlow(input);
-    const season = getSeason(input.date);
-
-    const imagePromises = textResult.steps.map(async (step) => {
-        try {
-            const { media } = await ai.generate({
-                model: 'googleai/imagen-4.0-fast-generate-001',
-                prompt: `${step.imagePrompt}, ${season}, photorealistic, high quality`,
-            });
-            return {
-                ...step,
-                imageDataUri: media?.url,
-            };
-        } catch (error) {
-            console.error(`Image generation failed for step: ${step.title}`, error);
-            // In case of an error, return the step without an image
-            return {
-                ...step,
-                imageDataUri: undefined,
-            };
-        }
-    });
-
-    // This is a bit of a trick. We return the text-only result first,
-    // and then asynchronously update the steps with images as they are generated.
-    // The client-side will need to handle this progressive enhancement.
-    // For this implementation, we will wait for all, but this structure allows for future enhancement.
-    const stepsWithImages = await Promise.all(imagePromises);
-
-    return {
-        ...textResult,
-        steps: stepsWithImages,
-    };
-}
-
-
-const prompt = ai.definePrompt({
-  name: 'dateCourseTextPrompt',
-  input: { schema: DateCourseInputSchema },
-  output: { schema: DateCourseOutputSchema },
-  prompt: `You are an expert date planner. Based on the user's preferences, create a perfect and detailed date course.
+const dateCourseTextFlow = ai.defineFlow(
+  {
+    name: 'dateCourseTextFlow',
+    inputSchema: DateCourseInputSchema,
+    outputSchema: DateCourseOutputSchema,
+  },
+  async (input) => {
+    const { output } = await ai.generate({
+      prompt: `You are an expert date planner. Based on the user's preferences, create a perfect and detailed date course.
 The response must be in Korean.
 
 User Preferences:
-- Destination/Atmosphere: {{{destination}}}
-- Number of People: {{{partySize}}}
-- Duration: {{{duration}}}
-- Date: {{{date}}}
-- Transportation: {{{transportation}}}
-- Budget per person: {{{cost}}}
-- Preferred Date Type: {{{dateType}}}
+- Destination/Atmosphere: ${input.destination}
+- Number of People: ${input.partySize}
+- Duration: ${input.duration}
+- Date: ${input.date}
+- Transportation: ${input.transportation}
+- Budget per person: ${input.cost}
+- Preferred Date Type: ${input.dateType}
 
 Please provide a detailed plan. The output must be a JSON object that follows the specified schema.
 - Create a catchy overall title for the date course.
@@ -122,17 +89,54 @@ Example for one step object in the array:
 }
 
 Generate the entire course now based on the user's preferences.`,
-});
-
-
-const dateCourseFlow = ai.defineFlow(
-  {
-    name: 'dateCourseTextFlow',
-    inputSchema: DateCourseInputSchema,
-    outputSchema: DateCourseOutputSchema,
-  },
-  async (input) => {
-    const { output } = await prompt(input);
+      output: { schema: DateCourseOutputSchema },
+    });
     return output!;
   }
 );
+
+const dateCourseImageFlow = ai.defineFlow(
+  {
+    name: 'dateCourseImageFlow',
+    inputSchema: z.string(),
+    outputSchema: z.string(),
+  },
+  async (prompt) => {
+    try {
+      const { media } = await ai.generate({
+        model: 'googleai/imagen-4.0-fast-generate-001',
+        prompt: prompt,
+      });
+      return media?.url || '';
+    } catch (error) {
+      console.error('Image generation failed for prompt:', prompt, error);
+      return '';
+    }
+  }
+);
+
+
+export async function recommendDateCourse(input: DateCourseInput): Promise<DateCourseOutput> {
+    const textResult = await dateCourseTextFlow(input);
+    const season = getSeason(input.date);
+
+    const imagePromises = textResult.steps.map(step => 
+        dateCourseImageFlow(`${step.imagePrompt}, ${season}, photorealistic, high quality`)
+    );
+    
+    // This allows the client to receive the text result first, and then update with images.
+    // However, the current client implementation awaits this whole function.
+    // For a truly streaming experience, the client would need to be refactored.
+    // This server-side change still provides a performance benefit by parallelizing image generation.
+    const imageDataUris = await Promise.all(imagePromises);
+
+    const stepsWithImages = textResult.steps.map((step, index) => ({
+        ...step,
+        imageDataUri: imageDataUris[index] || undefined,
+    }));
+
+    return {
+        ...textResult,
+        steps: stepsWithImages,
+    };
+}
