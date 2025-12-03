@@ -44,6 +44,11 @@ export const potentialMatches: User[] = [
     communication: ['깊은 대화', '유머러스'],
     lifestyle: ['예술가', '웰빙'],
     photoUrl: imageMap.get('user-1')!,
+    photoUrls: [
+        imageMap.get('user-1')!,
+        "https://images.unsplash.com/photo-1554151228-14d9def656e4?q=80&w=1972&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1974&auto=format&fit=crop",
+    ]
   },
   {
     id: 'user-2',
@@ -59,6 +64,10 @@ export const potentialMatches: User[] = [
     communication: ['직설적', '진솔함'],
     lifestyle: ['활동적', '미니멀리스트'],
     photoUrl: imageMap.get('user-2')!,
+    photoUrls: [
+        imageMap.get('user-2')!,
+        "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop",
+    ]
   },
   {
     id: 'user-3',
@@ -74,6 +83,9 @@ export const potentialMatches: User[] = [
     communication: ['유머러스', '따뜻함'],
     lifestyle: ['탐험가', '활동적'],
     photoUrl: imageMap.get('user-3')!,
+     photoUrls: [
+        imageMap.get('user-3')!,
+    ]
   },
   {
     id: 'user-4',
@@ -89,6 +101,9 @@ export const potentialMatches: User[] = [
     communication: ['깊은 대화', '진솔함'],
     lifestyle: ['예술가', '웰빙'],
     photoUrl: imageMap.get('user-4')!,
+     photoUrls: [
+        imageMap.get('user-4')!,
+    ]
   },
   {
     id: 'user-5',
@@ -104,6 +119,11 @@ export const potentialMatches: User[] = [
     communication: ['따뜻함', '진솔함'],
     lifestyle: ['미니멀리스트', '집순이'],
     photoUrl: imageMap.get('user-5')!,
+    photoUrls: [
+        imageMap.get('user-5')!,
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1557053910-d9eadeed1c58?q=80&w=1974&auto=format&fit=crop",
+    ]
   },
    {
     id: 'user-6',
@@ -119,6 +139,9 @@ export const potentialMatches: User[] = [
     communication: ['깊은 대화', '직설적'],
     lifestyle: ['웰빙', '예술가'],
     photoUrl: imageMap.get('user-6')!,
+    photoUrls: [
+        imageMap.get('user-6')!,
+    ]
   },
   {
     id: 'user-7',
@@ -134,6 +157,9 @@ export const potentialMatches: User[] = [
     communication: ['유머러스', '따뜻함'],
     lifestyle: ['활동적', '탐험가'],
     photoUrl: imageMap.get('user-7')!,
+    photoUrls: [
+        imageMap.get('user-7')!,
+    ]
   }
 ];
 

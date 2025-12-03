@@ -38,8 +38,8 @@ const navItems = [
 export default function BottomNav() {
   const pathname = usePathname();
 
-  // Hide bottom nav on chat pages
-  if (pathname.startsWith('/chat/') || pathname.startsWith('/profile/edit')) {
+  // Hide bottom nav on specific pages
+  if (pathname.startsWith('/chat/') || pathname.startsWith('/profile/edit') || pathname.startsWith('/users/')) {
     return null;
   }
 

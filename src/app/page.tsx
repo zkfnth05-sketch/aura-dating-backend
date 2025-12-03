@@ -2,14 +2,11 @@
 
 import { useState } from 'react';
 import { potentialMatches } from '@/lib/data';
-import { useUser } from '@/contexts/user-context';
-import AIAnalysisDialog from '@/components/ai-analysis-dialog';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
 
 export default function HomePage() {
-  const { user: currentUser } = useUser();
   const [users, setUsers] = useState(potentialMatches);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
@@ -45,13 +42,17 @@ export default function HomePage() {
           ) : (
             users.map((user, index) => {
               const isActive = index === currentIndex;
+              // Prevent non-active cards from being clickable
+              if (index < currentIndex) return null;
+              
               return (
-                <ProfileCard
-                  key={user.id}
-                  user={user}
-                  isActive={isActive}
-                  swipeState={isActive ? swipeState : null}
-                />
+                <div key={user.id} className="absolute w-full h-full">
+                  <ProfileCard
+                    user={user}
+                    isActive={isActive}
+                    swipeState={isActive ? swipeState : null}
+                  />
+                </div>
               );
             })
           )}
