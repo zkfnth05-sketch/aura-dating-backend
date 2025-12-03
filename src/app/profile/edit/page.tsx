@@ -2,179 +2,206 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { currentUser } from '@/lib/data';
-import type { User } from '@/lib/types';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { X, PlusCircle, ArrowLeft } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { X, Plus, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { cn } from '@/lib/utils';
 
-const profileSchema = z.object({
-  bio: z.string().max(200, '소개는 200자 이내로 작성해주세요.'),
-  hobbies: z.array(z.string()).max(5, '최대 5개의 취미를 선택할 수 있습니다.'),
-  interests: z.array(z.string()).max(5, '최대 5개의 관심사를 선택할 수 있습니다.'),
-});
+const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
+  <div className="py-6">
+    <h2 className="text-lg font-semibold text-primary">{title}</h2>
+    {description && <p className="text-sm text-muted-foreground mt-1 mb-4">{description}</p>}
+    <div className={cn(description && "mt-4")}>{children}</div>
+  </div>
+);
 
-type ProfileFormValues = z.infer<typeof profileSchema>;
+const TagButton = ({ label, isSelected, onClick }: { label: string, isSelected: boolean, onClick: () => void }) => (
+  <Button
+    variant={isSelected ? 'default' : 'secondary'}
+    onClick={onClick}
+    className={cn(
+        "rounded-full h-auto py-2 px-4 text-sm font-normal",
+        isSelected ? "bg-primary text-primary-foreground" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+    )}
+  >
+    {label}
+  </Button>
+);
 
-const ItemInput = ({ items, onAdd, onRemove }: { items: string[], onAdd: (item: string) => void, onRemove: (item: string) => void }) => {
-  const [inputValue, setInputValue] = useState('');
-
-  const handleAdd = () => {
-    if (inputValue && !items.includes(inputValue)) {
-      onAdd(inputValue);
-      setInputValue('');
-    }
-  };
-  
-  return (
-    <div>
-       <div className="flex gap-2 mb-2">
-            <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAdd();
-                    }
-                }}
-                placeholder="항목을 입력하고 +를 누르세요"
-            />
-            <Button type="button" size="icon" variant="ghost" onClick={handleAdd}>
-                <PlusCircle className="h-5 w-5" />
-            </Button>
-        </div>
-      <div className="flex flex-wrap gap-2">
-        {items.map(item => (
-          <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal text-sm flex items-center gap-1.5">
-            {item}
-            <button type="button" onClick={() => onRemove(item)}>
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+const allValues = {
+  relationship: ['진지한 관계', '가벼운 만남', '새로운 친구', '대화 상대'],
+  values: ['모험', '안정', '창의성', '성장', '진정성', '열정', '평온함', '유머'],
+  communication: ['깊은 대화', '유머러스', '진솔함', '따뜻함', '직설적'],
+  lifestyle: ['활동적', '집순이', '예술가', '웰빙', '탐험가', '미니멀리스트'],
+  hobbies: ['영화 감상', '음악 듣기', '운동', '요리', '독서', '여행', '게임', '캠핑', '수채화', '베이킹', '코딩', '피아노 연주', '스쿠버 다이빙', '명상'],
+  interests: ['맛집 탐방', '카페 투어', '사진 촬영', '패션', '뷰티', '재테크', '자기계발', '그림 그리기', '독서', '등산', '클래식 음악', '요가']
+};
 
 export default function ProfileEditPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      bio: currentUser.bio || '',
-      hobbies: currentUser.hobbies || [],
-      interests: currentUser.interests || [],
-    },
+  const [profile, setProfile] = useState({
+    name: currentUser.name,
+    age: currentUser.age.toString(),
+    city: currentUser.location.split(',')[0],
+    bio: currentUser.bio,
+    gender: '여성',
+    relationship: ['새로운 친구'],
+    values: ['모험', '성장'],
+    communication: ['진솔함', '따뜻함'],
+    lifestyle: ['활동적', '탐험가'],
+    hobbies: currentUser.hobbies,
+    interests: currentUser.interests,
   });
+  const [aiEnhancement, setAiEnhancement] = useState(true);
 
-  const onSubmit = (data: ProfileFormValues) => {
-    console.log('Updated Profile:', data);
-    // In a real app, you would update the user data in your backend.
-    // For now, we'll just show a toast notification.
+  const handleMultiSelect = (field: keyof typeof profile, value: string) => {
+    setProfile(prev => {
+        const currentValues = prev[field] as string[];
+        const newValues = currentValues.includes(value)
+            ? currentValues.filter(v => v !== value)
+            : [...currentValues, value];
+        return { ...prev, [field]: newValues };
+    });
+  };
+
+  const handleSingleSelect = (field: 'gender' | 'relationship', value: string) => {
+    setProfile(prev => ({...prev, [field]: value}));
+  }
+
+  const handleSave = () => {
     toast({
-      title: '프로필 저장됨',
-      description: '프로필이 성공적으로 업데이트되었습니다.',
+      title: "프로필 저장됨",
+      description: "프로필이 성공적으로 업데이트되었습니다.",
     });
     router.push('/profile');
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur">
-         <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ArrowLeft />
-        </Button>
-        <h1 className="text-lg font-semibold">프로필 수정</h1>
-        <Button form="profile-form" type="submit" variant="link" className="text-primary">
-            저장
-        </Button>
+    <div className="min-h-screen bg-black text-white">
+      <header className="sticky top-0 z-10 p-4 bg-black/80 backdrop-blur-sm">
+        <h1 className="text-xl font-bold text-center">프로필 수정</h1>
       </header>
 
-      <main className="container py-8 px-4">
-        <Form {...form}>
-            <form id="profile-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <FormField
-                control={form.control}
-                name="bio"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="text-primary">소개</FormLabel>
-                    <FormControl>
-                    <Textarea
-                        placeholder="자신을 소개해보세요."
-                        className="resize-none"
-                        {...field}
+      <main className="container pb-24 px-4">
+        <Section title="사진 및 동영상">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm">AI 보정</span>
+            <Switch checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="relative aspect-square rounded-lg overflow-hidden group">
+              <Image src={currentUser.photoUrl} alt="My profile photo" fill className="object-cover"/>
+              <div className="absolute top-1 right-1">
+                <Button variant="destructive" size="icon" className="w-6 h-6 rounded-full bg-black/50">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700">
+              <Plus className="text-zinc-500" />
+            </div>
+          </div>
+           <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
+            <Video className="mr-2 h-4 w-4" />
+            동영상 추가
+          </Button>
+        </Section>
+
+        <Section title="이름">
+          <Input 
+            value={profile.name} 
+            onChange={e => setProfile(p => ({...p, name: e.target.value}))}
+            className="bg-zinc-900 border-zinc-800" />
+        </Section>
+
+        <Section title="나이">
+          <Input 
+            type="number"
+            value={profile.age} 
+            onChange={e => setProfile(p => ({...p, age: e.target.value}))}
+            className="bg-zinc-900 border-zinc-800" />
+        </Section>
+        
+        <Section title="성별">
+            <div className="flex space-x-2">
+                {['남성', '여성', '기타'].map(gender => (
+                    <TagButton 
+                        key={gender} 
+                        label={gender}
+                        isSelected={profile.gender === gender} 
+                        onClick={() => handleSingleSelect('gender', gender)}
                     />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+                ))}
+            </div>
+        </Section>
+        
+        <Section title="도시">
+            <Input 
+                value={profile.city} 
+                onChange={e => setProfile(p => ({...p, city: e.target.value}))}
+                className="bg-zinc-900 border-zinc-800" />
+        </Section>
 
-            <FormField
-                control={form.control}
-                name="hobbies"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="text-primary">취미</FormLabel>
-                    <FormControl>
-                        <ItemInput 
-                            items={field.value}
-                            onAdd={(item) => field.onChange([...field.value, item])}
-                            onRemove={(item) => field.onChange(field.value.filter(i => i !== item))}
-                        />
-                    </FormControl>
-                     <FormDescription>
-                        최대 5개까지 입력할 수 있습니다.
-                    </FormDescription>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
+        <Section title="소개">
+          <Textarea 
+            value={profile.bio} 
+            onChange={e => setProfile(p => ({...p, bio: e.target.value}))}
+            placeholder="새로운 연결을 찾고 모험을 시작할 준비가 되었습니다. 제 소개를 편집하여 개성을 표현해보세요!"
+            className="bg-zinc-900 border-zinc-800 h-24" />
+        </Section>
+        
+        <Section title="찾는 관계">
+            <div className="flex flex-wrap gap-2">
+                {allValues.relationship.map(item => (
+                    <TagButton 
+                        key={item}
+                        label={item}
+                        isSelected={(profile.relationship as string[]).includes(item)}
+                        onClick={() => handleMultiSelect('relationship', item)}
+                    />
+                ))}
+            </div>
+        </Section>
 
-            <FormField
-                control={form.control}
-                name="interests"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel className="text-primary">관심사</FormLabel>
-                    <FormControl>
-                        <ItemInput 
-                            items={field.value}
-                            onAdd={(item) => field.onChange([...field.value, item])}
-                            onRemove={(item) => field.onChange(field.value.filter(i => i !== item))}
+        {Object.entries({
+            '가치관': 'values', 
+            '소통 스타일': 'communication',
+            '라이프스타일': 'lifestyle',
+            '취미': 'hobbies',
+            '관심사': 'interests'
+        }).map(([title, key]) => (
+            <Section key={key} title={title} description="여러 개 선택">
+                <div className="flex flex-wrap gap-2">
+                    {allValues[key as keyof typeof allValues].map(item => (
+                        <TagButton 
+                            key={item}
+                            label={item}
+                            isSelected={(profile[key as keyof typeof profile] as string[]).includes(item)}
+                            onClick={() => handleMultiSelect(key as keyof typeof profile, item)}
                         />
-                    </FormControl>
-                     <FormDescription>
-                        최대 5개까지 입력할 수 있습니다.
-                    </FormDescription>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            </form>
-        </Form>
+                    ))}
+                </div>
+            </Section>
+        ))}
+
       </main>
+
+      <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-zinc-800">
+        <div className="container flex items-center justify-between">
+            <Button variant="ghost" onClick={() => router.back()}>취소</Button>
+            <Button onClick={handleSave} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8">저장</Button>
+        </div>
+        <div className="text-center mt-4">
+            <Button variant="link" className="text-xs text-zinc-500">회원탈퇴</Button>
+        </div>
+      </footer>
     </div>
   );
 }
