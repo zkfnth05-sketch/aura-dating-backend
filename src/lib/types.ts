@@ -9,6 +9,11 @@ export type User = {
   photoUrl: string;
   photoDataUri?: string; // For AI flow
   photoUrls?: string[];
+  gender?: '남성' | '여성' | '기타';
+  relationship?: string[];
+  values?: string[];
+  communication?: string[];
+  lifestyle?: string[];
 };
 
 export type Match = {

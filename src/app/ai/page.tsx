@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { potentialMatches, currentUser } from '@/lib/data';
+import { potentialMatches } from '@/lib/data';
+import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
 import { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
 
 export default function AiPage() {
+  const { user: currentUser } = useUser();
   const [recommendedUsers, setRecommendedUsers] = useState<User[]>(potentialMatches.slice(0, 6));
   const [analyses, setAnalyses] = useState<Record<string, AIMatchEnhancementOutput | null>>({});
   const [selectedUser, setSelectedUser] = useState<User | null>(null);

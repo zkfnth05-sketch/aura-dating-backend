@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { currentUser } from '@/lib/data';
+import { useUser } from '@/contexts/user-context';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,26 +48,45 @@ const allValues = {
 export default function ProfileEditPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user: currentUser, updateUser } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState({
     name: currentUser.name,
     age: currentUser.age.toString(),
-    city: currentUser.location.split(',')[0],
+    location: currentUser.location,
     bio: currentUser.bio,
-    gender: '여성' as '남성' | '여성' | '기타',
-    relationship: ['새로운 친구'],
-    values: ['모험', '성장'],
-    communication: ['진솔함', '따뜻함'],
-    lifestyle: ['활동적', '탐험가'],
+    gender: currentUser.gender || ('여성' as '남성' | '여성' | '기타'),
+    relationship: currentUser.relationship || ['새로운 친구'],
+    values: currentUser.values || ['모험', '성장'],
+    communication: currentUser.communication || ['진솔함', '따뜻함'],
+    lifestyle: currentUser.lifestyle || ['활동적', '탐험가'],
     hobbies: currentUser.hobbies,
     interests: currentUser.interests,
   });
 
-  const [images, setImages] = useState<string[]>([currentUser.photoUrl]);
+  const [images, setImages] = useState<string[]>(currentUser.photoUrls || [currentUser.photoUrl]);
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Ensure local state is in sync with context if user data changes
+    setProfile({
+        name: currentUser.name,
+        age: currentUser.age.toString(),
+        location: currentUser.location,
+        bio: currentUser.bio,
+        gender: currentUser.gender || '여성',
+        relationship: currentUser.relationship || ['새로운 친구'],
+        values: currentUser.values || ['모험', '성장'],
+        communication: currentUser.communication || ['진솔함', '따뜻함'],
+        lifestyle: currentUser.lifestyle || ['활동적', '탐험가'],
+        hobbies: currentUser.hobbies,
+        interests: currentUser.interests,
+    });
+    setImages(currentUser.photoUrls || [currentUser.photoUrl]);
+  }, [currentUser]);
 
 
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
@@ -85,6 +104,12 @@ export default function ProfileEditPage() {
   }
 
   const handleSave = () => {
+    updateUser({
+        ...profile,
+        age: parseInt(profile.age) || currentUser.age,
+        photoUrls: images,
+        photoUrl: images[0] || currentUser.photoUrl,
+    });
     toast({
       title: "프로필 저장됨",
       description: "프로필이 성공적으로 업데이트되었습니다.",
@@ -93,6 +118,7 @@ export default function ProfileEditPage() {
   };
 
   const processAndAddImage = async (dataUri: string) => {
+    let finalUri = dataUri;
     const newImageIndex = images.length;
     setImages(prev => [...prev, dataUri]);
 
@@ -100,9 +126,10 @@ export default function ProfileEditPage() {
       setIsEnhancing(newImageIndex);
       try {
         const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
+        finalUri = result.enhancedPhotoDataUri;
         setImages(prev => {
           const newImages = [...prev];
-          newImages[newImageIndex] = result.enhancedPhotoDataUri;
+          newImages[newImageIndex] = finalUri;
           return newImages;
         });
       } catch (error) {
@@ -241,8 +268,8 @@ export default function ProfileEditPage() {
         
         <Section title="도시">
             <Input 
-                value={profile.city} 
-                onChange={e => setProfile(p => ({...p, city: e.target.value}))}
+                value={profile.location} 
+                onChange={e => setProfile(p => ({...p, location: e.target.value}))}
                 className="bg-zinc-900 border-zinc-800" />
         </Section>
 

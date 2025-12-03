@@ -12,6 +12,11 @@ export const currentUser: User = {
   bio: '모험을 사랑하는 소프트웨어 엔지니어. 함께 새로운 카페나 등산로를 탐험할 분을 찾습니다.',
   hobbies: ['등산', '사진', '코딩'],
   interests: ['인디 음악', 'SF 영화', '커피'],
+  gender: '남성',
+  relationship: ['새로운 친구'],
+  values: ['모험', '성장'],
+  communication: ['진솔함', '따뜻함'],
+  lifestyle: ['활동적', '탐험가'],
   photoUrl: imageMap.get('current-user')!,
   photoUrls: [
     imageMap.get('current-user')!,
@@ -33,6 +38,7 @@ export const potentialMatches: User[] = [
     bio: '도시의 숨겨진 보석을 찾는 것을 좋아하는 미술학도. 같이 버블티 마실래요?',
     hobbies: ['그림 그리기', '독서', '요가'],
     interests: ['미술사', '다큐멘터리', 'K-Pop'],
+    gender: '여성',
     photoUrl: imageMap.get('user-1')!,
   },
   {
@@ -43,6 +49,7 @@ export const potentialMatches: User[] = [
     bio: '운동과 강아지를 사랑해요. 제 골든 리트리버는 제 가장 친한 친구입니다. 아침 조깅을 함께할 파트너를 찾아요.',
     hobbies: ['달리기', '요리', '기타 연주'],
     interests: ['강아지', '액션 영화', '수제 맥주'],
+    gender: '남성',
     photoUrl: imageMap.get('user-2')!,
   },
   {
@@ -53,6 +60,7 @@ export const potentialMatches: User[] = [
     bio: '여행 블로거이자 미식가. 항상 다음 여행을 계획하고 있어요. 마리오 카트는 아마 제가 이길걸요?',
     hobbies: ['여행', '블로깅', '비디오 게임'],
     interests: ['매운 음식', '90년대 R&B', '공포 영화'],
+    gender: '여성',
     photoUrl: imageMap.get('user-3')!,
   },
   {
@@ -63,6 +71,7 @@ export const potentialMatches: User[] = [
     bio: '음악가이자 커피 애호가. 주말엔 곡을 쓰거나 서울 최고의 라떼를 찾아다녀요.',
     hobbies: ['작곡', '커피 시음', '사이클링'],
     interests: ['라이브 음악', '철학', '미니멀리즘'],
+    gender: '남성',
     photoUrl: imageMap.get('user-4')!,
   },
   {
@@ -73,6 +82,7 @@ export const potentialMatches: User[] = [
     bio: '지속 가능성에 대한 열정을 가진 패션 디자이너. 중고 쇼핑과 옷 리폼을 좋아해요.',
     hobbies: ['재봉', '중고 쇼핑', '정원 가꾸기'],
     interests: ['지속가능한 패션', '고전 영화', '팟캐스트'],
+    gender: '여성',
     photoUrl: imageMap.get('user-5')!,
   },
    {
@@ -83,6 +93,7 @@ export const potentialMatches: User[] = [
     bio: '좋은 디자인의 가치를 아는 건축가. 좋은 책과 와인 한 잔과 함께하는 조용한 밤을 즐겨요.',
     hobbies: ['독서', '스케치', '와인 시음'],
     interests: ['현대 건축', '재즈 음악', '역사'],
+    gender: '남성',
     photoUrl: imageMap.get('user-6')!,
   },
   {
@@ -93,6 +104,7 @@ export const potentialMatches: User[] = [
     bio: '주말에 등산하는 것과 새로운 맛집을 탐방하는 것을 좋아해요. 유머 감각이 뛰어난 사람을 찾고 있어요.',
     hobbies: ['등산', '맛집 탐방', '콘서트'],
     interests: ['인디 음악', '코미디 쇼', '여행'],
+    gender: '여성',
     photoUrl: imageMap.get('user-7')!,
   }
 ];

@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import BottomNav from '@/components/layout/bottom-nav';
+import { UserProvider } from '@/contexts/user-context';
 
 export const metadata: Metadata = {
   title: 'Aura - 새로운 만남의 시작',
@@ -27,11 +28,13 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <div className="pb-24">
-          {children}
-        </div>
-        <Toaster />
-        <BottomNav />
+        <UserProvider>
+          <div className="pb-24">
+            {children}
+          </div>
+          <Toaster />
+          <BottomNav />
+        </UserProvider>
       </body>
     </html>
   );

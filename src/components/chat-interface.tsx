@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { Match, Message } from '@/lib/types';
-import { currentUser } from '@/lib/data';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Send } from 'lucide-react';
@@ -12,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 
-export default function ChatInterface({ match, initialMessages }: { match: Match; initialMessages: Message[] }) {
+export default function ChatInterface({ match, initialMessages, currentUserId }: { match: Match; initialMessages: Message[], currentUserId: string }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -23,7 +22,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
 
     const message: Message = {
       id: `msg-${Date.now()}`,
-      senderId: currentUser.id,
+      senderId: currentUserId,
       text: newMessage,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
@@ -66,9 +65,9 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
           {messages.map((message) => (
             <div
               key={message.id}
-              className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'justify-end' : 'justify-start')}
+              className={cn('flex items-end gap-2', message.senderId === currentUserId ? 'justify-end' : 'justify-start')}
             >
-              {message.senderId !== currentUser.id && (
+              {message.senderId !== currentUserId && (
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={match.user.photoUrl} />
                   <AvatarFallback>{match.user.name.charAt(0)}</AvatarFallback>
@@ -76,7 +75,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
               )}
               <div
                 className={cn('max-w-xs md:max-w-md px-4 py-2 rounded-2xl',
-                  message.senderId === currentUser.id
+                  message.senderId === currentUserId
                     ? 'bg-primary text-primary-foreground rounded-br-none'
                     : 'bg-accent text-accent-foreground rounded-bl-none'
                 )}

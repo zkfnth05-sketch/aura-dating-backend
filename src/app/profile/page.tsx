@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { currentUser } from '@/lib/data';
+import { useUser } from '@/contexts/user-context';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false }: 
 
 
 export default function ProfilePage() {
+  const { user: currentUser } = useUser();
   const [showLocationBanner, setShowLocationBanner] = useState(true);
   const [settings, setSettings] = useState({
     location: true,
@@ -61,25 +62,25 @@ export default function ProfilePage() {
         </div>
         
         <div className="container relative z-10 px-4">
-            <div className="grid grid-cols-3 gap-1 mt-1">
-                {otherPhotos.map((photoUrl, index) => (
-                    <div key={index} className="relative aspect-square rounded-md overflow-hidden">
-                        <Image 
-                            src={photoUrl}
-                            alt={`More photo of ${currentUser.name} ${index + 1}`}
-                            fill
-                            className="object-cover"
-                            data-ai-hint="person portrait"
-                        />
-                    </div>
-                ))}
-            </div>
-            <div className="text-left mt-4">
-                <h1 className="text-3xl font-bold">
-                    {currentUser.name}, {currentUser.age}
-                </h1>
-                <p className="text-muted-foreground">{currentUser.location}</p>
-            </div>
+          <div className="grid grid-cols-3 gap-1 mt-1">
+              {otherPhotos.map((photoUrl, index) => (
+                  <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                      <Image 
+                          src={photoUrl}
+                          alt={`More photo of ${currentUser.name} ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          data-ai-hint="person portrait"
+                      />
+                  </div>
+              ))}
+          </div>
+          <div className="text-left mt-4">
+              <h1 className="text-3xl font-bold">
+                  {currentUser.name}, {currentUser.age}
+              </h1>
+              <p className="text-muted-foreground">{currentUser.location}</p>
+          </div>
         </div>
 
         <div className="container relative z-10 px-4 mt-6">
