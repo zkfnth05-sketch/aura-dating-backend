@@ -84,7 +84,7 @@ export default function ProfilePage() {
             </div>
             <div className="text-left mt-4">
                 <h1 className="text-3xl font-bold">
-                    {currentUser.name}, {currentUser.age}
+                    {currentUser.name}, {currentUser.age}, {currentUser.gender}
                 </h1>
                 <p className="text-muted-foreground">{currentUser.location}</p>
             </div>

@@ -47,7 +47,7 @@ export default function ProfileCard({ user, isActive, swipeState }: ProfileCardP
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
         <h2 className="text-3xl font-bold drop-shadow-lg">
-          {user.name}, <span className="font-light">{user.age}</span>
+          {user.name}, <span className="font-light">{user.age}, {user.gender}</span>
         </h2>
         <p className="text-white/80 mt-1 drop-shadow-md line-clamp-2">{user.bio}</p>
         <div className="flex flex-wrap gap-2 mt-4">
