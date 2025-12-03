@@ -21,13 +21,13 @@ const UserProfileSchema = z.object({
   lifestyle: z.array(z.string()).optional(),
 });
 
-export const RecommendationReasonInputSchema = z.object({
+const RecommendationReasonInputSchema = z.object({
   currentUser: UserProfileSchema,
   potentialMatch: UserProfileSchema,
 });
 export type RecommendationReasonInput = z.infer<typeof RecommendationReasonInputSchema>;
 
-export const RecommendationReasonOutputSchema = z.object({
+const RecommendationReasonOutputSchema = z.object({
   reason: z.string().describe("A personalized and compelling reason, in Korean, explaining why the two users are a good match, based on their shared interests, hobbies, and values. The tone should be friendly and encouraging."),
 });
 export type RecommendationReasonOutput = z.infer<typeof RecommendationReasonOutputSchema>;
