@@ -7,10 +7,11 @@ import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
+import { getAIRecommendationReason } from '@/app/actions/ai-actions';
 
 
 // Helper components for page structure
@@ -21,13 +22,20 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
   </div>
 );
 
-const AIReasonSection = ({ reason }: { reason: string }) => (
-    <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4">
-        <h3 className="flex items-center font-semibold text-primary text-sm mb-3">
+const AIReasonSection = ({ reason, isLoading }: { reason: string | null; isLoading: boolean }) => (
+    <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4 min-h-[100px] flex items-center justify-center">
+        <h3 className="flex items-center font-semibold text-primary text-sm mb-3 absolute top-4 left-4">
             <Sparkles className="h-4 w-4 mr-2 text-primary/80" />
             AI 추천 이유
         </h3>
-        <p className="text-sm text-foreground/80">{reason}</p>
+        {isLoading ? (
+            <div className="text-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary/80 mx-auto" />
+                <p className="text-sm text-foreground/70 mt-2">AI 추천 이유 생성 중...</p>
+            </div>
+        ) : (
+             <p className="text-sm text-foreground/80 text-center">{reason}</p>
+        )}
     </div>
 )
 
@@ -36,34 +44,52 @@ export default function UserProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const userId = params.userId as string;
-  const recommendationReason = searchParams.get('reason');
+  const source = searchParams.get('from');
 
+  const { user: currentUser } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
+  const [aiReason, setAiReason] = useState<string | null>(null);
+  const [isAiReasonLoading, setIsAiReasonLoading] = useState(false);
+
   useEffect(() => {
     const foundUser = potentialMatches.find(u => u.id === userId);
     
     if (foundUser) {
       setUser(foundUser);
+      
+      if (source === 'ai') {
+        setIsAiReasonLoading(true);
+        getAIRecommendationReason({ currentUser, potentialMatch: foundUser })
+          .then(result => {
+            setAiReason(result.reason);
+          })
+          .catch(error => {
+            console.error("Failed to get AI recommendation reason:", error);
+            setAiReason("추천 이유를 불러오는 데 실패했습니다.");
+          })
+          .finally(() => {
+            setIsAiReasonLoading(false);
+          });
+      }
     }
     setIsLoading(false);
-  }, [userId]);
+  }, [userId, source, currentUser]);
 
   const handleAction = (action: 'like' | 'dislike' | 'superlike') => {
     if (!user) return;
     console.log(action, user.name);
-    // After action, go back to the previous page
     router.back();
   };
   
   if (isLoading) {
       return (
         <div className="flex items-center justify-center h-screen">
-          <p>Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       )
   }
@@ -122,7 +148,7 @@ export default function UserProfilePage() {
           </div>
 
           <div className="container relative z-10 px-4 mt-6">
-            {recommendationReason && <AIReasonSection reason={recommendationReason} />}
+            {source === 'ai' && <AIReasonSection reason={aiReason} isLoading={isAiReasonLoading} />}
             <div className="bg-card p-4 rounded-lg">
 
               <ProfileSection title="소개">

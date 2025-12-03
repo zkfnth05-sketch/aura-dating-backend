@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import type { User } from '@/lib/types';
 import { currentUser } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,44 +11,18 @@ import { Badge } from '@/components/ui/badge';
 import Header from './layout/header';
 import DateCourseForm from './date-course-form';
 import { calculateCompatibility } from '@/lib/utils';
-import { getAIRecommendationReason } from '@/app/actions/ai-actions';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
 
 interface AiPageClientProps {
   recommendedUsers: User[];
 }
 
 const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: User }) => {
-  const router = useRouter();
-  const [isGenerating, setIsGenerating] = useState(false);
   const { score, commonalities } = calculateCompatibility(currentUser, user);
 
-  const handleCardClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    setIsGenerating(true);
-    try {
-      const result = await getAIRecommendationReason({ currentUser, potentialMatch: user });
-      const reason = result.reason;
-      router.push(`/users/${user.id}?reason=${encodeURIComponent(reason)}`);
-    } catch (error) {
-      console.error("Failed to generate AI recommendation reason:", error);
-      // If AI fails, navigate without the reason
-      router.push(`/users/${user.id}`);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   return (
-    <Link href={`/users/${user.id}`} onClick={handleCardClick}>
+    <Link href={`/users/${user.id}?from=ai`}>
       <Card className="overflow-hidden relative group cursor-pointer">
-        {isGenerating && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/70">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-white text-sm mt-2">AI 추천 이유 생성 중...</p>
-          </div>
-        )}
         <div className="relative aspect-[3/4]">
           <Image
             src={user.photoUrl}
