@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import BottomNav from '@/components/layout/bottom-nav';
 import { UserProvider } from '@/contexts/user-context';
+import { NotificationSimulator } from '@/components/notification-simulator';
 
 export const metadata: Metadata = {
   title: 'Aura - 새로운 만남의 시작',
@@ -29,6 +30,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <UserProvider>
+          <NotificationSimulator />
           <div className="pb-24">
             {children}
           </div>
