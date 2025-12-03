@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Match, Message } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Send, Sparkles, Loader2, Mic } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Mic, Video } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
+import VideoChat from './video-chat';
 
 
 export default function ChatInterface({ match, initialMessages }: { match: Match; initialMessages: Message[]}) {
@@ -28,6 +29,9 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  const [isCallActive, setIsCallActive] = useState(false);
+
 
   const handleSendMessage = (e: React.FormEvent, text?: string) => {
     e.preventDefault();
@@ -149,6 +153,16 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
 
   const otherUser = match.user;
 
+  if (isCallActive) {
+    return (
+      <VideoChat
+        localUser={currentUser}
+        remoteUser={otherUser}
+        onEndCall={() => setIsCallActive(false)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10">
@@ -157,7 +171,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1">
           <Avatar>
             <AvatarImage src={otherUser.photoUrl} alt={otherUser.name} />
             <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
@@ -167,6 +181,9 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
             <p className="text-xs text-muted-foreground">온라인</p>
           </div>
         </div>
+        <Button variant="ghost" size="icon" onClick={() => setIsCallActive(true)}>
+          <Video className="h-6 w-6 text-primary" />
+        </Button>
       </header>
 
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
