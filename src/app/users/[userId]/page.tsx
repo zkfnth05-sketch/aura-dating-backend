@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, BrainCircuit, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
 import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
@@ -23,8 +23,11 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
   </div>
 );
 
-export default function UserProfilePage({ params }: { params: { userId: string } }) {
+export default function UserProfilePage() {
   const router = useRouter();
+  const params = useParams();
+  const userId = params.userId as string;
+
   const { user: currentUser } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,7 +41,6 @@ export default function UserProfilePage({ params }: { params: { userId: string }
 
 
   useEffect(() => {
-    const userId = params.userId;
     const foundUser = potentialMatches.find(u => u.id === userId);
     
     if (foundUser) {
@@ -53,7 +55,7 @@ export default function UserProfilePage({ params }: { params: { userId: string }
 
     }
     setIsLoading(false);
-  }, [params, currentUser]);
+  }, [userId, currentUser]);
   
   if (isLoading) {
       return (
