@@ -227,7 +227,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
         )}
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}>
-            <Sparkles className="h-5 w-5 text-primary" />
+            <Sparkles className="h-6 w-6 text-primary" />
           </Button>
           <Input
             value={newMessage}
@@ -237,7 +237,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
           />
           {newMessage.trim() ? (
             <Button type="submit" size="icon">
-                <Send className="h-5 w-5" />
+                <Send className="h-6 w-6 text-primary" />
             </Button>
           ) : (
             <Button 
@@ -249,7 +249,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
                 onTouchStart={handleMicPress}
                 onTouchEnd={handleMicRelease}
             >
-                <Mic className="h-5 w-5" />
+                <Mic className="h-6 w-6 text-primary" />
             </Button>
           )}
         </form>
