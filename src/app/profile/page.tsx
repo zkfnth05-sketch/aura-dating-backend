@@ -49,7 +49,7 @@ export default function ProfilePage() {
       {/* Remove Header to have full screen control */}
       {/* <Header /> */}
       <main className="flex-1">
-        <div className="relative w-full h-[60svh]">
+        <div className="relative w-full h-[40svh]">
           <Image
             src={mainPhoto}
             alt={`Profile of ${currentUser.name}`}
@@ -58,7 +58,6 @@ export default function ProfilePage() {
             data-ai-hint="person portrait"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           <div className="absolute bottom-4 left-4 text-white">
             <h1 className="text-3xl font-bold">
               {currentUser.name}, {currentUser.age}
