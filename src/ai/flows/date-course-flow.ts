@@ -58,7 +58,7 @@ const dateCourseTextFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      prompt: `You are an expert date planner. Based on the user's preferences, create a perfect and detailed date course.
+      prompt: `You are an expert date planner for young Koreans in their 20s and 30s. Based on the user's preferences, create a perfect and detailed date course.
 The response must be in Korean.
 
 User Preferences:
@@ -85,7 +85,7 @@ Example for one step object in the array:
   "directions": "레스토랑에서 택시로 10분 거리에 있는 '더 그리핀' 바",
   "cost": "1인당 30,000원",
   "romanticTip": "서로에게 오늘 하루 중 가장 좋았던 순간을 이야기해주고, 다음 데이트를 기약하는 설레는 대화를 나눠보세요.",
-  "imagePrompt": "A couple enjoying cocktails at a glamorous rooftop bar at night, with a sparkling city skyline in the background."
+  "imagePrompt": "A young Korean couple in their 20s enjoying cocktails at a glamorous rooftop bar at night, with a sparkling city skyline in the background."
 }
 
 Generate the entire course now based on the user's preferences.`,
@@ -121,11 +121,11 @@ export async function recommendDateCourse(input: DateCourseInput): Promise<DateC
     const season = getSeason(input.date);
 
     const imagePromises = textResult.steps.map(step => 
-        dateCourseImageFlow(`${step.imagePrompt}, ${season}, photorealistic, high quality`)
+        dateCourseImageFlow(`${step.imagePrompt}, young Korean couple in their 20s-30s, ${season}, photorealistic, high quality`)
     );
     
     // This allows the client to receive the text result first, and then update with images.
-    // However, the current client implementation awaits this whole function.
+    // The current client implementation awaits this whole function.
     // For a truly streaming experience, the client would need to be refactored.
     // This server-side change still provides a performance benefit by parallelizing image generation.
     const imageDataUris = await Promise.all(imagePromises);
