@@ -10,7 +10,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-export const DateCourseInputSchema = z.object({
+const DateCourseInputSchema = z.object({
   destination: z.string().describe('The desired travel destination or atmosphere.'),
   partySize: z.string().describe('The number of people for the date.'),
   duration: z.string().describe('The duration of the date.'),
@@ -19,7 +19,7 @@ export const DateCourseInputSchema = z.object({
 });
 export type DateCourseInput = z.infer<typeof DateCourseInputSchema>;
 
-export const DateCourseOutputSchema = z.object({
+const DateCourseOutputSchema = z.object({
   recommendation: z.string().describe('The detailed date course recommendation, including places to visit, activities, and a timeline. The response must be in Markdown format.'),
 });
 export type DateCourseOutput = z.infer<typeof DateCourseOutputSchema>;
