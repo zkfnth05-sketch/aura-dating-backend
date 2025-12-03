@@ -120,14 +120,11 @@ export async function recommendDateCourse(input: DateCourseInput): Promise<DateC
     const textResult = await dateCourseTextFlow(input);
     const season = getSeason(input.date);
 
-    const imagePromises = textResult.steps.map(step => 
-        dateCourseImageFlow(`${step.imagePrompt}, young Korean couple in their 20s-30s, ${season}, photorealistic, high quality`)
-    );
+    const imagePromises = textResult.steps.map(step => {
+        const imagePrompt = `${step.imagePrompt}, young Korean couple in their 20s-30s, ${season}, photorealistic, high quality`;
+        return dateCourseImageFlow(imagePrompt);
+    });
     
-    // This allows the client to receive the text result first, and then update with images.
-    // The current client implementation awaits this whole function.
-    // For a truly streaming experience, the client would need to be refactored.
-    // This server-side change still provides a performance benefit by parallelizing image generation.
     const imageDataUris = await Promise.all(imagePromises);
 
     const stepsWithImages = textResult.steps.map((step, index) => ({
