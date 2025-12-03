@@ -51,6 +51,7 @@ const prompt = ai.definePrompt({
   input: {schema: AIMatchEnhancementInputSchema},
   output: {schema: AIMatchEnhancementOutputSchema},
   prompt: `You are an AI dating matchmaker. You will analyze two user profiles and determine if they are a good match.
+Your response must be in Korean.
 
 User 1 Profile:
 Name: {{{userProfile1.name}}}
@@ -72,7 +73,7 @@ Analyze their profiles, identify shared hobbies and interests, and provide a com
 Also, generate a detailed analysis of the potential match, highlighting the strengths and weaknesses.
 Finally, provide a boolean value recommendInclude, which suggests whether or not to include these users as a potential match. Set this to true if the compatibility score is above 60.
 
-Output in JSON format as described by the schema.`,
+Output in JSON format as described by the schema. All text in the output must be in Korean.`,
 });
 
 const aiMatchEnhancementFlow = ai.defineFlow(
