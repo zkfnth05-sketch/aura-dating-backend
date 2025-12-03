@@ -7,9 +7,8 @@ import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BrainCircuit, Loader2 } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 import { notFound, useRouter } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
@@ -17,15 +16,10 @@ import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Helper components for page structure
-const ProfileSection = ({ title, children, isLoading = false, noPadding = false }: { title: string; children: React.ReactNode, isLoading?: boolean, noPadding?: boolean }) => (
-  <div className={cn(!noPadding && "py-4")}>
+const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="py-4">
     <h3 className="font-semibold text-primary text-sm mb-3">{title}</h3>
-    {isLoading ? (
-        <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-        </div>
-    ) : children}
+    {children}
   </div>
 );
 
@@ -123,13 +117,22 @@ export default function UserProfilePage({ params }: { params: { userId: string }
           <div className="container relative z-10 px-4 mt-6">
             <div className="bg-card p-4 rounded-lg">
                 
-              <ProfileSection title="AI 추천 이유" isLoading={isAiLoading}>
-                {aiError ? (
-                  <p className="text-sm text-destructive">{aiError}</p>
-                ) : (
-                  <p className="text-sm text-foreground/80">{aiAnalysis?.analysis}</p>
-                )}
-              </ProfileSection>
+              <div className="bg-yellow-900/20 border border-primary/50 rounded-lg p-4 mb-6">
+                  <h3 className="font-semibold text-primary text-sm mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    AI 추천 이유
+                  </h3>
+                  {isAiLoading ? (
+                      <div className="space-y-2">
+                          <Skeleton className="h-4 w-full bg-yellow-200/10" />
+                          <Skeleton className="h-4 w-3/4 bg-yellow-200/10" />
+                      </div>
+                  ) : aiError ? (
+                    <p className="text-sm text-destructive">{aiError}</p>
+                  ) : (
+                    <p className="text-sm text-foreground/90">{aiAnalysis?.analysis}</p>
+                  )}
+              </div>
 
               <ProfileSection title="소개">
                 <p className="text-sm text-foreground/80">{user.bio}</p>
