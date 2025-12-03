@@ -34,7 +34,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
-      <main className="flex-grow flex flex-col items-center justify-center p-4 overflow-hidden">
+      <main className="flex-grow flex flex-col items-center p-4 overflow-hidden">
         <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
           {currentIndex >= users.length ? (
             <div className="text-center">
