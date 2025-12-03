@@ -28,6 +28,7 @@ export type Match = {
 export type Message = {
   id: string;
   senderId: string;
-  text: string;
+  text?: string;
+  audioUrl?: string;
   timestamp: string;
 };

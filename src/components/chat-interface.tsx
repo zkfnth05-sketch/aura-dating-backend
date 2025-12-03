@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Match, Message } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Send, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Mic } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -12,10 +12,12 @@ import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function ChatInterface({ match, initialMessages }: { match: Match; initialMessages: Message[]}) {
   const { user: currentUser } = useUser();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -23,6 +25,9 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const handleSendMessage = (e: React.FormEvent, text?: string) => {
     e.preventDefault();
@@ -40,6 +45,17 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
     setNewMessage('');
     setSuggestions([]); // Clear suggestions after sending a message
   };
+
+  const handleSendAudio = (audioUrl: string) => {
+    const message: Message = {
+      id: `msg-${Date.now()}`,
+      senderId: currentUser.id,
+      audioUrl: audioUrl,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setMessages(prev => [...prev, message]);
+  };
+
 
   const handleGetSuggestions = async () => {
     setIsLoadingSuggestions(true);
@@ -60,7 +76,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
             },
             messages: messages.map(m => ({
                 senderName: m.senderId === currentUser.id ? currentUser.name : match.user.name,
-                text: m.text,
+                text: m.text || '음성 메시지',
             }))
         };
       const result = await getAIChatReplySuggestions(chatReplyInput);
@@ -72,6 +88,55 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
       setIsLoadingSuggestions(false);
     }
   };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = function() {
+            const base64Audio = reader.result as string;
+            handleSendAudio(base64Audio);
+        }
+        
+        audioChunksRef.current = [];
+        stream.getTracks().forEach(track => track.stop());
+      };
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+      toast({
+        variant: 'destructive',
+        title: '녹음 실패',
+        description: '마이크 접근 권한을 확인해주세요.',
+      })
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleMicPress = () => {
+    startRecording();
+  };
+
+  const handleMicRelease = () => {
+    stopRecording();
+  };
+
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -124,7 +189,11 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
                     : 'bg-accent text-accent-foreground rounded-bl-none'
                 )}
               >
-                <p className="text-sm">{message.text}</p>
+                {message.audioUrl ? (
+                    <audio controls src={message.audioUrl} className="h-10" />
+                ) : (
+                    <p className="text-sm">{message.text}</p>
+                )}
               </div>
             </div>
           ))}
@@ -166,9 +235,23 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
             placeholder="메시지를 입력하세요..."
             autoComplete="off"
           />
-          <Button type="submit" size="icon" disabled={!newMessage.trim()}>
-            <Send className="h-5 w-5" />
-          </Button>
+          {newMessage.trim() ? (
+            <Button type="submit" size="icon">
+                <Send className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Button 
+                type="button" 
+                size="icon"
+                variant={isRecording ? 'destructive' : 'ghost'}
+                onMouseDown={handleMicPress}
+                onMouseUp={handleMicRelease}
+                onTouchStart={handleMicPress}
+                onTouchEnd={handleMicRelease}
+            >
+                <Mic className="h-5 w-5" />
+            </Button>
+          )}
         </form>
       </footer>
     </div>
