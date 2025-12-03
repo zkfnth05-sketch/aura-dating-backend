@@ -8,8 +8,8 @@ import Link from 'next/link';
 import { potentialMatches } from '@/lib/data';
 import type { User } from '@/lib/types';
 
-const UserCard = ({ user }: { user: User }) => (
-  <Link href={`/users/${user.id}`}>
+const UserCard = ({ user, uniqueKey }: { user: User, uniqueKey: string }) => (
+  <Link href={`/users/${user.id}`} key={uniqueKey}>
     <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
       <Image
         src={user.photoUrl}
@@ -28,9 +28,18 @@ const UserCard = ({ user }: { user: User }) => (
 
 
 export default function HotPage() {
-  // For demonstration, splitting the potentialMatches array
-  const newUsers = potentialMatches.slice(0, Math.ceil(potentialMatches.length / 2));
-  const hotUsers = potentialMatches.slice(Math.ceil(potentialMatches.length / 2));
+  const generateUsers = (count: number, reverse: boolean = false): User[] => {
+    const users: User[] = [];
+    const sourceUsers = reverse ? [...potentialMatches].reverse() : potentialMatches;
+    if (sourceUsers.length === 0) return [];
+    for (let i = 0; i < count; i++) {
+      users.push(sourceUsers[i % sourceUsers.length]);
+    }
+    return users;
+  };
+  
+  const newUsers = generateUsers(12);
+  const hotUsers = generateUsers(12, true);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -53,15 +62,15 @@ export default function HotPage() {
           </TabsList>
           <TabsContent value="new" className="mt-0">
             <div className="grid grid-cols-2 gap-px bg-background">
-                {newUsers.map((user) => (
-                    <UserCard key={`new-${user.id}`} user={user} />
+                {newUsers.map((user, index) => (
+                    <UserCard key={`new-${user.id}-${index}`} user={user} uniqueKey={`new-${user.id}-${index}`} />
                 ))}
             </div>
           </TabsContent>
           <TabsContent value="hot" className="mt-0">
             <div className="grid grid-cols-2 gap-px bg-background">
-                {hotUsers.map((user) => (
-                    <UserCard key={`hot-${user.id}`} user={user} />
+                {hotUsers.map((user, index) => (
+                    <UserCard key={`hot-${user.id}-${index}`} user={user} uniqueKey={`hot-${user.id}-${index}`} />
                 ))}
             </div>
           </TabsContent>
