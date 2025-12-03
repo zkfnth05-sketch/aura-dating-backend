@@ -1,6 +1,5 @@
 import type { Match } from '@/lib/types';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 export default function MatchList({ matches }: { matches: Match[] }) {
@@ -20,7 +19,7 @@ export default function MatchList({ matches }: { matches: Match[] }) {
               </div>
               <p className="text-sm text-muted-foreground truncate">{match.lastMessage}</p>
             </div>
-            <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+            {match.lastMessage && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
           </div>
         </Link>
       ))}
