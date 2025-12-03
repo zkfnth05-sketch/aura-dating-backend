@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
@@ -105,39 +105,12 @@ const distanceOptions = [
 export default function MapClient({ users }: MapClientProps) {
   const router = useRouter();
   const currentUser = users[0];
-  const otherUsers = users.slice(1);
   
   const [zoom, setZoom] = useState(11);
-  const [currentPosition, setCurrentPosition] = useState({ lat: currentUser.lat, lng: currentUser.lng });
-
-  useEffect(() => {
-    let watchId: number;
-    if (navigator.geolocation) {
-      watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setCurrentPosition({ lat: latitude, lng: longitude });
-        },
-        (error) => {
-          console.error("Error getting user location:", error);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0,
-        }
-      );
-    }
-
-    return () => {
-      if (watchId) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
-  }, []);
+  const [center] = useState({ lat: currentUser.lat, lng: currentUser.lng });
 
   const handleMarkerClick = (userId: string) => {
-    if(userId === 'current-user') {
+    if(userId === 'current-user' || userId === currentUser.id) {
       router.push('/profile');
     } else {
       router.push(`/users/${userId}`);
@@ -164,36 +137,23 @@ export default function MapClient({ users }: MapClientProps) {
       </div>
       <div className="flex-1">
         <Map
-          center={currentPosition}
+          center={center}
           zoom={zoom}
           mapId={'dating-app-map-style'}
           disableDefaultUI={true}
           styles={mapStyles}
           gestureHandling={'greedy'}
         >
-          {/* Current User Marker */}
-          <AdvancedMarker
-            position={currentPosition}
-            onClick={() => handleMarkerClick(currentUser.id)}
-          >
-            <div className="relative w-12 h-12 rounded-full border-2 border-primary shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110">
-              <Image
-                src={currentUser.photoUrl}
-                alt={currentUser.name}
-                fill
-                className="object-cover rounded-full"
-              />
-            </div>
-          </AdvancedMarker>
-
-          {/* Other Users Markers */}
-          {otherUsers.map((user) => (
+          {users.map((user) => (
             <AdvancedMarker
               key={user.id}
               position={{ lat: user.lat, lng: user.lng }}
               onClick={() => handleMarkerClick(user.id)}
             >
-              <div className="relative w-12 h-12 rounded-full border-2 border-transparent shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110">
+              <div className={cn(
+                  "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
+                  user.id === currentUser.id ? "border-primary" : "border-transparent"
+              )}>
                 <Image
                   src={user.photoUrl}
                   alt={user.name}
