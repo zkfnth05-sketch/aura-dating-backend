@@ -162,7 +162,7 @@ export default function ProfileEditPage() {
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept="image/*"
+                    accept="image/*,image/heic,image/heif"
                   />
                 </div>
               </DialogContent>
