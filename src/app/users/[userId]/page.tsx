@@ -23,19 +23,21 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
 );
 
 const AIReasonSection = ({ reason, isLoading }: { reason: string | null; isLoading: boolean }) => (
-    <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4 min-h-[100px] flex items-center justify-center">
-        <h3 className="flex items-center font-semibold text-primary text-sm mb-3 absolute top-4 left-4">
+    <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4 min-h-[120px] flex flex-col relative">
+        <h3 className="flex items-center font-semibold text-primary text-sm">
             <Sparkles className="h-4 w-4 mr-2 text-primary/80" />
             AI 추천 이유
         </h3>
-        {isLoading ? (
-            <div className="text-center">
-                <Loader2 className="h-6 w-6 animate-spin text-primary/80 mx-auto" />
-                <p className="text-sm text-foreground/70 mt-2">AI 추천 이유 생성 중...</p>
-            </div>
-        ) : (
-             <p className="text-sm text-foreground/80 text-center">{reason}</p>
-        )}
+        <div className="flex-grow flex items-center justify-center pt-2">
+            {isLoading ? (
+                <div className="text-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary/80 mx-auto" />
+                    <p className="text-sm text-foreground/70 mt-2">AI 추천 이유 생성 중...</p>
+                </div>
+            ) : (
+                <p className="text-sm text-foreground/80 text-center">{reason}</p>
+            )}
+        </div>
     </div>
 )
 
