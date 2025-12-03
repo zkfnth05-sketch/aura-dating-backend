@@ -19,27 +19,33 @@ type AIAnalysisDialogProps = {
   onClose: () => void;
   user1: User;
   user2: User;
+  initialAnalysis?: AIMatchEnhancementOutput;
 };
 
-export default function AIAnalysisDialog({ isOpen, onClose, user1, user2 }: AIAnalysisDialogProps) {
-  const [analysis, setAnalysis] = useState<AIMatchEnhancementOutput | null>(null);
+export default function AIAnalysisDialog({ isOpen, onClose, user1, user2, initialAnalysis }: AIAnalysisDialogProps) {
+  const [analysis, setAnalysis] = useState<AIMatchEnhancementOutput | null>(initialAnalysis || null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && !analysis && !isLoading) {
+    if (isOpen && !initialAnalysis && !analysis && !isLoading) {
       setIsLoading(true);
       setError(null);
       getAIMatchAnalysis({ userProfile1: user1, userProfile2: user2 })
         .then(setAnalysis)
         .catch(() => setError('AI 분석에 실패했습니다. 다시 시도해주세요.'))
         .finally(() => setIsLoading(false));
+    } else if(initialAnalysis) {
+      setAnalysis(initialAnalysis);
     }
+
     if(!isOpen) {
-      // Reset state when dialog is closed
+      // Reset state when dialog is closed for next opening
       setAnalysis(null);
+      setIsLoading(false);
+      setError(null);
     }
-  }, [isOpen, user1, user2, analysis, isLoading]);
+  }, [isOpen, user1, user2, analysis, isLoading, initialAnalysis]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -50,7 +56,7 @@ export default function AIAnalysisDialog({ isOpen, onClose, user1, user2 }: AIAn
             AI 매치 분석
           </DialogTitle>
           <DialogDescription>
-            당신과 {user2.name}님에 대한 AI의 생각입니다.
+            {user1.name}님과 {user2.name}님에 대한 AI의 생각입니다.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-6">

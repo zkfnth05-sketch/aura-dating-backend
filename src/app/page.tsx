@@ -11,7 +11,6 @@ export default function HomePage() {
   const [users, setUsers] = useState(potentialMatches);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
 
   const handleAction = (action: 'like' | 'dislike' | 'superlike') => {
     if (currentIndex >= users.length) return;
@@ -64,15 +63,6 @@ export default function HomePage() {
               onLike={() => handleAction('like')}
             />
           </div>
-        )}
-
-        {activeUser && (
-          <AIAnalysisDialog
-            isOpen={showAIAnalysis}
-            onClose={() => setShowAIAnalysis(false)}
-            user1={currentUser}
-            user2={activeUser}
-          />
         )}
       </main>
     </div>

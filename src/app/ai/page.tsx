@@ -1,13 +1,38 @@
+'use client';
+
+import { useState } from 'react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { potentialMatches } from '@/lib/data';
+import { potentialMatches, currentUser } from '@/lib/data';
+import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import AIAnalysisDialog from '@/components/ai-analysis-dialog';
+import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
+import { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
 
 export default function AiPage() {
-  // Filter some users for the grid, for example, the first 6.
-  const recommendedUsers = potentialMatches.slice(0, 6);
+  const [recommendedUsers, setRecommendedUsers] = useState<User[]>(potentialMatches.slice(0, 6));
+  const [analyses, setAnalyses] = useState<Record<string, AIMatchEnhancementOutput | null>>({});
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  
+  const handleCardClick = async (user: User) => {
+    setSelectedUser(user);
+    if (!analyses[user.id]) {
+      try {
+        const result = await getAIMatchAnalysis({ userProfile1: currentUser, userProfile2: user });
+        setAnalyses(prev => ({ ...prev, [user.id]: result }));
+      } catch (error) {
+        console.error("Failed to get AI analysis", error);
+        // Optionally, show an error to the user
+      }
+    }
+  };
+
+  const closeDialog = () => {
+    setSelectedUser(null);
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -31,7 +56,11 @@ export default function AiPage() {
           <TabsContent value="ideal-type" className="mt-6">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {recommendedUsers.map((user) => (
-                <Card key={user.id} className="overflow-hidden relative group">
+                <Card 
+                  key={user.id} 
+                  className="overflow-hidden relative group cursor-pointer"
+                  onClick={() => handleCardClick(user)}
+                >
                   <div className="relative aspect-[3/4]">
                     <Image
                       src={user.photoUrl}
@@ -46,10 +75,7 @@ export default function AiPage() {
                     <p className="font-semibold truncate">{user.name}, {user.age}</p>
                   </div>
                   <div className="absolute top-2 left-2">
-                    <Badge className="bg-primary/80 text-primary-foreground text-xs">8% 일치</Badge>
-                  </div>
-                   <div className="absolute top-2 right-2">
-                    <Badge variant="secondary" className="text-xs">공통점 1개</Badge>
+                    <Badge className="bg-primary/80 text-primary-foreground text-xs">AI 추천</Badge>
                   </div>
                 </Card>
               ))}
@@ -62,6 +88,16 @@ export default function AiPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {selectedUser && (
+        <AIAnalysisDialog
+          isOpen={!!selectedUser}
+          onClose={closeDialog}
+          user1={currentUser}
+          user2={selectedUser}
+          initialAnalysis={analyses[selectedUser.id] || undefined}
+        />
+      )}
     </div>
   );
 }
