@@ -38,7 +38,8 @@ export default function UserProfilePage({ params }: { params: { userId: string }
 
 
   useEffect(() => {
-    const foundUser = potentialMatches.find(u => u.id === params.userId);
+    const userId = params.userId;
+    const foundUser = potentialMatches.find(u => u.id === userId);
     if (foundUser) {
       setUser(foundUser);
       
