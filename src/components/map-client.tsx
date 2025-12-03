@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { User } from '@/lib/types';
 import { Slider } from '@/components/ui/slider';
@@ -96,7 +96,24 @@ const mapStyles: google.maps.MapTypeStyle[] = [
 export default function MapClient({ users }: MapClientProps) {
   const router = useRouter();
   const [zoom, setZoom] = useState(11);
-  const center = { lat: users[0].lat, lng: users[0].lng };
+  const [center, setCenter] = useState({ lat: users[0].lat, lng: users[0].lng });
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCenter({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setZoom(14); // Zoom in closer when location is found
+        },
+        () => {
+          console.log("Geolocation permission denied. Using default location.");
+        }
+      );
+    }
+  }, []);
 
   const handleMarkerClick = (userId: string) => {
     if(userId === 'current-user') {
@@ -122,7 +139,7 @@ export default function MapClient({ users }: MapClientProps) {
       </div>
       <div className="flex-1">
         <Map
-          defaultCenter={center}
+          center={center}
           zoom={zoom}
           mapId={'dating-app-map-style'}
           disableDefaultUI={true}
