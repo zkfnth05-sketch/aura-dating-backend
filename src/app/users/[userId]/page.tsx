@@ -7,11 +7,9 @@ import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BrainCircuit } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ArrowLeft } from 'lucide-react';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
-import AIAnalysisDialog from '@/components/ai-analysis-dialog';
 
 
 // Helper components for page structure
@@ -27,15 +25,11 @@ export default function UserProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
 
-  const { user: currentUser } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
-
 
   useEffect(() => {
     const foundUser = potentialMatches.find(u => u.id === userId);
@@ -109,11 +103,6 @@ export default function UserProfilePage() {
 
           <div className="container relative z-10 px-4 mt-6">
             <div className="bg-card p-4 rounded-lg">
-                
-              <Button onClick={() => setIsAiDialogOpen(true)} className="w-full mb-6 bg-yellow-900/20 text-primary hover:bg-yellow-900/40 border border-primary/50">
-                <BrainCircuit className="mr-2 h-4 w-4" />
-                AI 매치 분석 보기
-              </Button>
 
               <ProfileSection title="소개">
                 <p className="text-sm text-foreground/80">{user.bio}</p>
@@ -185,14 +174,6 @@ export default function UserProfilePage() {
         images={allPhotos}
         startIndex={selectedImageIndex}
       />
-      {isAiDialogOpen && user && (
-        <AIAnalysisDialog
-            isOpen={isAiDialogOpen}
-            onClose={() => setIsAiDialogOpen(false)}
-            user1={currentUser}
-            user2={user}
-        />
-      )}
     </>
   );
 }

@@ -29,3 +29,12 @@ export type Message = {
   text: string;
   timestamp: string;
 };
+
+// This type is no longer needed as we removed the AI match analysis
+// export type AIMatchEnhancementOutput = {
+//   compatibilityScore: number;
+//   sharedHobbies: string[];
+//   sharedInterests: string[];
+//   analysis: string;
+//   recommendInclude: boolean;
+// };

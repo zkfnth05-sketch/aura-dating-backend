@@ -1,56 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { User } from '@/lib/types';
-import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
-import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
 import { currentUser } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import Header from './layout/header';
 import DateCourseForm from './date-course-form';
-
-type AnalysisState = {
-  isLoading: boolean;
-  data: AIMatchEnhancementOutput | null;
-  error: string | null;
-};
+import { calculateCompatibility } from '@/lib/utils';
 
 interface AiPageClientProps {
   recommendedUsers: User[];
 }
 
 export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
-  const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisState>>({});
-
-  useEffect(() => {
-    recommendedUsers.forEach(user => {
-      if (!analysisResults[user.id]) {
-        setAnalysisResults(prev => ({
-          ...prev,
-          [user.id]: { isLoading: true, data: null, error: null },
-        }));
-
-        getAIMatchAnalysis({ userProfile1: currentUser, userProfile2: user })
-          .then(data => {
-            setAnalysisResults(prev => ({
-              ...prev,
-              [user.id]: { isLoading: false, data, error: null },
-            }));
-          })
-          .catch(() => {
-            setAnalysisResults(prev => ({
-              ...prev,
-              [user.id]: { isLoading: false, data: null, error: '분석 실패' },
-            }));
-          });
-      }
-    });
-  }, [recommendedUsers, analysisResults]);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -74,8 +40,7 @@ export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
           <TabsContent value="ideal-type" className="mt-6">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {recommendedUsers.map((user) => {
-                const analysis = analysisResults[user.id];
-                const commonalitiesCount = (analysis?.data?.sharedHobbies?.length || 0) + (analysis?.data?.sharedInterests?.length || 0);
+                const { score, commonalities } = calculateCompatibility(currentUser, user);
 
                 return (
                   <Link href={`/users/${user.id}`} key={user.id}>
@@ -94,21 +59,15 @@ export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
                       </div>
                       
                       <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
-                        {analysis?.isLoading ? (
-                            <Skeleton className="h-6 w-12 rounded-md bg-white/30" />
-                        ) : analysis?.data ? (
-                            <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
-                                {analysis.data.compatibilityScore}% 일치
-                            </Badge>
-                        ) : null}
+                        <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
+                            {score}% 일치
+                        </Badge>
 
-                        {analysis?.isLoading ? (
-                           <Skeleton className="h-6 w-20 rounded-md bg-black/40" />
-                        ) : commonalitiesCount > 0 ? (
+                        {commonalities.length > 0 && (
                            <Badge variant="secondary" className="bg-black/50 text-white border-none text-xs py-1">
-                                공통점 {commonalitiesCount}개
+                                공통점 {commonalities.length}개
                            </Badge>
-                        ) : null}
+                        )}
                       </div>
 
                       <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
