@@ -46,7 +46,7 @@ export default function ProfilePage() {
                 <p className="mt-4">{currentUser.bio}</p>
 
                 <div className="mt-6">
-                    <h3 className="font-semibold text-primary">Interests</h3>
+                    <h3 className="font-semibold text-primary">관심사</h3>
                     <div className="flex flex-wrap gap-2 mt-2">
                         {currentUser.interests.map(interest => (
                             <Badge key={interest} variant="secondary">{interest}</Badge>
@@ -55,7 +55,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6">
-                    <h3 className="font-semibold text-primary">Hobbies</h3>
+                    <h3 className="font-semibold text-primary">취미</h3>
                     <div className="flex flex-wrap gap-2 mt-2">
                         {currentUser.hobbies.map(hobby => (
                             <Badge key={hobby} variant="secondary">{hobby}</Badge>

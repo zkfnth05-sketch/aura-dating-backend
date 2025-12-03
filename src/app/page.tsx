@@ -35,11 +35,11 @@ export default function HomePage() {
     <div className="flex flex-col h-screen bg-background">
       <Header />
       <main className="flex-grow flex flex-col items-center p-4 overflow-hidden">
-        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
+        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center">
           {currentIndex >= users.length ? (
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-primary">That's everyone for now!</h2>
-              <p className="text-muted-foreground mt-2">Come back later for more profiles.</p>
+              <h2 className="text-2xl font-bold text-primary">오늘은 여기까지예요!</h2>
+              <p className="text-muted-foreground mt-2">새로운 상대를 보려면 나중에 다시 확인해주세요.</p>
             </div>
           ) : (
             users.map((user, index) => {

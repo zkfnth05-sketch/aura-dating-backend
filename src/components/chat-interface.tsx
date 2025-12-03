@@ -56,7 +56,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
           </Avatar>
           <div>
             <p className="font-semibold">{match.user.name}</p>
-            <p className="text-xs text-muted-foreground">Online</p>
+            <p className="text-xs text-muted-foreground">온라인</p>
           </div>
         </div>
       </header>
@@ -93,7 +93,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="메시지를 입력하세요..."
             autoComplete="off"
           />
           <Button type="submit" size="icon" disabled={!newMessage.trim()}>
