@@ -27,8 +27,12 @@ export default function ImageCarouselDialog({ isOpen, onClose, images, startInde
   const [api, setApi] = useState<EmblaCarouselType | undefined>()
 
   useEffect(() => {
-    if (api && isOpen) {
-        api.scrollTo(startIndex, true);
+    if (!api) {
+      return
+    }
+    // Ensure the carousel goes to the correct start index when opened
+    if (isOpen) {
+      api.scrollTo(startIndex, true);
     }
   }, [api, isOpen, startIndex])
 
