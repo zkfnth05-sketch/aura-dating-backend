@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { calculateCompatibility } from '@/lib/utils';
+import { Heart } from 'lucide-react';
 
 type ProfileCardProps = {
   currentUser: User;
@@ -65,9 +66,17 @@ export default function ProfileCard({ currentUser, potentialMatch, isActive, swi
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-          <h2 className="text-3xl font-bold drop-shadow-lg">
-            {potentialMatch.name}, <span className="font-light">{potentialMatch.age}, {potentialMatch.gender}</span>
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-3xl font-bold drop-shadow-lg">
+              {potentialMatch.name}, <span className="font-light">{potentialMatch.age}, {potentialMatch.gender}</span>
+            </h2>
+            {potentialMatch.likeCount !== undefined && (
+              <div className="flex items-center gap-1 text-white/90 drop-shadow-md">
+                <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                <span className="font-semibold text-lg">{potentialMatch.likeCount}</span>
+              </div>
+            )}
+          </div>
           <p className="text-white/80 mt-1 drop-shadow-md line-clamp-2">{potentialMatch.bio}</p>
           <div className="flex flex-wrap gap-2 mt-4">
             {allTags.slice(0, 4).map((item) => (

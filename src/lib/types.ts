@@ -19,6 +19,7 @@ export type User = {
   likesMe?: boolean;
   likedByMe?: boolean;
   likedTimestamp?: string; // ISO 8601 date string
+  likeCount?: number;
 };
 
 export type Match = {
