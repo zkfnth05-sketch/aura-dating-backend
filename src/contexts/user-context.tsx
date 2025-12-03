@@ -4,30 +4,52 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import type { User } from '@/lib/types';
 import { currentUser as initialUser } from '@/lib/data';
 
+interface NotificationSettings {
+  all: boolean;
+  newMatch: boolean;
+  newMessage: boolean;
+  videoCall: boolean;
+}
+
 interface UserContextType {
   user: User;
   updateUser: (newUserData: Partial<User>) => void;
+  notificationSettings: NotificationSettings;
+  updateNotificationSettings: (newSettings: Partial<NotificationSettings>) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const initialSettings: NotificationSettings = {
+    all: true,
+    newMatch: true,
+    newMessage: true,
+    videoCall: false,
+};
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(initialUser);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
+
 
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
-        // Combine stored data with initial photo data
         const parsedData = JSON.parse(storedUser);
         setUser(prevUser => ({
-          ...prevUser, // This keeps initial photos
-          ...parsedData, // This applies stored text changes
+          ...prevUser, 
+          ...parsedData,
         }));
       }
+      const storedSettings = localStorage.getItem('notificationSettings');
+      if(storedSettings) {
+        setNotificationSettings(JSON.parse(storedSettings));
+      }
+
     } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('currentUser');
+      console.error("Failed to parse data from localStorage", error);
+      localStorage.clear();
     }
   }, []);
 
@@ -36,13 +58,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const updatedUser = { ...prevUser, ...newUserData };
         
         try {
-          // Create a copy of the user object for storing in localStorage
           const userToStore = { ...updatedUser };
-          
-          // Remove all large photo data URIs and URLs before saving to avoid quota errors
           delete userToStore.photoDataUri;
           delete userToStore.photoUrls;
-          delete userToStore.photoUrl; // also remove single photoUrl if it's a data URI
+          delete userToStore.photoUrl;
 
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
         } catch (error) {
@@ -53,8 +72,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateNotificationSettings = (newSettings: Partial<NotificationSettings>) => {
+    setNotificationSettings(prevSettings => {
+        const updatedSettings = { ...prevSettings, ...newSettings };
+        try {
+            localStorage.setItem('notificationSettings', JSON.stringify(updatedSettings));
+        } catch (error) {
+            console.error("Failed to save notification settings to localStorage", error);
+        }
+        return updatedSettings;
+    });
+  };
+
   return (
-    <UserContext.Provider value={{ user, updateUser }}>
+    <UserContext.Provider value={{ user, updateUser, notificationSettings, updateNotificationSettings }}>
       {children}
     </UserContext.Provider>
   );

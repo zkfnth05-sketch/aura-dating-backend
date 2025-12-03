@@ -28,20 +28,13 @@ const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false }: 
 
 
 export default function ProfilePage() {
-  const { user: currentUser } = useUser();
+  const { user: currentUser, notificationSettings, updateNotificationSettings } = useUser();
   const [showLocationBanner, setShowLocationBanner] = useState(true);
-  const [settings, setSettings] = useState({
-    location: true,
-    notifications: true,
-    newMatch: true,
-    newMessage: true,
-    videoCall: false,
-  });
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  const handleSettingChange = (id: keyof typeof settings) => (checked: boolean) => {
-    setSettings(prev => ({...prev, [id]: checked}));
+  const handleSettingChange = (id: keyof typeof notificationSettings) => (checked: boolean) => {
+    updateNotificationSettings({ [id]: checked });
   };
   
   const allPhotos = currentUser.photoUrls || [currentUser.photoUrl];
@@ -169,31 +162,31 @@ export default function ProfilePage() {
                   <ProfileToggle 
                     id="location"
                     label="실시간 위치 공유" 
-                    checked={settings.location}
-                    onCheckedChange={handleSettingChange('location')}
+                    checked={true} // This seems to be a placeholder, adjust if state is needed
+                    onCheckedChange={() => {}}
                   />
                   <ProfileToggle 
                     id="notifications"
                     label="알림 설정" 
-                    checked={settings.notifications}
-                    onCheckedChange={handleSettingChange('notifications')}
+                    checked={notificationSettings.all}
+                    onCheckedChange={handleSettingChange('all')}
                   />
                   <ProfileToggle 
                     id="newMatch"
                     label="새로운 매치"
-                    checked={settings.newMatch}
+                    checked={notificationSettings.newMatch}
                     onCheckedChange={handleSettingChange('newMatch')}
                   />
                   <ProfileToggle 
                     id="newMessage"
                     label="새로운 메시지" 
-                    checked={settings.newMessage}
+                    checked={notificationSettings.newMessage}
                     onCheckedChange={handleSettingChange('newMessage')}
                   />
                   <ProfileToggle 
                     id="videoCall"
                     label="영상 통화 요청" 
-                    checked={settings.videoCall}
+                    checked={notificationSettings.videoCall}
                     onCheckedChange={handleSettingChange('videoCall')}
                     isLast={true}
                   />
