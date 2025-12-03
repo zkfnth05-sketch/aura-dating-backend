@@ -2,13 +2,13 @@
 /**
  * @fileOverview An AI flow for enhancing user profile photos.
  *
- * - enhancePhoto - A function that takes a photo and gender, and returns an enhanced photo.
+ * - enhancePhoto - A function that takes a photo and returns an enhanced photo.
  * - EnhancePhotoInput - The input type for the enhancePhoto function.
  * - EnhancePhotoOutput - The return type for the enhancePhoto function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const EnhancePhotoInputSchema = z.object({
   photoDataUri: z
@@ -16,6 +16,9 @@ const EnhancePhotoInputSchema = z.object({
     .describe(
       "A photo of the user, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  // Gender is no longer needed for the new prompt but we keep it in the schema 
+  // to avoid breaking the calling component for now.
+  // It can be removed in a future refactor.
   gender: z.enum(['남성', '여성', '기타']).describe('The gender of the user in the photo.'),
 });
 export type EnhancePhotoInput = z.infer<typeof EnhancePhotoInputSchema>;
@@ -33,9 +36,8 @@ export async function enhancePhoto(input: EnhancePhotoInput): Promise<EnhancePho
   return enhancePhotoFlow(input);
 }
 
-const malePrompt = `Enhance the photo to make the man look more handsome and cool. Give him a more voluminous, well-balanced, and attractive body. The output must be a photorealistic image.`;
-const femalePrompt = `Enhance the photo to make the woman's face prettier and sexier with smoother skin. Give her a more voluminous, well-balanced, and sexy body. The output must be a photorealistic image.`;
-const otherPrompt = `Enhance the photo to make the person look more attractive. The output must be a photorealistic image.`;
+const enhancementPrompt = `Enhance this user's profile picture for a high-end dating app. Improve the lighting and composition to make the person look more stylish, confident, and attractive. Give the photo a polished, professional, and slightly more glamorous feel, while ensuring the person's core features remain recognizable. Make them look their absolute best. The output must be a photorealistic image.`;
+
 
 const enhancePhotoFlow = ai.defineFlow(
   {
@@ -44,20 +46,11 @@ const enhancePhotoFlow = ai.defineFlow(
     outputSchema: EnhancePhotoOutputSchema,
   },
   async (input) => {
-    let enhancementInstruction = '';
-    if (input.gender === '남성') {
-        enhancementInstruction = malePrompt;
-    } else if (input.gender === '여성') {
-        enhancementInstruction = femalePrompt;
-    } else {
-        enhancementInstruction = otherPrompt;
-    }
-
     const { media } = await ai.generate({
         model: 'googleai/gemini-2.5-flash-image-preview',
         prompt: [
             { media: { url: input.photoDataUri } },
-            { text: enhancementInstruction },
+            { text: enhancementPrompt },
         ],
         config: {
             responseModalities: ['IMAGE'],
