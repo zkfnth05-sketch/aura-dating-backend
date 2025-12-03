@@ -15,6 +15,11 @@ import {
     RecommendationReasonInput,
     RecommendationReasonOutput,
 } from '@/ai/flows/recommendation-reason-flow';
+import { 
+    getChatReplySuggestions,
+    ChatReplyInput,
+    ChatReplyOutput,
+} from '@/ai/flows/chat-reply-flow';
 
 export async function getEnhancedPhoto(
     input: EnhancePhotoInput
@@ -49,5 +54,17 @@ export async function getAIRecommendationReason(
     } catch (error) {
         console.error('AI Recommendation Reason generation failed:', error);
         throw new Error('Failed to get AI recommendation reason.');
+    }
+}
+
+export async function getAIChatReplySuggestions(
+    input: ChatReplyInput
+    ): Promise<ChatReplyOutput> {
+    try {
+        const result = await getChatReplySuggestions(input);
+        return result;
+    } catch (error) {
+        console.error('AI Chat Reply suggestion failed:', error);
+        throw new Error('Failed to get AI chat reply suggestions.');
     }
 }

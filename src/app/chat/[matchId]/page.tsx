@@ -11,7 +11,6 @@ export default function ChatPage() {
   const params = useParams();
   const matchId = params.matchId as string;
 
-  const { user: currentUser } = useUser();
   const [match, setMatch] = useState<Match | undefined>(undefined);
   
   useEffect(() => {
@@ -28,5 +27,5 @@ export default function ChatPage() {
     return null;
   }
 
-  return <ChatInterface match={match} initialMessages={messages || []} currentUserId={currentUser.id} />;
+  return <ChatInterface match={match} initialMessages={messages || []} />;
 }

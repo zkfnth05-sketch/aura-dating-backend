@@ -6,3 +6,4 @@ config();
 import '@/ai/flows/enhance-photo-flow.ts';
 import '@/ai/flows/date-course-flow.ts';
 import '@/ai/flows/recommendation-reason-flow.ts';
+import '@/ai/flows/chat-reply-flow.ts';
