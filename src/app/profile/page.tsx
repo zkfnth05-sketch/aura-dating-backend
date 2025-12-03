@@ -63,9 +63,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="container -mt-8 relative z-10 px-4">
+        <div className="container relative z-10 px-4">
           {showLocationBanner && (
-            <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-between mb-6">
+            <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-between mb-6 -mt-4">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-blue-300" />
                 <span>실시간 위치 공유가 활성화되어 있습니다.</span>
