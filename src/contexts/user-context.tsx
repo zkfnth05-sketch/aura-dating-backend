@@ -16,6 +16,7 @@ interface UserContextType {
   updateUser: (newUserData: Partial<User>) => void;
   notificationSettings: NotificationSettings;
   updateNotificationSettings: (newSettings: Partial<NotificationSettings>) => void;
+  isLoaded: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -30,6 +31,7 @@ const initialSettings: NotificationSettings = {
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(initialUser);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
+  const [isLoaded, setIsLoaded] = useState(false);
 
 
   useEffect(() => {
@@ -52,6 +54,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
       localStorage.clear();
+    } finally {
+        setIsLoaded(true);
     }
   }, []);
 
@@ -95,7 +99,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, updateUser, notificationSettings, updateNotificationSettings }}>
+    <UserContext.Provider value={{ user, updateUser, notificationSettings, updateNotificationSettings, isLoaded }}>
       {children}
     </UserContext.Provider>
   );

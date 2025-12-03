@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { MapPin, X } from 'lucide-react';
+import { MapPin, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
@@ -28,7 +28,7 @@ const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false }: 
 
 
 export default function ProfilePage() {
-  const { user: currentUser, notificationSettings, updateNotificationSettings } = useUser();
+  const { user: currentUser, notificationSettings, updateNotificationSettings, isLoaded } = useUser();
   const [showLocationBanner, setShowLocationBanner] = useState(true);
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -37,6 +37,14 @@ export default function ProfilePage() {
     updateNotificationSettings({ [id]: checked });
   };
   
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   const allPhotos = currentUser.photoUrls || [currentUser.photoUrl];
 
   const handleImageClick = (index: number) => {
