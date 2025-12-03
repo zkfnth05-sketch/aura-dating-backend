@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Match, Message } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Send, Sparkles, Loader2, Mic, Video } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Video } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -15,6 +15,30 @@ import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 
+const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width="24" height="24" 
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        {...props}
+    >
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2H3v2a9 9 0 0 0 8 8.94V24h2v-3.06A9 9 0 0 0 21 12v-2h-2z"/>
+    </svg>
+);
+
+const VideoIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width="24" height="24" 
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        {...props}
+    >
+        <path d="M21 6.5l-4 4V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3.5l4 4v-11z"/>
+    </svg>
+);
 
 export default function ChatInterface({ match, initialMessages }: { match: Match; initialMessages: Message[]}) {
   const { user: currentUser } = useUser();
@@ -182,7 +206,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setIsCallActive(true)}>
-          <Video className="h-6 w-6 text-primary" />
+          <VideoIcon className="h-6 w-6 text-primary" />
         </Button>
       </header>
 
@@ -266,7 +290,7 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
                 onTouchStart={handleMicPress}
                 onTouchEnd={handleMicRelease}
             >
-                <Mic className="h-6 w-6 text-primary" />
+                <MicIcon className="h-6 w-6 text-primary" />
             </Button>
           )}
         </form>
