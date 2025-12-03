@@ -54,7 +54,7 @@ export default function ProfilePage() {
             data-ai-hint="person portrait"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
           <div className="absolute bottom-4 left-4 text-white">
             <h1 className="text-3xl font-bold">
               {currentUser.name}, {currentUser.age}
@@ -63,9 +63,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="container relative z-10 px-4">
+        <div className="container relative z-10 px-4 -mt-16">
           {showLocationBanner && (
-            <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-between mb-6 -mt-4">
+            <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-blue-300" />
                 <span>실시간 위치 공유가 활성화되어 있습니다.</span>
