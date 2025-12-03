@@ -61,7 +61,6 @@ export default function HomePage() {
             onDislike={() => handleAction('dislike')}
             onSuperlike={() => handleAction('superlike')}
             onLike={() => handleAction('like')}
-            onAI={() => setShowAIAnalysis(true)}
           />
         )}
 
