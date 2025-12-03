@@ -7,6 +7,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { potentialMatches } from '@/lib/data';
 import type { User } from '@/lib/types';
+import { useUser } from '@/contexts/user-context';
+import { useState, useEffect } from 'react';
 
 const UserCard = ({ user, uniqueKey }: { user: User, uniqueKey: string }) => (
   <Link href={`/users/${user.id}`} key={uniqueKey}>
@@ -28,18 +30,31 @@ const UserCard = ({ user, uniqueKey }: { user: User, uniqueKey: string }) => (
 
 
 export default function HotPage() {
-  const generateUsers = (count: number, reverse: boolean = false): User[] => {
-    const users: User[] = [];
-    const sourceUsers = reverse ? [...potentialMatches].reverse() : potentialMatches;
-    if (sourceUsers.length === 0) return [];
-    for (let i = 0; i < count; i++) {
-      users.push(sourceUsers[i % sourceUsers.length]);
-    }
-    return users;
-  };
-  
-  const newUsers = generateUsers(12);
-  const hotUsers = generateUsers(12, true);
+  const { user: currentUser } = useUser();
+  const [newUsers, setNewUsers] = useState<User[]>([]);
+  const [hotUsers, setHotUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const filteredMatches = potentialMatches.filter(user => {
+      if (currentUser.gender === '남성') return user.gender === '여성';
+      if (currentUser.gender === '여성') return user.gender === '남성';
+      return false;
+    });
+
+    const generateUsers = (count: number, reverse: boolean = false): User[] => {
+      const users: User[] = [];
+      const sourceUsers = reverse ? [...filteredMatches].reverse() : filteredMatches;
+      if (sourceUsers.length === 0) return [];
+      for (let i = 0; i < count; i++) {
+        users.push(sourceUsers[i % sourceUsers.length]);
+      }
+      return users;
+    };
+    
+    setNewUsers(generateUsers(12));
+    setHotUsers(generateUsers(12, true));
+
+  }, [currentUser.gender]);
 
   return (
     <div className="flex flex-col min-h-screen">
