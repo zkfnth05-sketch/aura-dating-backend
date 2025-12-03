@@ -1,21 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
-import { matches, potentialMatches, currentUser } from '@/lib/data';
+import { matches, potentialMatches } from '@/lib/data';
 import type { User } from '@/lib/types';
+import { useUser } from '@/contexts/user-context';
 
 export default function MatchesPage() {
-  // Mock data for likes
-  const [peopleWhoLikedMe] = useState<User[]>(
-    potentialMatches.filter(u => u.gender === '여성').slice(0, 4)
-  );
-  const [peopleILiked] = useState<User[]>(
-    potentialMatches.filter(u => u.gender === '여성').slice(2, 7)
-  );
+  const { user: currentUser } = useUser();
+
+  const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
+  const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
+
+  useEffect(() => {
+    const filteredMatches = potentialMatches.filter(user => {
+      if (currentUser.gender === '남성') return user.gender === '여성';
+      if (currentUser.gender === '여성') return user.gender === '남성';
+      return false;
+    });
+
+    setPeopleWhoLikedMe(filteredMatches.filter(u => u.likesMe));
+    setPeopleILiked(filteredMatches.filter(u => u.likedByMe));
+  }, [currentUser.gender]);
 
   return (
     <div className="flex flex-col min-h-screen">

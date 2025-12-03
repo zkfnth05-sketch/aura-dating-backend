@@ -55,6 +55,8 @@ export const potentialMatches: User[] = [
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1974&auto=format&fit=crop",
     ],
     lastSeen: 'Online',
+    likesMe: true,
+    likedByMe: false,
   },
   {
     id: 'user-2',
@@ -77,6 +79,8 @@ export const potentialMatches: User[] = [
         "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop",
     ],
     lastSeen: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 minutes ago
+    likesMe: false,
+    likedByMe: false,
   },
   {
     id: 'user-3',
@@ -98,6 +102,8 @@ export const potentialMatches: User[] = [
         imageMap.get('user-3')!,
     ],
     lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+    likesMe: false,
+    likedByMe: true,
   },
   {
     id: 'user-4',
@@ -119,6 +125,8 @@ export const potentialMatches: User[] = [
         imageMap.get('user-4')!,
     ],
     lastSeen: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+    likesMe: false,
+    likedByMe: false,
   },
   {
     id: 'user-5',
@@ -142,6 +150,8 @@ export const potentialMatches: User[] = [
         "https://images.unsplash.com/photo-1557053910-d9eadeed1c58?q=80&w=1974&auto=format&fit=crop",
     ],
     lastSeen: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+    likesMe: true,
+    likedByMe: true,
   },
    {
     id: 'user-6',
@@ -163,6 +173,8 @@ export const potentialMatches: User[] = [
         imageMap.get('user-6')!,
     ],
     lastSeen: 'Online',
+    likesMe: false,
+    likedByMe: false,
   },
   {
     id: 'user-7',
@@ -184,6 +196,8 @@ export const potentialMatches: User[] = [
         imageMap.get('user-7')!,
     ],
     lastSeen: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 minutes ago
+    likesMe: true,
+    likedByMe: false,
   }
 ];
 
