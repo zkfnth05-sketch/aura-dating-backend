@@ -29,7 +29,7 @@ const AvatarImage = React.forwardRef<
     <Image
       ref={ref}
       alt={alt}
-      className={cn("aspect-square h-full w-full", className)}
+      className={cn("aspect-square h-full w-full rounded-full", className)}
       {...props}
       // Since we don't know the image dimensions, we can use fill and let the parent control it.
       // Or specify a default size if that's more appropriate.
