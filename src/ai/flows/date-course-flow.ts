@@ -42,15 +42,23 @@ export type DateCourseOutput = z.infer<typeof DateCourseOutputSchema> & {
     steps: (z.infer<typeof DateCourseStepSchema> & { imageDataUri?: string })[];
 };
 
+function getSeason(dateString: string): string {
+    const month = parseInt(dateString.split('-')[1], 10);
+    if (month >= 3 && month <= 5) return 'spring';
+    if (month >= 6 && month <= 8) return 'summer';
+    if (month >= 9 && month <= 11) return 'autumn';
+    return 'winter';
+}
 
 export async function recommendDateCourse(input: DateCourseInput): Promise<DateCourseOutput> {
     const textResult = await dateCourseFlow(input);
+    const season = getSeason(input.date);
 
     const imagePromises = textResult.steps.map(async (step) => {
         try {
             const { media } = await ai.generate({
                 model: 'googleai/imagen-4.0-fast-generate-001',
-                prompt: `${step.imagePrompt}, photorealistic, high quality`,
+                prompt: `${step.imagePrompt}, ${season}, photorealistic, high quality`,
             });
             return {
                 ...step,
