@@ -17,7 +17,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   // Hide bottom nav on chat pages
-  if (pathname.startsWith('/chat/')) {
+  if (pathname.startsWith('/chat/') || pathname.startsWith('/profile/edit')) {
     return null;
   }
 
@@ -44,11 +44,6 @@ export default function BottomNav() {
             </Link>
           );
         })}
-         <div className="absolute bottom-8">
-            <Button asChild className="rounded-full bg-primary h-14 w-32 text-base font-bold">
-                 <Link href="/profile/edit">프로필 수정</Link>
-            </Button>
-        </div>
       </nav>
     </div>
   );

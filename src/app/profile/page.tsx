@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Header from '@/components/layout/header';
 import { currentUser } from '@/lib/data';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { MapPin, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 // Helper components for page structure
 const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -18,12 +18,12 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
   </div>
 );
 
-const ProfileToggle = ({ label, id, checked, onCheckedChange }: { label: string, id: string, checked: boolean, onCheckedChange: (checked: boolean) => void }) => (
-  <div className="flex items-center justify-between py-3">
-    <label htmlFor={id} className="text-foreground/80">{label}</label>
-    <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
-  </div>
-);
+const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false }: { label: string, id: string, checked: boolean, onCheckedChange: (checked: boolean) => void, isLast?: boolean }) => (
+    <div className={cn("flex items-center justify-between py-4", !isLast && "border-b")}>
+      <label htmlFor={id} className="text-foreground/80">{label}</label>
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
+    </div>
+  );
 
 
 export default function ProfilePage() {
@@ -113,7 +113,7 @@ export default function ProfilePage() {
                 />
                  <ProfileToggle 
                   id="newMatch"
-                  label="새로운 매치" 
+                  label="새로운 매치"
                   checked={settings.newMatch}
                   onCheckedChange={handleSettingChange('newMatch')}
                 />
@@ -128,13 +128,14 @@ export default function ProfilePage() {
                   label="영상 통화 요청" 
                   checked={settings.videoCall}
                   onCheckedChange={handleSettingChange('videoCall')}
+                  isLast={true}
                 />
             </ProfileSection>
           </div>
 
           <div className="py-8">
-            <Button className="w-full h-12 bg-primary text-primary-foreground rounded-full font-bold text-base">
-                프로필 수정
+            <Button asChild className="w-full h-12 bg-primary text-primary-foreground rounded-full font-bold text-base">
+                <Link href="/profile/edit">프로필 수정</Link>
             </Button>
           </div>
         </div>
