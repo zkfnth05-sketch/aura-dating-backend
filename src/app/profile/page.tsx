@@ -23,7 +23,7 @@ export default function ProfilePage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
                  </div>
-                 <div className="absolute top-[8rem] left-6">
+                 <div className="absolute top-[6rem] left-6">
                     <div className="relative w-32 h-32 rounded-full border-4 border-card overflow-hidden">
                          <Image
                             src={currentUser.photoUrl}
