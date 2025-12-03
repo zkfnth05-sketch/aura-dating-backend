@@ -34,7 +34,7 @@ export async function enhancePhoto(input: EnhancePhotoInput): Promise<EnhancePho
 }
 
 const malePrompt = `Enhance the photo to make the man look more handsome and cool. Give him a more voluminous, well-balanced, and attractive body. The output must be a photorealistic image.`;
-const femalePrompt = `Enhance the photo to make the woman look prettier and sexier. Give her a more voluminous, well-balanced, and sexy body. The output must be a photorealistic image.`;
+const femalePrompt = `Enhance the photo to make the woman's face prettier and sexier with smoother skin. Give her a more voluminous, well-balanced, and sexy body. The output must be a photorealistic image.`;
 const otherPrompt = `Enhance the photo to make the person look more attractive. The output must be a photorealistic image.`;
 
 const enhancePhotoFlow = ai.defineFlow(
