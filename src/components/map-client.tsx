@@ -106,7 +106,7 @@ export default function MapClient({ users }: MapClientProps) {
   const router = useRouter();
   const [currentUser] = users;
   const [zoom, setZoom] = useState(11);
-  const [center] = useState({ lat: currentUser.lat, lng: currentUser.lng });
+  const [center, setCenter] = useState({ lat: currentUser.lat, lng: currentUser.lng });
 
   const handleMarkerClick = (userId: string) => {
     if(userId === 'current-user') {
