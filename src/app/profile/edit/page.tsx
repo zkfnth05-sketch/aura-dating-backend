@@ -99,7 +99,7 @@ export default function ProfileEditPage() {
     if (aiEnhancement) {
       setIsEnhancing(newImageIndex);
       try {
-        const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
+        const result = await getEnhancedPhoto({ photoDataUri: dataUri });
         setImages(prev => {
           const newImages = [...prev];
           newImages[newImageIndex] = result.enhancedPhotoDataUri;
