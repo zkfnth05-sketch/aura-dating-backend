@@ -58,15 +58,15 @@ export default function ProfilePage() {
             data-ai-hint="person portrait"
             priority
           />
-          <div className="absolute bottom-4 left-4 text-white">
-            <h1 className="text-3xl font-bold">
-              {currentUser.name}, {currentUser.age}
-            </h1>
-            <p className="text-white/80">{currentUser.location}</p>
-          </div>
         </div>
         
-        <div className="container relative z-10 px-4 -mt-16">
+        <div className="container relative z-10 px-4 -mt-8">
+            <div className="text-white bg-gradient-to-t from-black/20 to-transparent p-4 rounded-b-lg -mx-4 mt-[-4rem] mb-4">
+                <h1 className="text-3xl font-bold">
+                    {currentUser.name}, {currentUser.age}
+                </h1>
+                <p className="text-white/80">{currentUser.location}</p>
+            </div>
             <div className="grid grid-cols-3 gap-1">
                 {otherPhotos.map((photoUrl, index) => (
                     <div key={index} className="relative aspect-square rounded-md overflow-hidden">
