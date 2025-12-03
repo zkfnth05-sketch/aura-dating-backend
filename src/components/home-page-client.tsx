@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { potentialMatches } from '@/lib/data';
+import React, { useState } from 'react';
+import { potentialMatches, currentUser } from '@/lib/data';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
@@ -48,7 +48,8 @@ export default function HomePageClient() {
               return (
                 <div key={user.id} className="absolute w-full h-full">
                   <ProfileCard
-                    user={user}
+                    currentUser={currentUser}
+                    potentialMatch={user}
                     isActive={isActive}
                     swipeState={isActive ? swipeState : null}
                   />
