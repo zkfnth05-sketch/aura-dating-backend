@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
-import Image from 'next/image';
 
 import { cn } from "@/lib/utils"
 
@@ -22,22 +21,14 @@ const Avatar = React.forwardRef<
 Avatar.displayName = AvatarPrimitive.Root.displayName
 
 const AvatarImage = React.forwardRef<
-  React.ElementRef<typeof Image>,
-  Omit<React.ComponentPropsWithoutRef<typeof Image>, 'alt'> & { alt: string }
->(({ className, alt, ...props }, ref) => (
-  <AvatarPrimitive.Image asChild>
-    <Image
-      ref={ref}
-      alt={alt}
-      className={cn("aspect-square h-full w-full rounded-full", className)}
-      {...props}
-      // Since we don't know the image dimensions, we can use fill and let the parent control it.
-      // Or specify a default size if that's more appropriate.
-      // For Avatars, h-10 w-10 is set on the root, so width/height is better.
-      width={40}
-      height={40}
-    />
-  </AvatarPrimitive.Image>
+  React.ElementRef<typeof AvatarPrimitive.Image>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
+>(({ className, ...props }, ref) => (
+  <AvatarPrimitive.Image
+    ref={ref}
+    className={cn("aspect-square h-full w-full", className)}
+    {...props}
+  />
 ))
 AvatarImage.displayName = AvatarPrimitive.Image.displayName
 
