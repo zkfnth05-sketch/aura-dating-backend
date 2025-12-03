@@ -57,11 +57,13 @@ export default function HomePage() {
         </div>
         
         {activeUser && (
-          <ActionButtons
-            onDislike={() => handleAction('dislike')}
-            onSuperlike={() => handleAction('superlike')}
-            onLike={() => handleAction('like')}
-          />
+          <div className="absolute bottom-24 z-20">
+            <ActionButtons
+              onDislike={() => handleAction('dislike')}
+              onSuperlike={() => handleAction('superlike')}
+              onLike={() => handleAction('like')}
+            />
+          </div>
         )}
 
         {activeUser && (

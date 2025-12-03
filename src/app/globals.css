@@ -24,6 +24,11 @@
     --input: 210 40% 96.1%;
     --ring: 51 100% 50%;
     --radius: 0.75rem;
+
+    --button-bg: 0 0% 14.9%;
+    --button-dislike: 210 10% 60%;
+    --button-superlike: 198 100% 50%;
+    --button-like: 340 95% 58%;
   }
  
   .dark {
@@ -47,6 +52,11 @@
     --input: 0 0% 14.9%;
     --ring: 51 100% 50%;
     --radius: 0.75rem;
+
+    --button-bg: 0 0% 14.9%;
+    --button-dislike: 210 10% 60%;
+    --button-superlike: 198 100% 50%;
+    --button-like: 340 95% 58%;
   }
 }
  

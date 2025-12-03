@@ -48,6 +48,10 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        'button-bg': 'hsl(var(--button-bg))',
+        'button-dislike': 'hsl(var(--button-dislike))',
+        'button-superlike': 'hsl(var(--button-superlike))',
+        'button-like': 'hsl(var(--button-like))',
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',
