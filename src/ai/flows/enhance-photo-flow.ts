@@ -36,7 +36,7 @@ export async function enhancePhoto(input: EnhancePhotoInput): Promise<EnhancePho
   return enhancePhotoFlow(input);
 }
 
-const enhancementPrompt = `Enhance this user's profile picture for a high-end dating app. Improve the lighting and composition to make the person look more stylish, confident, and attractive. Give the photo a polished, professional, and slightly more glamorous feel, while ensuring the person's core features remain recognizable. Make them look their absolute best. The output must be a photorealistic image.`;
+const enhancementPrompt = `고급 데이팅 앱에 어울리도록 조명과 구성을 개선하여 더 스타일리시하고, 자신감 있고, 성적으로 매력적이고, 균형있는,섹시한,매력적으로 보이게 하되, 본래의 주요 특징은 유지하면서 최고의 모습으로 만들어주세요. The output must be a photorealistic image.`;
 
 
 const enhancePhotoFlow = ai.defineFlow(
