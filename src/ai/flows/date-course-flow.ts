@@ -35,6 +35,7 @@ const DateCourseOutputSchema = z.object({
     title: z.string().describe("A catchy overall title for the date course."),
     totalCost: z.string().describe("A summary of the total estimated cost for the date."),
     steps: z.array(DateCourseStepSchema).describe("An array of detailed steps for the date course. Include at least 4-5 steps."),
+    summaryAndMessage: z.string().describe("A final warm and encouraging summary message for the couple's date."),
 });
 
 export type DateCourseOutput = z.infer<typeof DateCourseOutputSchema> & {
@@ -94,7 +95,8 @@ Please provide a detailed plan. The output must be a JSON object that follows th
 - Create a catchy overall title for the date course.
 - Create at least 4-5 timeline entries in the 'steps' array.
 - For each step, provide all the required fields: 'time', 'title', 'description', 'directions', 'cost', 'romanticTip', and a suitable 'imagePrompt'.
-- Conclude with a summary of the total estimated cost.
+- Conclude with a summary of the total estimated cost in the 'totalCost' field.
+- Finally, create a warm and encouraging summary message for the couple in the 'summaryAndMessage' field. This message should be a few sentences long and wish them a wonderful date.
 
 Example for one step object in the array:
 {

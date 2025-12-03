@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Loader2, Utensils, MapPin, Wallet, Sparkles, Ship, TramFront, Bus, Car, Plane, Footprints, Bike } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Utensils, MapPin, Wallet, Sparkles, Ship, TramFront, Bus, Car, Plane, Footprints, Bike, PartyPopper } from 'lucide-react';
 import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
@@ -106,7 +106,7 @@ export default function DateCourseForm() {
       <div>
         <div className="text-center my-8">
             <h2 className="text-2xl font-bold text-primary">{result.title}</h2>
-            <p className="text-muted-foreground mt-1">{result.totalCost}</p>
+            <p className="text-muted-foreground mt-2 px-4">{result.steps[0].description.substring(0,100)}...</p>
         </div>
         <div className="space-y-6">
             {result.steps.map((step, index) => (
@@ -142,7 +142,17 @@ export default function DateCourseForm() {
                 </Card>
             ))}
         </div>
-        <Button onClick={() => { setResult(null); setShowForm(true); }} className="w-full mt-8">
+        <Card className="my-8 text-center">
+            <CardHeader>
+                <CardTitle>총 예상 비용 ({result.steps.length > 0 ? form.getValues('partySize').charAt(0) : 'N/A'}인 기준)</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p className="text-2xl font-bold text-primary mb-4">{result.totalCost}</p>
+                <p className="text-sm text-muted-foreground px-4">{result.summaryAndMessage}</p>
+            </CardContent>
+        </Card>
+
+        <Button onClick={() => { setResult(null); setShowForm(true); }} className="w-full mt-4">
             새로운 코스 추천받기
         </Button>
     </div>
