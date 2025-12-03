@@ -65,7 +65,7 @@ export default function VideoChat({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stream]);
+  }, []);
 
   const toggleMic = () => {
     if (stream) {
@@ -143,10 +143,10 @@ export default function VideoChat({
       {/* Call Controls */}
       <div className="absolute bottom-10 left-0 right-0 z-10">
         <div className="flex items-center justify-center gap-4">
-          <Button variant="ghost" size="icon" onClick={toggleMic} className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur">
+          <Button variant="ghost" size="icon" onClick={toggleMic} className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur" disabled={!hasPermissions}>
             {isMicOn ? <Mic className="w-7 h-7" /> : <MicOff className="w-7 h-7" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={toggleCamera} className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur">
+          <Button variant="ghost" size="icon" onClick={toggleCamera} className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur" disabled={!hasPermissions}>
             {isCameraOn ? <Video className="w-7 h-7" /> : <VideoOff className="w-7 h-7" />}
           </Button>
           <Button
