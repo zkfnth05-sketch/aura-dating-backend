@@ -5,6 +5,11 @@ import {
   AIMatchEnhancementInput,
   AIMatchEnhancementOutput,
 } from '@/ai/flows/ai-match-enhancement';
+import {
+    enhancePhoto,
+    EnhancePhotoInput,
+    EnhancePhotoOutput,
+} from '@/ai/flows/enhance-photo-flow';
 import { User } from '@/lib/types';
 
 // The AI flow expects a specific input structure defined in AIMatchEnhancementInputSchema.
@@ -41,3 +46,15 @@ export async function getAIMatchAnalysis(
     throw new Error('Failed to get AI match analysis.');
   }
 }
+
+export async function getEnhancedPhoto(
+    input: EnhancePhotoInput
+  ): Promise<EnhancePhotoOutput> {
+    try {
+      const result = await enhancePhoto(input);
+      return result;
+    } catch (error) {
+      console.error('AI Photo Enhancement failed:', error);
+      throw new Error('Failed to get AI photo enhancement.');
+    }
+  }

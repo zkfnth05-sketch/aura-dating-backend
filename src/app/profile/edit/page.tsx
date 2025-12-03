@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { X, Plus, Video, Camera, ImageIcon } from 'lucide-react';
+import { X, Plus, Video, Camera, ImageIcon, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
+import { getEnhancedPhoto } from '@/app/actions/ai-actions';
 
 const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
   <div className="py-6">
@@ -54,7 +55,7 @@ export default function ProfileEditPage() {
     age: currentUser.age.toString(),
     city: currentUser.location.split(',')[0],
     bio: currentUser.bio,
-    gender: '여성',
+    gender: '여성' as '남성' | '여성' | '기타',
     relationship: ['새로운 친구'],
     values: ['모험', '성장'],
     communication: ['진솔함', '따뜻함'],
@@ -66,6 +67,8 @@ export default function ProfileEditPage() {
   const [images, setImages] = useState<string[]>([currentUser.photoUrl]);
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState<number | null>(null);
+
 
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
     setProfile(prev => {
@@ -77,7 +80,7 @@ export default function ProfileEditPage() {
     });
   };
 
-  const handleSingleSelect = (field: 'gender' | 'relationship', value: string) => {
+  const handleSingleSelect = (field: 'gender', value: '남성' | '여성' | '기타') => {
     setProfile(prev => ({...prev, [field]: value}));
   }
 
@@ -88,6 +91,32 @@ export default function ProfileEditPage() {
     });
     router.push('/profile');
   };
+
+  const processAndAddImage = async (dataUri: string) => {
+    const newImageIndex = images.length;
+    setImages(prev => [...prev, dataUri]);
+
+    if (aiEnhancement) {
+      setIsEnhancing(newImageIndex);
+      try {
+        const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
+        setImages(prev => {
+          const newImages = [...prev];
+          newImages[newImageIndex] = result.enhancedPhotoDataUri;
+          return newImages;
+        });
+      } catch (error) {
+        console.error("AI enhancement failed:", error);
+        toast({
+          variant: "destructive",
+          title: "AI 보정 실패",
+          description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
+        });
+      } finally {
+        setIsEnhancing(null);
+      }
+    }
+  };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -95,7 +124,7 @@ export default function ProfileEditPage() {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
-          setImages(prev => [...prev, e.target!.result as string]);
+          processAndAddImage(e.target.result as string);
         }
       };
       reader.readAsDataURL(file);
@@ -103,8 +132,8 @@ export default function ProfileEditPage() {
   };
 
   const handlePhotoTaken = (dataUri: string) => {
-    setImages(prev => [...prev, dataUri]);
     setIsCameraDialogOpen(false);
+    processAndAddImage(dataUri);
   };
   
   const removeImage = (index: number) => {
@@ -125,8 +154,13 @@ export default function ProfileEditPage() {
           </div>
           <div className="grid grid-cols-3 gap-2">
             {images.map((src, index) => (
-              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
                 <Image src={src} alt={`My profile photo ${index + 1}`} fill className="object-cover"/>
+                {isEnhancing === index && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <Loader2 className="h-8 w-8 animate-spin text-white" />
+                  </div>
+                )}
                 <div className="absolute top-1 right-1">
                   <Button variant="destructive" size="icon" onClick={() => removeImage(index)} className="w-6 h-6 rounded-full bg-black/50">
                     <X className="h-4 w-4" />
@@ -199,7 +233,7 @@ export default function ProfileEditPage() {
                         key={gender} 
                         label={gender}
                         isSelected={profile.gender === gender} 
-                        onClick={() => handleSingleSelect('gender', gender)}
+                        onClick={() => handleSingleSelect('gender', gender as '남성' | '여성' | '기타')}
                     />
                 ))}
             </div>
