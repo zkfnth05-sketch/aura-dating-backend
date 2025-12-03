@@ -7,7 +7,6 @@ export type User = {
   hobbies: string[];
   interests: string[];
   photoUrl: string;
-  photoDataUri?: string; // For AI flow
   photoUrls?: string[];
   gender?: '남성' | '여성' | '기타';
   relationship?: string[];

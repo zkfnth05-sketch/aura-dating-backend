@@ -15,9 +15,6 @@ import { User } from '@/lib/types';
 // The AI flow expects a specific input structure defined in AIMatchEnhancementInputSchema.
 // We map our application's User type to this structure.
 function mapUserToAIProfile(user: User) {
-    if (!user.photoDataUri) {
-        throw new Error(`User ${user.id} is missing photoDataUri required for AI analysis.`);
-    }
     return {
         userId: user.id,
         name: user.name,
@@ -25,7 +22,6 @@ function mapUserToAIProfile(user: User) {
         location: user.location,
         hobbies: user.hobbies,
         interests: user.interests,
-        photoDataUri: user.photoDataUri,
     };
 }
 

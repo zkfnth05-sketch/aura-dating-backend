@@ -18,11 +18,6 @@ const UserProfileSchema = z.object({
   location: z.string().describe('User location.'),
   hobbies: z.array(z.string()).describe('List of user hobbies.'),
   interests: z.array(z.string()).describe('List of user interests.'),
-  photoDataUri: z
-    .string()
-    .describe(
-      "A photo of the user, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
 });
 
 const AIMatchEnhancementInputSchema = z.object({
@@ -59,7 +54,6 @@ Age: {{{userProfile1.age}}}
 Location: {{{userProfile1.location}}}
 Hobbies: {{#each userProfile1.hobbies}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 Interests: {{#each userProfile1.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-Photo: {{media url=userProfile1.photoDataUri}}
 
 User 2 Profile:
 Name: {{{userProfile2.name}}}
@@ -67,9 +61,8 @@ Age: {{{userProfile2.age}}}
 Location: {{{userProfile2.location}}}
 Hobbies: {{#each userProfile2.hobbies}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 Interests: {{#each userProfile2.interests}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-Photo: {{media url=userProfile2.photoDataUri}}
 
-Analyze their profiles, identify shared hobbies and interests, and provide a compatibility score between 0 and 100.
+Analyze their profiles based on hobbies and interests, and provide a compatibility score between 0 and 100.
 Also, generate a detailed analysis of the potential match, highlighting the strengths and weaknesses.
 Finally, provide a boolean value recommendInclude, which suggests whether or not to include these users as a potential match. Set this to true if the compatibility score is above 60.
 
