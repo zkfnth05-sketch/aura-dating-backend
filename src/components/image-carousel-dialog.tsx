@@ -38,9 +38,9 @@ export default function ImageCarouselDialog({ isOpen, onClose, images, startInde
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 border-0 bg-transparent w-screen h-screen max-w-none sm:rounded-none flex items-center justify-center">
+      <DialogContent className="p-0 border-0 bg-transparent w-full h-full max-w-none sm:rounded-none flex items-center justify-center">
         <DialogTitle className="sr-only">프로필 이미지 갤러리</DialogTitle>
-        <div className="relative w-full h-full max-w-4xl max-h-[90vh]">
+        <div className="relative w-full h-full">
           <Carousel 
             className="w-full h-full"
             opts={{
@@ -52,7 +52,7 @@ export default function ImageCarouselDialog({ isOpen, onClose, images, startInde
             <CarouselContent className="h-full">
               {images.map((src, index) => (
                 <CarouselItem key={index} className="flex items-center justify-center">
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-[90vh]">
                     <Image 
                       src={src} 
                       alt={`Profile image ${index + 1}`}
