@@ -60,14 +60,8 @@ export default function ProfilePage() {
           />
         </div>
         
-        <div className="container relative z-10 px-4 -mt-8">
-            <div className="text-white bg-gradient-to-t from-black/20 to-transparent p-4 rounded-b-lg -mx-4 mt-[-4rem] mb-4">
-                <h1 className="text-3xl font-bold">
-                    {currentUser.name}, {currentUser.age}
-                </h1>
-                <p className="text-white/80">{currentUser.location}</p>
-            </div>
-            <div className="grid grid-cols-3 gap-1">
+        <div className="container relative z-10 px-4">
+            <div className="grid grid-cols-3 gap-1 mt-1">
                 {otherPhotos.map((photoUrl, index) => (
                     <div key={index} className="relative aspect-square rounded-md overflow-hidden">
                         <Image 
@@ -79,6 +73,12 @@ export default function ProfilePage() {
                         />
                     </div>
                 ))}
+            </div>
+            <div className="text-left mt-4">
+                <h1 className="text-3xl font-bold">
+                    {currentUser.name}, {currentUser.age}
+                </h1>
+                <p className="text-muted-foreground">{currentUser.location}</p>
             </div>
         </div>
 
