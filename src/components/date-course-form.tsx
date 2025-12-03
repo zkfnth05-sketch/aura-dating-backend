@@ -105,14 +105,14 @@ export default function DateCourseForm() {
     return (
       <div>
         <div className="text-center my-8">
-            <h2 className="text-2xl font-bold text-primary">{result.title}</h2>
-            <p className="text-muted-foreground mt-2 px-4">{result.steps[0].description.substring(0,100)}...</p>
+            <h2 className="text-3xl font-bold text-primary">{result.title}</h2>
+            {result.steps.length > 0 && <p className="text-muted-foreground mt-4 px-4">{result.steps[0].description.substring(0,100)}...</p>}
         </div>
-        <div className="space-y-6">
+        <div className="space-y-8">
             {result.steps.map((step, index) => (
-                <Card key={index} className="overflow-hidden">
+                <Card key={index} className="overflow-hidden bg-card border-border/40">
                      {step.imageDataUri && (
-                        <div className="relative w-full h-48">
+                        <div className="relative w-full h-56">
                             <Image
                                 src={step.imageDataUri}
                                 alt={step.title}
@@ -122,37 +122,39 @@ export default function DateCourseForm() {
                         </div>
                     )}
                     <CardHeader>
-                        <CardTitle className="text-lg">{step.time} - {step.title}</CardTitle>
+                        <CardTitle className="text-xl text-primary/90">{step.time} - {step.title}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm">
-                        <p className="text-muted-foreground">{step.description}</p>
-                        <div className="flex items-start gap-2">
-                           <MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0"/>
-                           <p><span className="font-semibold">찾아가는 길:</span> {step.directions}</p>
-                        </div>
-                         <div className="flex items-start gap-2">
-                           <Wallet className="h-4 w-4 mt-1 text-primary flex-shrink-0"/>
-                           <p><span className="font-semibold">예상 비용:</span> {step.cost}</p>
-                        </div>
-                         <div className="flex items-start gap-2">
-                           <Sparkles className="h-4 w-4 mt-1 text-primary flex-shrink-0"/>
-                           <p><span className="font-semibold">💖 로맨틱 팁:</span> {step.romanticTip}</p>
+                        <p className="text-foreground/80">{step.description}</p>
+                        <div className="space-y-3 pt-2">
+                            <div className="flex items-start gap-3">
+                               <MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0"/>
+                               <p><span className="font-semibold text-foreground">찾아가는 길:</span> <span className="text-muted-foreground">{step.directions}</span></p>
+                            </div>
+                             <div className="flex items-start gap-3">
+                               <Wallet className="h-4 w-4 mt-0.5 text-primary flex-shrink-0"/>
+                               <p><span className="font-semibold text-foreground">예상 비용:</span> <span className="text-muted-foreground">{step.cost}</span></p>
+                            </div>
+                             <div className="flex items-start gap-3">
+                               <Sparkles className="h-4 w-4 mt-0.5 text-primary flex-shrink-0"/>
+                               <p><span className="font-semibold text-foreground">💖 로맨틱 팁:</span> <span className="text-muted-foreground">{step.romanticTip}</span></p>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
             ))}
         </div>
-        <Card className="my-8 text-center">
+        <Card className="my-8 text-center bg-card border-border/40">
             <CardHeader>
                 <CardTitle>총 예상 비용 ({result.steps.length > 0 ? form.getValues('partySize').charAt(0) : 'N/A'}인 기준)</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-2xl font-bold text-primary mb-4">{result.totalCost}</p>
+                <p className="text-3xl font-bold text-primary mb-4">{result.totalCost}</p>
                 <p className="text-sm text-muted-foreground px-4">{result.summaryAndMessage}</p>
             </CardContent>
         </Card>
 
-        <Button onClick={() => { setResult(null); setShowForm(true); }} className="w-full mt-4">
+        <Button onClick={() => { setResult(null); setShowForm(true); }} className="w-full mt-4 h-12 text-base font-bold">
             새로운 코스 추천받기
         </Button>
     </div>
@@ -343,7 +345,7 @@ export default function DateCourseForm() {
             )}
           />
 
-          <Button type="submit" disabled={isLoading} className="w-full">
+          <Button type="submit" disabled={isLoading} className="w-full h-12 text-base font-bold">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             AI 데이트 코스 추천받기
           </Button>
