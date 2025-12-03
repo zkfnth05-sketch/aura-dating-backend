@@ -50,7 +50,7 @@ export default function ProfilePage() {
       {/* Remove Header to have full screen control */}
       {/* <Header /> */}
       <main className="flex-1">
-        <div className="relative w-full h-[40svh]">
+        <div className="relative w-full aspect-[3/4] max-h-[70vh]">
           <Image
             src={mainPhoto}
             alt={`Profile of ${currentUser.name}`}
