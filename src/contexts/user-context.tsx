@@ -24,7 +24,7 @@ const initialSettings: NotificationSettings = {
     all: true,
     newMatch: true,
     newMessage: true,
-    videoCall: false,
+    videoCall: true,
 };
 
 export function UserProvider({ children }: { children: ReactNode }) {
@@ -40,6 +40,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setUser(prevUser => ({
           ...prevUser, 
           ...parsedData,
+          photoUrl: parsedData.photoUrl || prevUser.photoUrl,
+          photoUrls: parsedData.photoUrls || prevUser.photoUrls,
         }));
       }
       const storedSettings = localStorage.getItem('notificationSettings');
@@ -58,16 +60,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const updatedUser = { ...prevUser, ...newUserData };
         
         try {
+          // Create a copy to avoid modifying the state directly before setting it
           const userToStore = { ...updatedUser };
-          // Don't store large data URIs in localStorage
+          
+          // Don't store large data URIs in localStorage to avoid exceeding limits
           if (userToStore.photoUrls) {
             userToStore.photoUrls = userToStore.photoUrls.filter(url => !url.startsWith('data:'));
           }
-          if (userToStore.photoUrl && userToStore.photoUrl.startsWith('data:')) {
-            // Find the first non-data URI to set as the main photoUrl
-            userToStore.photoUrl = userToStore.photoUrls?.find(url => !url.startsWith('data:')) || prevUser.photoUrl;
-          }
 
+          // If the main photoUrl is a data URI, try to find a non-data URI as a replacement for storage
+          if (userToStore.photoUrl && userToStore.photoUrl.startsWith('data:')) {
+            userToStore.photoUrl = userToStore.photoUrls?.find(url => !url.startsWith('data:')) || initialUser.photoUrl;
+          }
+          
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
         } catch (error) {
           console.error("Failed to save user to localStorage", error);
