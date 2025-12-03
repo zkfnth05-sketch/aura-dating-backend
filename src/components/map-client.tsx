@@ -118,14 +118,14 @@ export default function MapClient({ users }: MapClientProps) {
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="absolute top-24 left-1/2 -translate-x-1/2 z-10 w-full max-w-sm px-4">
+      <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10 w-full px-4">
         <div className="bg-black/50 backdrop-blur-sm rounded-full p-1 flex justify-around items-center text-white text-sm font-semibold">
           {distanceOptions.map(option => (
             <button
               key={option.label}
               onClick={() => setZoom(option.zoom)}
               className={cn(
-                'py-2 px-4 rounded-full transition-colors duration-200',
+                'py-2 px-4 rounded-full transition-colors duration-200 w-full',
                 zoom === option.zoom ? 'bg-primary text-primary-foreground' : 'bg-transparent text-white/80'
               )}
             >
