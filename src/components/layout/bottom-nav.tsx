@@ -2,14 +2,36 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Map, Flame, MessageSquare, User } from 'lucide-react';
+import { Search, Map, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
+const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width="24" 
+        height="24" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        {...props}
+    >
+        <path d="M12 2a5.5 5.5 0 0 0-5.5 5.5c0 3.038 2.462 5.5 5.5 5.5s5.5-2.462 5.5-5.5A5.5 5.5 0 0 0 12 2z" />
+        <path d="M12 13s-4-1-4-4" />
+        <path d="M12 13s4-1 4-4" />
+        <path d="M12 13v9" />
+        <path d="M12 22a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+    </svg>
+);
+
 const navItems = [
   { href: '/', label: '탐색', icon: Search },
+  { href: '/map', label: '지도', icon: Map },
+  { href: '/hot', label: 'HOT 회원', icon: HotIcon },
   { href: '/matches', label: '연결', icon: MessageSquare },
-  { href: '/ai', label: 'AI 추천', icon: Flame },
   { href: '/profile', label: '내프로필', icon: User },
 ];
 
