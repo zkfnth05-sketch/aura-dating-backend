@@ -3,6 +3,8 @@ export type User = {
   name: string;
   age: number;
   location: string;
+  lat: number;
+  lng: number;
   bio: string;
   hobbies: string[];
   interests: string[];
@@ -29,12 +31,3 @@ export type Message = {
   text: string;
   timestamp: string;
 };
-
-// This type is no longer needed as we removed the AI match analysis
-// export type AIMatchEnhancementOutput = {
-//   compatibilityScore: number;
-//   sharedHobbies: string[];
-//   sharedInterests: string[];
-//   analysis: string;
-//   recommendInclude: boolean;
-// };
