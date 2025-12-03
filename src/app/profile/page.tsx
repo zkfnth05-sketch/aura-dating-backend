@@ -69,7 +69,7 @@ export default function ProfilePage() {
           </div>
           
           <div className="container relative z-10 px-4">
-            <div className="grid grid-cols-3 gap-1 mt-4">
+            <div className="grid grid-cols-3 gap-2 mt-4">
                 {allPhotos.slice(1).map((photoUrl, index) => (
                     <div key={index} className="relative aspect-square rounded-md overflow-hidden cursor-pointer" onClick={() => handleImageClick(index + 1)}>
                         <Image 
