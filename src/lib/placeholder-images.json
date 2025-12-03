@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-1",
+      "description": "Profile picture of a smiling woman",
+      "imageUrl": "https://images.unsplash.com/flagged/photo-1559855603-ce4c8f480d76?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHx3b21hbiUyMHNtaWxpbmd8ZW58MHx8fHwxNzY0NzA1ODUwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman smiling"
+    },
+    {
+      "id": "user-2",
+      "description": "Profile picture of a man outdoors",
+      "imageUrl": "https://images.unsplash.com/photo-1659769431940-9157f010bcdd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxtYW4lMjBvdXRkb29yc3xlbnwwfHx8fDE3NjQ3MTMwMTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man outdoors"
+    },
+    {
+      "id": "user-3",
+      "description": "Profile picture of a person at a cafe",
+      "imageUrl": "https://images.unsplash.com/photo-1583124252515-5bda43518acd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwZXJzb24lMjBjYWZlfGVufDB8fHx8MTc2NDY3NzA5Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person cafe"
+    },
+    {
+      "id": "user-4",
+      "description": "Profile picture of a woman hiking",
+      "imageUrl": "https://images.unsplash.com/photo-1480812494744-bfed1358a9b7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHx3b21hbiUyMGhpa2luZ3xlbnwwfHx8fDE3NjQ3MTM4ODN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman hiking"
+    },
+    {
+      "id": "user-5",
+      "description": "Profile picture of a man with a dog",
+      "imageUrl": "https://images.unsplash.com/photo-1626921665123-577a588e433b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxtYW4lMjBkb2d8ZW58MHx8fHwxNzY0NjYwMDk2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man dog"
+    },
+    {
+      "id": "user-6",
+      "description": "Profile picture of a person painting",
+      "imageUrl": "https://images.unsplash.com/photo-1448932133140-b4045783ed9e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwZXJzb24lMjBwYWludGluZ3xlbnwwfHx8fDE3NjQ3NDM0NTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person painting"
+    },
+    {
+      "id": "user-7",
+      "description": "Profile picture of a woman in a city",
+      "imageUrl": "https://images.unsplash.com/photo-1437623889155-075d40e2e59f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3b21hbiUyMGNpdHl8ZW58MHx8fHwxNzY0NzQxODQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman city"
+    },
+    {
+      "id": "current-user",
+      "description": "Profile picture of Alex",
+      "imageUrl": "https://images.unsplash.com/photo-1613145997970-db84a7975fbb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxwZXJzb24lMjBwcm9maWxlfGVufDB8fHx8MTc2NDczMTMyNXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person profile"
+    }
+  ]
 }
