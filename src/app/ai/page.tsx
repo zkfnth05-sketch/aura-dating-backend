@@ -1,39 +1,10 @@
-import Header from '@/components/layout/header';
-import { potentialMatches, currentUser } from '@/lib/data';
-import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
-import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
+'use client';
+
 import AiPageClient from '@/components/ai-page-client';
+import { potentialMatches } from '@/lib/data';
 
-type AnalysisResult = {
-  isLoading: boolean;
-  data: AIMatchEnhancementOutput | null;
-  error: string | null;
-};
-
-export default async function AiPage() {
+export default function AiPage() {
   const recommendedUsers = potentialMatches.slice(0, 6);
-  
-  const analysisPromises = recommendedUsers.map(user => 
-    getAIMatchAnalysis({ userProfile1: currentUser, userProfile2: user })
-      .then(data => ({ id: user.id, data, error: null }))
-      .catch(() => ({ id: user.id, data: null, error: '분석 실패' }))
-  );
 
-  const results = await Promise.all(analysisPromises);
-
-  const analysisResults: Record<string, AnalysisResult> = {};
-  results.forEach(result => {
-    analysisResults[result.id] = {
-      isLoading: false,
-      data: result.data,
-      error: result.error,
-    };
-  });
-
-  return (
-    <AiPageClient 
-      recommendedUsers={recommendedUsers} 
-      initialAnalysisResults={analysisResults} 
-    />
-  );
+  return <AiPageClient recommendedUsers={recommendedUsers} />;
 }

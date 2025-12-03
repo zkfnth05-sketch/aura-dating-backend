@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { User } from '@/lib/types';
 import type { AIMatchEnhancementOutput } from '@/ai/flows/ai-match-enhancement';
+import { getAIMatchAnalysis } from '@/app/actions/ai-actions';
+import { currentUser } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
@@ -19,10 +21,36 @@ type AnalysisState = {
 
 interface AiPageClientProps {
   recommendedUsers: User[];
-  initialAnalysisResults: Record<string, AnalysisState>;
 }
 
-export default function AiPageClient({ recommendedUsers, initialAnalysisResults }: AiPageClientProps) {
+export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
+  const [analysisResults, setAnalysisResults] = useState<Record<string, AnalysisState>>({});
+
+  useEffect(() => {
+    recommendedUsers.forEach(user => {
+      if (!analysisResults[user.id]) {
+        setAnalysisResults(prev => ({
+          ...prev,
+          [user.id]: { isLoading: true, data: null, error: null },
+        }));
+
+        getAIMatchAnalysis({ userProfile1: currentUser, userProfile2: user })
+          .then(data => {
+            setAnalysisResults(prev => ({
+              ...prev,
+              [user.id]: { isLoading: false, data, error: null },
+            }));
+          })
+          .catch(() => {
+            setAnalysisResults(prev => ({
+              ...prev,
+              [user.id]: { isLoading: false, data: null, error: '분석 실패' },
+            }));
+          });
+      }
+    });
+  }, [recommendedUsers, analysisResults]);
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -45,7 +73,7 @@ export default function AiPageClient({ recommendedUsers, initialAnalysisResults 
           <TabsContent value="ideal-type" className="mt-6">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {recommendedUsers.map((user) => {
-                const analysis = initialAnalysisResults[user.id];
+                const analysis = analysisResults[user.id];
                 const commonalitiesCount = (analysis?.data?.sharedHobbies?.length || 0) + (analysis?.data?.sharedInterests?.length || 0);
 
                 return (
