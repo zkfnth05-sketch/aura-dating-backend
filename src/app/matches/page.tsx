@@ -22,8 +22,15 @@ export default function MatchesPage() {
       return false;
     });
 
-    setPeopleWhoLikedMe(filteredMatches.filter(u => u.likesMe));
-    setPeopleILiked(filteredMatches.filter(u => u.likedByMe));
+    const sortUsersByTimestamp = (a: User, b: User) => {
+      const dateA = a.likedTimestamp ? new Date(a.likedTimestamp).getTime() : 0;
+      const dateB = b.likedTimestamp ? new Date(b.likedTimestamp).getTime() : 0;
+      return dateB - dateA;
+    };
+    
+    setPeopleWhoLikedMe(filteredMatches.filter(u => u.likesMe).sort(sortUsersByTimestamp));
+    setPeopleILiked(filteredMatches.filter(u => u.likedByMe).sort(sortUsersByTimestamp));
+    
   }, [currentUser.gender]);
 
   return (

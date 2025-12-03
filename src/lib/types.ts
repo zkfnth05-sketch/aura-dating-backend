@@ -18,6 +18,7 @@ export type User = {
   lastSeen?: 'Online' | string; // 'Online' or ISO 8601 date string
   likesMe?: boolean;
   likedByMe?: boolean;
+  likedTimestamp?: string; // ISO 8601 date string
 };
 
 export type Match = {

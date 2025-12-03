@@ -57,6 +57,7 @@ export const potentialMatches: User[] = [
     lastSeen: 'Online',
     likesMe: true,
     likedByMe: false,
+    likedTimestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 minutes ago
   },
   {
     id: 'user-2',
@@ -104,6 +105,7 @@ export const potentialMatches: User[] = [
     lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
     likesMe: false,
     likedByMe: true,
+    likedTimestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
   },
   {
     id: 'user-4',
@@ -152,6 +154,7 @@ export const potentialMatches: User[] = [
     lastSeen: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
     likesMe: true,
     likedByMe: true,
+    likedTimestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(), // 2 days ago
   },
    {
     id: 'user-6',
@@ -198,6 +201,7 @@ export const potentialMatches: User[] = [
     lastSeen: new Date(Date.now() - 10 * 60 * 1000).toISOString(), // 10 minutes ago
     likesMe: true,
     likedByMe: false,
+    likedTimestamp: new Date().toISOString(), // now
   }
 ];
 
