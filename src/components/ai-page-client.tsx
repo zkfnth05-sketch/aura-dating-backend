@@ -12,6 +12,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Header from './layout/header';
+import DateCourseForm from './date-course-form';
 
 type AnalysisState = {
   isLoading: boolean;
@@ -119,10 +120,8 @@ export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
               })}
             </div>
           </TabsContent>
-          <TabsContent value="date-course">
-            <div className="flex items-center justify-center h-64">
-              <p className="text-muted-foreground">준비 중입니다.</p>
-            </div>
+          <TabsContent value="date-course" className="mt-6">
+            <DateCourseForm />
           </TabsContent>
         </Tabs>
       </main>

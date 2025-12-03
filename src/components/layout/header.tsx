@@ -6,7 +6,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
-        <div className="flex flex-1 items-center justify-start gap-2">
+        <div className="flex items-center gap-2">
             <Link href="/ai" className="font-semibold text-muted-foreground hover:text-primary transition-colors text-sm">AI 추천</Link>
         </div>
         
@@ -18,7 +18,7 @@ export default function Header() {
             </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" size="icon">
                 <SlidersHorizontal className="h-5 w-5" />
             </Button>

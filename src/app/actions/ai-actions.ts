@@ -10,6 +10,11 @@ import {
     EnhancePhotoInput,
     EnhancePhotoOutput,
 } from '@/ai/flows/enhance-photo-flow';
+import {
+    recommendDateCourse,
+    DateCourseInput,
+    DateCourseOutput,
+} from '@/ai/flows/date-course-flow';
 import { User } from '@/lib/types';
 
 // The AI flow expects a specific input structure defined in AIMatchEnhancementInputSchema.
@@ -54,3 +59,15 @@ export async function getEnhancedPhoto(
       throw new Error('Failed to get AI photo enhancement.');
     }
   }
+
+export async function getDateCourse(
+    input: DateCourseInput
+    ): Promise<DateCourseOutput> {
+    try {
+        const result = await recommendDateCourse(input);
+        return result;
+    } catch (error) {
+        console.error('AI Date Course recommendation failed:', error);
+        throw new Error('Failed to get AI date course recommendation.');
+    }
+}
