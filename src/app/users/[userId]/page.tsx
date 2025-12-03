@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft } from 'lucide-react';
 import { notFound, useRouter, useParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
+import ActionButtons from '@/components/action-buttons';
 
 
 // Helper components for page structure
@@ -39,6 +40,13 @@ export default function UserProfilePage() {
     }
     setIsLoading(false);
   }, [userId]);
+
+  const handleAction = (action: 'like' | 'dislike' | 'superlike') => {
+    if (!user) return;
+    console.log(action, user.name);
+    // After action, go back to the previous page
+    router.back();
+  };
   
   if (isLoading) {
       return (
@@ -67,7 +75,7 @@ export default function UserProfilePage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
         </header>
-        <main className="flex-1 pb-24">
+        <main className="flex-1 pb-40">
           <div className="relative w-full aspect-[3/4] max-h-[70vh] cursor-pointer" onClick={() => handleImageClick(0)}>
             <Image
               src={allPhotos[0]}
@@ -166,6 +174,15 @@ export default function UserProfilePage() {
             </div>
           </div>
         </main>
+        <footer className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="flex justify-center">
+                <ActionButtons 
+                    onDislike={() => handleAction('dislike')}
+                    onSuperlike={() => handleAction('superlike')}
+                    onLike={() => handleAction('like')}
+                />
+            </div>
+        </footer>
       </div>
 
       <ImageCarouselDialog 
