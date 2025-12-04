@@ -5,7 +5,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import BottomNav from '@/components/layout/bottom-nav';
 import { UserProvider, useUser } from '@/contexts/user-context';
-import { NotificationSimulator } from '@/components/notification-simulator';
+import { IncomingCallToast } from '@/components/incoming-call-toast';
 import { usePathname } from 'next/navigation';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
@@ -22,7 +22,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <NotificationSimulator />
+      {authUser && <IncomingCallToast />}
       {needsPadding ? (
         <div className="pb-24">
           {children}

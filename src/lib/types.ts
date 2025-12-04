@@ -30,6 +30,8 @@ export type Match = {
   lastMessageTimestamp: Timestamp;
   unreadCount?: number;
   matchDate: Timestamp;
+  callStatus?: 'idle' | 'ringing' | 'active';
+  callerId?: string | null;
 };
 
 export type Message = {

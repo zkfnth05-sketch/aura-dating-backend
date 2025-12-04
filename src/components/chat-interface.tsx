@@ -15,7 +15,7 @@ import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { CollectionReference, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -42,11 +42,14 @@ const VideoIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export default function ChatInterface({ match, messagesColRef }: { match: Match; messagesColRef: CollectionReference }) {
+export default function ChatInterface({ match: initialMatch, messagesColRef }: { match: Match; messagesColRef: CollectionReference }) {
   const { user: currentUser } = useUser();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  const [match, setMatch] = useState(initialMatch);
   
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -56,6 +59,24 @@ export default function ChatInterface({ match, messagesColRef }: { match: Match;
   const audioChunksRef = useRef<Blob[]>([]);
 
   const [isCallActive, setIsCallActive] = useState(false);
+
+  useEffect(() => {
+    const matchRef = doc(firestore, 'matches', match.id);
+    const unsubscribe = onSnapshot(matchRef, (doc) => {
+        const updatedMatch = doc.data() as Match;
+        setMatch(updatedMatch);
+
+        // If I am the caller and the call is accepted, start the call
+        if(updatedMatch.callStatus === 'active' && updatedMatch.callerId === currentUser?.id) {
+            setIsCallActive(true);
+        }
+        // If the call is ended by either party, stop the call
+        if(updatedMatch.callStatus === 'idle' && isCallActive) {
+            setIsCallActive(false);
+        }
+    });
+    return () => unsubscribe();
+  }, [firestore, match.id, currentUser?.id, isCallActive]);
 
   const messagesQuery = useMemoFirebase(() => {
     return query(messagesColRef, orderBy('timestamp', 'asc'));
@@ -172,6 +193,30 @@ export default function ChatInterface({ match, messagesColRef }: { match: Match;
     stopRecording();
   };
 
+  const handleInitiateCall = async () => {
+    if(!currentUser) return;
+    const matchRef = doc(firestore, 'matches', match.id);
+    await updateDoc(matchRef, {
+        callStatus: 'ringing',
+        callerId: currentUser.id,
+    });
+    // The useEffect listening to match updates will handle setting isCallActive
+    // for the caller if the call is accepted.
+    toast({
+        title: '통화 연결 중...',
+        description: `${otherUser.name}님에게 영상 통화를 요청했습니다.`,
+    });
+  }
+
+  const handleEndCall = async () => {
+      const matchRef = doc(firestore, 'matches', match.id);
+      await updateDoc(matchRef, {
+          callStatus: 'idle',
+          callerId: null,
+      });
+      setIsCallActive(false);
+  }
+
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -195,7 +240,7 @@ export default function ChatInterface({ match, messagesColRef }: { match: Match;
       <VideoChat
         localUser={currentUser}
         remoteUser={otherUser}
-        onEndCall={() => setIsCallActive(false)}
+        onEndCall={handleEndCall}
       />
     );
   }
@@ -218,7 +263,7 @@ export default function ChatInterface({ match, messagesColRef }: { match: Match;
             <p className="text-xs text-muted-foreground">{lastSeenText}</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setIsCallActive(true)}>
+        <Button variant="ghost" size="icon" onClick={handleInitiateCall} disabled={match.callStatus === 'ringing' || match.callStatus === 'active'}>
           <VideoIcon className="h-6 w-6 text-primary" />
         </Button>
       </header>
