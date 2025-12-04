@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/firebase';
-import { signInWithPopup, GoogleAuthProvider, getAuth } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, getAuth, signInAnonymously } from 'firebase/auth';
 
 // Kakao icon
 const KakaoIcon = () => (
@@ -89,20 +89,19 @@ export default function SignupPage() {
   const auth = useAuth();
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-        await signInWithPopup(auth, provider);
+        await signInAnonymously(auth);
         // On successful sign-in, the useEffect in HomePage will redirect.
         router.push('/');
     } catch (error) {
-        console.error("Google-Login-Fehler:", error);
+        console.error("Anonymous-Login-Error:", error);
     }
   };
 
   // Dummy handler for other login methods
   const handleLogin = () => {
     // For now, we only implement Google login
-    alert("현재는 Google 로그인만 지원됩니다.");
+    alert("현재는 익명 로그인만 지원됩니다.");
   };
 
   return (
