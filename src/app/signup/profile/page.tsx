@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { serverTimestamp } from 'firebase/firestore';
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -54,7 +53,7 @@ export default function CreateProfilePage() {
         bio: '새로운 만남을 기다립니다!',
         lat: 37.5665, // Default to Seoul
         lng: 126.9780,
-        createdAt: serverTimestamp() as any, // Set server-side timestamp
+        createdAt: 'serverTimestamp' as any, // Use string placeholder
         likeCount: 0, // Initialize like count
         likedBy: [], // Initialize likedBy array
       });

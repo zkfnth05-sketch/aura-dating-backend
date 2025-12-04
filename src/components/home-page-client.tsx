@@ -146,6 +146,7 @@ export default function HomePageClient() {
         if (action === 'like') {
             // 2. Increment the likeCount on the target user
             const targetUserRef = doc(firestore, 'users', targetUser.id);
+            // We use getDoc here to ensure we have the latest data before incrementing
             const targetUserSnap = await getDoc(targetUserRef);
             const currentLikeCount = targetUserSnap.data()?.likeCount || 0;
             batch.update(targetUserRef, {
@@ -159,6 +160,7 @@ export default function HomePageClient() {
                  where('likeeId', '==', currentUser.id),
                  where('isLike', '==', true)
              );
+             // This can be done in the background, but for showing an immediate match, we do it here.
              const theirLikeSnapshot = await getDocs(theirLikeQuery);
 
 
@@ -185,6 +187,7 @@ export default function HomePageClient() {
         await batch.commit();
     };
 
+    // We don't await this promise. Let it run in the background.
     recordLike().catch(error => console.error("Failed to record like/dislike:", error));
     // --- End Non-blocking Firestore operations ---
 

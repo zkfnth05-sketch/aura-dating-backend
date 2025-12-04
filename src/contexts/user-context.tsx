@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { User as AuthUser } from 'firebase/auth';
 import { useUser as useAuthUser, useFirestore } from '@/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 interface NotificationSettings {
@@ -104,16 +104,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const updateUser = async (newUserData: Partial<User>) => {
     if (!authUser) return;
-
-    // Use a functional update to ensure you have the latest state
+  
+    const userRef = doc(firestore, 'users', authUser.uid);
+  
+    // Special handling for serverTimestamp
+    const dataToSave: any = { ...newUserData };
+    if (newUserData.createdAt === 'serverTimestamp') {
+        dataToSave.createdAt = serverTimestamp();
+    }
+  
+    // Use setDoc with merge to create or update the user profile
+    await setDoc(userRef, dataToSave, { merge: true });
+  
+    // After successful save, update the local state
     setUser(prevUser => {
+      // Create the updated user state, but don't re-assign serverTimestamp function
       const updatedUser = { ...(prevUser || {}), ...newUserData, id: authUser.uid } as User;
       
-      const userRef = doc(firestore, 'users', authUser.uid);
-      // Use setDoc with merge to create or update the user profile
-      setDoc(userRef, updatedUser, { merge: true }).catch(error => {
-          console.error("Failed to save user to Firestore", error);
-      });
+      // If we used serverTimestamp, the local state shouldn't hold the function
+      // It will be updated on the next snapshot read if needed.
+      // For now, we can just remove it from the immediate local state.
+      if (updatedUser.createdAt) {
+        // This is a simple way to handle it. In a real app you might want to
+        // get the fresh data from the server.
+        delete updatedUser.createdAt; 
+      }
 
       return updatedUser;
     });

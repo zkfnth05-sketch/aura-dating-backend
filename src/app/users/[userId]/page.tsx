@@ -71,12 +71,16 @@ export default function UserProfilePage() {
         try {
           const potentialMatchWithDefaults = {
             ...user,
+            hobbies: user.hobbies || [],
+            interests: user.interests || [],
             values: user.values || [],
             communication: user.communication || [],
             lifestyle: user.lifestyle || [],
           };
           const currentUserWithDefaults = {
             ...currentUser,
+            hobbies: currentUser.hobbies || [],
+            interests: currentUser.interests || [],
             values: currentUser.values || [],
             communication: currentUser.communication || [],
             lifestyle: currentUser.lifestyle || [],
