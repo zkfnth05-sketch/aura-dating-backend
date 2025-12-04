@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter'];
+  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
   const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
 
   return (
