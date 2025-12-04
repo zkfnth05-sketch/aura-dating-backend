@@ -14,6 +14,17 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
   <div className="py-6">
@@ -165,6 +176,34 @@ export default function ProfileEditPage() {
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
   }
+
+  const handleDeleteAccount = () => {
+    try {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('notificationSettings');
+        localStorage.removeItem('userFilters');
+        localStorage.removeItem('isSignedUp');
+        
+        toast({
+            title: "계정이 삭제되었습니다.",
+            description: "이용해주셔서 감사합니다.",
+        });
+
+        // This will effectively reset the app state for the next user
+        router.push('/signup');
+        // We might want to force a reload to clear all context state,
+        // but router.push should be sufficient for this prototype.
+        setTimeout(() => window.location.reload(), 500);
+
+    } catch(e) {
+        console.error("Failed to delete account:", e);
+        toast({
+            variant: "destructive",
+            title: "오류",
+            description: "계정을 삭제하는 중 오류가 발생했습니다.",
+        });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -322,7 +361,25 @@ export default function ProfileEditPage() {
             <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">저장</Button>
         </div>
         <div className="text-center mt-4">
-            <Button variant="link" className="text-xs text-zinc-500">회원탈퇴</Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="link" className="text-xs text-zinc-500">회원탈퇴</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    이 작업은 되돌릴 수 없습니다. 계정이 영구적으로 삭제되고 데이터가 서버에서 제거됩니다.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>취소</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAccount} className={cn(buttonVariants({ variant: "destructive" }))}>
+                    삭제
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </div>
       </footer>
     </div>
