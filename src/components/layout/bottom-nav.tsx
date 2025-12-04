@@ -48,8 +48,12 @@ export default function BottomNav() {
     setUnreadCount(totalUnread);
   }, []);
 
+  // Define paths where the bottom nav should be hidden
+  const noNavPaths = ['/signup', '/chat/', '/profile/edit', '/users/'];
+
   // Hide bottom nav on specific pages
-  if (pathname.startsWith('/chat/') || pathname.startsWith('/profile/edit') || pathname.startsWith('/users/') || pathname.startsWith('/filter')) {
+  const isNavHidden = noNavPaths.some(path => pathname.startsWith(path));
+  if (isNavHidden) {
     return null;
   }
 
