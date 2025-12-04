@@ -82,8 +82,15 @@ export default function UserProfilePage() {
     setIsLoading(false);
   }, [userId, source, currentUser]);
 
-  const handleAction = (action: 'like' | 'dislike' | 'superlike') => {
+  const handleAction = (action: 'like' | 'dislike' | 'message') => {
     if (!user) return;
+    
+    if (action === 'message') {
+        const matchId = `match-${user.id.split('-')[1]}`;
+        router.push(`/chat/${matchId}`);
+        return;
+    }
+
     console.log(action, user.name);
     router.back();
   };
@@ -219,7 +226,7 @@ export default function UserProfilePage() {
             <div className="flex justify-center">
                 <ActionButtons 
                     onDislike={() => handleAction('dislike')}
-                    onSuperlike={() => handleAction('superlike')}
+                    onMessage={() => handleAction('message')}
                     onLike={() => handleAction('like')}
                 />
             </div>

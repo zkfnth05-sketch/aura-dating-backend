@@ -8,6 +8,7 @@ import ProfileCard from '@/components/profile-card';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
+import { useRouter } from 'next/navigation';
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
     return users.filter(user => {
@@ -50,6 +51,7 @@ const applyFilters = (users: User[], filters: FilterSettings, currentUser: User)
 
 export default function HomePageClient() {
   const { user: currentUser, filters, isLoaded } = useUser();
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
@@ -62,20 +64,26 @@ export default function HomePageClient() {
     }
   }, [filters, isLoaded, currentUser]);
 
-  const handleAction = (action: 'like' | 'dislike' | 'superlike') => {
+  const handleAction = (action: 'like' | 'dislike' | 'message') => {
     if (currentIndex >= users.length) return;
+    const user = users[currentIndex];
+
+    if (action === 'message') {
+        // This is a simplified logic. In a real app, you'd find or create a match ID.
+        const matchId = `match-${user.id.split('-')[1]}`;
+        router.push(`/chat/${matchId}`);
+        return;
+    }
 
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
 
-    // In a real app, this would send data to the backend.
-    console.log(action, users[currentIndex].name);
+    console.log(action, user.name);
 
-    // Animate out and then move to the next card.
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
-    }, 500); // This timeout should match the CSS transition duration.
+    }, 500);
   };
   
   const activeUser = users[currentIndex];
@@ -98,7 +106,6 @@ export default function HomePageClient() {
           ) : (
             users.map((user, index) => {
               const isActive = index === currentIndex;
-              // Prevent non-active cards from being clickable
               if (index < currentIndex) return null;
               
               return (
@@ -119,7 +126,7 @@ export default function HomePageClient() {
           <div className="absolute bottom-24 z-20">
             <ActionButtons
               onDislike={() => handleAction('dislike')}
-              onSuperlike={() => handleAction('superlike')}
+              onMessage={() => handleAction('message')}
               onLike={() => handleAction('like')}
             />
           </div>
