@@ -391,5 +391,4 @@ export default function ProfileEditPage() {
       </footer>
     </div>
   );
-
-    
+}
