@@ -1,23 +1,31 @@
-import type {Metadata} from 'next';
+'use client';
+
+import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import BottomNav from '@/components/layout/bottom-nav';
 import { UserProvider } from '@/contexts/user-context';
 import { NotificationSimulator } from '@/components/notification-simulator';
+import { usePathname } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Aura - 새로운 만남의 시작',
-  description: 'Aura와 함께 당신의 인연을 찾아보세요.',
-};
+// No metadata export from a 'use client' component. 
+// If you need metadata, you'd move this to a server component parent.
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter'];
+  const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
+
   return (
     <html lang="ko" className="dark">
       <head>
+        {/* We can still have a head tag in a client component */}
+        <title>Aura - 새로운 만남의 시작</title>
+        <meta name="description" content="Aura와 함께 당신의 인연을 찾아보세요." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -31,9 +39,13 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <UserProvider>
           <NotificationSimulator />
-          <div className="pb-24">
-            {children}
-          </div>
+          {needsPadding ? (
+            <div className="pb-24">
+              {children}
+            </div>
+          ) : (
+            children
+          )}
           <Toaster />
           <BottomNav />
         </UserProvider>
