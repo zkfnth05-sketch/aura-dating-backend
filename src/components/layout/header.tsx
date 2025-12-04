@@ -14,7 +14,7 @@ export default function Header() {
         </div>
         <div className="flex items-center justify-center">
             <Link href="/" className="flex items-center justify-center gap-2">
-                <span className="font-headline text-2xl font-bold text-primary">
+                <span className="font-headline text-3xl font-bold text-primary">
                     Aura
                 </span>
             </Link>
