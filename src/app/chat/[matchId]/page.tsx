@@ -1,11 +1,11 @@
 'use client';
 
 import ChatInterface from '@/components/chat-interface';
-import { useDoc, useMemoFirebase } from '@/firebase';
-import type { Match, Message } from '@/lib/types';
+import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
+import type { Match } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
-import { doc, collection } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { doc, collection, CollectionReference } from 'firebase/firestore';
+
 
 export default function ChatPage() {
   const params = useParams();
@@ -20,7 +20,7 @@ export default function ChatPage() {
 
   const messagesColRef = useMemoFirebase(() => {
     if (!matchId) return null;
-    return collection(firestore, 'matches', matchId, 'messages');
+    return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
   }, [firestore, matchId]);
 
   if (isMatchLoading) {
@@ -31,5 +31,5 @@ export default function ChatPage() {
     return notFound();
   }
 
-  return <ChatInterface match={match} messagesColRef={messagesColRef} />;
+  return <ChatInterface match={match} messagesColRef={messagesColRef!} />;
 }

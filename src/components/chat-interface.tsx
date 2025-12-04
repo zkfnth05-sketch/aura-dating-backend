@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Match, Message, User } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Send, Sparkles, Loader2, Video } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -103,14 +103,14 @@ export default function ChatInterface({ match, messagesColRef }: { match: Match;
             currentUser: {
                 name: currentUser.name,
                 bio: currentUser.bio,
-                hobbies: currentUser.hobbies,
-                interests: currentUser.interests,
+                hobbies: currentUser.hobbies || [],
+                interests: currentUser.interests || [],
             },
             matchUser: {
                 name: otherUser.name,
                 bio: otherUser.bio,
-                hobbies: otherUser.hobbies,
-                interests: otherUser.interests,
+                hobbies: otherUser.hobbies || [],
+                interests: otherUser.interests || [],
             },
             messages: (messages || []).map(m => ({
                 senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name,

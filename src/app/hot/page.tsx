@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { useState, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 const UserCard = ({ user, uniqueKey }: { user: User, uniqueKey: string }) => (
   <Link href={`/users/${user.id}`} key={uniqueKey}>
@@ -54,7 +54,7 @@ export default function HotPage() {
 
         // For NEW, we'll sort by a timestamp if available, otherwise just use the order.
         // This assumes a `createdAt` field might exist on the user object.
-        const sortedByNew = [...filteredMatches].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const sortedByNew = [...filteredMatches].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
         setNewUsers(sortedByNew.slice(0, 12));
 
         // For HOT, sort by likeCount.

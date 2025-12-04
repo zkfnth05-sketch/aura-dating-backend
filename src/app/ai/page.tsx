@@ -33,7 +33,7 @@ export default function AiPage() {
     }
   }, [currentUser, allUsers]);
 
-  if (!currentUser) {
+  if (!isLoaded || !currentUser) {
     return null; // Or a loading state
   }
 

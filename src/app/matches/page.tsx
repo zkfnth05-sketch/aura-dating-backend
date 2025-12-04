@@ -7,38 +7,50 @@ import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import type { User } from '@/lib/types';
+import type { User, Like } from '@/lib/types';
+import { useState, useEffect } from 'react';
 
 export default function MatchesPage() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
+  const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
+  const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
+  
+  const { data: allUsers } = useCollection<User>(useMemoFirebase(() => collection(firestore, 'users'), [firestore]));
 
   // Query for users who liked me
   const likesMeQuery = useMemoFirebase(() => {
     if (!currentUser) return null;
     return query(
-        collection(firestore, 'likes'), 
-        where('likeeId', '==', currentUser.id)
+      collection(firestore, 'users'), 
+      where('likedBy', 'array-contains', currentUser.id)
     );
   }, [firestore, currentUser]);
-  const { data: likesMeData } = useCollection(likesMeQuery);
+  const { data: likesMeData } = useCollection<User>(likesMeQuery);
+  
+  useEffect(() => {
+      if(likesMeData) {
+        setPeopleWhoLikedMe(likesMeData);
+      }
+  }, [likesMeData]);
 
-  // In a real app you'd fetch user profiles based on likerId.
-  // For this demo, we'll just show a count.
-  const peopleWhoLikedMe: User[] = []; // This would be populated by fetching profiles
 
   // Query for users I liked
   const iLikedQuery = useMemoFirebase(() => {
     if (!currentUser) return null;
     return query(
-        collection(firestore, 'likes'), 
-        where('likerId', '==', currentUser.id)
+      collection(firestore, 'users', currentUser.id, 'likes')
     );
   }, [firestore, currentUser]);
-  const { data: iLikedData } = useCollection(iLikedQuery);
+  const { data: iLikedData } = useCollection<Like>(iLikedQuery);
 
-  // In a real app you'd fetch user profiles based on likeeId.
-  const peopleILiked: User[] = []; // This would be populated by fetching profiles
+  useEffect(() => {
+    if(iLikedData && allUsers) {
+        const likedUserIds = iLikedData.map(like => like.likeeId);
+        const likedUsers = allUsers.filter(user => likedUserIds.includes(user.id));
+        setPeopleILiked(likedUsers);
+    }
+  }, [iLikedData, allUsers]);
 
   const matchesQuery = useMemoFirebase(() => {
     if (!currentUser) return null;
@@ -75,11 +87,9 @@ export default function MatchesPage() {
             <MatchList matches={matches || []} />
           </TabsContent>
           <TabsContent value="liked-me" className="mt-0 p-4">
-             {/* This is a placeholder, a real implementation would fetch user profiles based on IDs from likesMeData */}
             <UserGrid users={peopleWhoLikedMe} />
           </TabsContent>
           <TabsContent value="i-liked" className="mt-0 p-4">
-              {/* This is a placeholder, a real implementation would fetch user profiles based on IDs from iLikedData */}
             <UserGrid users={peopleILiked} />
           </TabsContent>
         </Tabs>

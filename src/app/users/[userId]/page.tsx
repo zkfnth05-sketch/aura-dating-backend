@@ -66,33 +66,57 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     if (user && currentUser && source === 'ai' && !aiReason) {
-      setIsAiReasonLoading(true);
-      getAIRecommendationReason({ currentUser, potentialMatch: user })
-        .then(result => {
+      const fetchReason = async () => {
+        setIsAiReasonLoading(true);
+        try {
+          const potentialMatchWithDefaults = {
+            ...user,
+            values: user.values || [],
+            communication: user.communication || [],
+            lifestyle: user.lifestyle || [],
+          };
+          const currentUserWithDefaults = {
+            ...currentUser,
+            values: currentUser.values || [],
+            communication: currentUser.communication || [],
+            lifestyle: currentUser.lifestyle || [],
+          };
+
+          const result = await getAIRecommendationReason({ 
+              currentUser: currentUserWithDefaults, 
+              potentialMatch: potentialMatchWithDefaults 
+          });
           setAiReason(result.reason);
-        })
-        .catch(error => {
+        } catch (error) {
           console.error("Failed to get AI recommendation reason:", error);
           setAiReason("추천 이유를 불러오는 데 실패했습니다.");
-        })
-        .finally(() => {
+        } finally {
           setIsAiReasonLoading(false);
-        });
+        }
+      }
+      fetchReason();
     }
   }, [user, currentUser, source, aiReason]);
+
 
   const handleAction = (action: 'like' | 'dislike' | 'message') => {
     if (!user) return;
     
+    // This part should be handled by home-page-client's swipe logic
+    // But if we want a user to be able to like from here, we need to implement it.
+    // For now, we just go back.
+    if (action === 'like' || action === 'dislike') {
+      router.back();
+      return;
+    }
+
     if (action === 'message') {
-        const matchId = `match-${user.id.split('-')[1]}`;
+        const matchId = `match-${user.id.split('-')[1]}`; // This logic might need to be more robust
         router.push(`/chat/${matchId}`);
         return;
     }
 
     console.log(action, user.name);
-    // In a real app, you'd handle the like/dislike action in the backend
-    // For this prototype, we just go back.
     router.back();
   };
   
@@ -108,7 +132,7 @@ export default function UserProfilePage() {
     notFound();
   }
 
-  const allPhotos = user.photoUrls || [user.photoUrl];
+  const allPhotos = user.photoUrls && user.photoUrls.length > 0 ? user.photoUrls : [user.photoUrl];
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
@@ -125,14 +149,16 @@ export default function UserProfilePage() {
         </header>
         <main className="flex-1 pb-40">
           <div className="relative w-full aspect-[3/4] max-h-[70vh] cursor-pointer" onClick={() => handleImageClick(0)}>
-            <Image
-              src={allPhotos[0]}
-              alt={`Profile of ${user.name}`}
-              fill
-              className="object-cover"
-              data-ai-hint="person portrait"
-              priority
-            />
+            {allPhotos[0] && (
+              <Image
+                src={allPhotos[0]}
+                alt={`Profile of ${user.name}`}
+                fill
+                className="object-cover"
+                data-ai-hint="person portrait"
+                priority
+              />
+            )}
           </div>
           
           <div className="container relative z-10 px-4">
@@ -205,21 +231,25 @@ export default function UserProfilePage() {
                 </ProfileSection>
               )}
 
-              <ProfileSection title="관심사">
-                <div className="flex flex-wrap gap-2">
-                  {user.interests.map(interest => (
-                    <Badge key={interest} variant="secondary" className="bg-accent text-accent-foreground font-normal">{interest}</Badge>
-                  ))}
-                </div>
-              </ProfileSection>
-
-              <ProfileSection title="취미">
-                <div className="flex flex-wrap gap-2">
-                  {user.hobbies.map(hobby => (
-                    <Badge key={hobby} variant="secondary" className="bg-accent text-accent-foreground font-normal">{hobby}</Badge>
-                  ))}
-                </div>
-              </ProfileSection>
+              {user.interests && user.interests.length > 0 && (
+                <ProfileSection title="관심사">
+                  <div className="flex flex-wrap gap-2">
+                    {user.interests.map(interest => (
+                      <Badge key={interest} variant="secondary" className="bg-accent text-accent-foreground font-normal">{interest}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
+              
+              {user.hobbies && user.hobbies.length > 0 && (
+                <ProfileSection title="취미">
+                  <div className="flex flex-wrap gap-2">
+                    {user.hobbies.map(hobby => (
+                      <Badge key={hobby} variant="secondary" className="bg-accent text-accent-foreground font-normal">{hobby}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
             </div>
           </div>
         </main>

@@ -12,25 +12,25 @@ export type User = {
   interests: string[];
   photoUrl: string;
   photoUrls?: string[];
-  gender?: '남성' | '여성' | '기타';
+  gender: '남성' | '여성' | '기타';
   relationship?: string[];
   values?: string[];
   communication?: string[];
   lifestyle?: string[];
   lastSeen?: 'Online' | string; // 'Online' or ISO 8601 date string
-  likesMe?: boolean;
-  likedByMe?: boolean;
-  likedTimestamp?: string; // ISO 8601 date string
   likeCount?: number;
+  createdAt?: Timestamp;
+  likedBy?: string[];
 };
 
 export type Match = {
   id: string;
   users: string[];
-  participants: User[];
+  participants: Partial<User>[]; // Store a subset of user data for quick access
   lastMessage: string;
   lastMessageTimestamp: Timestamp;
   unreadCount?: number;
+  matchDate: Timestamp;
 };
 
 export type Message = {
@@ -39,4 +39,12 @@ export type Message = {
   text?: string;
   audioUrl?: string;
   timestamp: Timestamp | any;
+};
+
+export type Like = {
+    id: string;
+    likerId: string;
+    likeeId: string;
+    isLike: boolean;
+    timestamp: Timestamp;
 };

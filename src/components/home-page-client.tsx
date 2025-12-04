@@ -9,30 +9,37 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, writeBatch, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, writeBatch, getDoc, arrayUnion } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
     return users.filter(user => {
       if (user.id === currentUser.id) return false;
-      if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
+      
+      const age = Number(user.age);
+      if (age < filters.ageRange.min || age > filters.ageRange.max) return false;
+
       if (filters.gender.length > 0 && user.gender && !filters.gender.includes(user.gender)) return false;
+      
       if (filters.gender.length === 0) {
         if (currentUser.gender === '남성' && user.gender !== '여성') return false;
         if (currentUser.gender === '여성' && user.gender !== '남성') return false;
       }
+      
       const checkTags = (userTags: string[] | undefined, filterTags: string[]) => {
         if (filterTags.length === 0) return true;
-        if (!userTags) return false;
+        if (!userTags || userTags.length === 0) return false;
         return filterTags.every(tag => userTags.includes(tag));
       };
+
       if (!checkTags(user.relationship, filters.relationship)) return false;
       if (!checkTags(user.values, filters.values)) return false;
       if (!checkTags(user.communication, filters.communication)) return false;
       if (!checkTags(user.lifestyle, filters.lifestyle)) return false;
       if (!checkTags(user.hobbies, filters.hobbies)) return false;
       if (!checkTags(user.interests, filters.interests)) return false;
+      
       return true;
     });
 };
@@ -55,7 +62,6 @@ export default function HomePageClient() {
 
   useEffect(() => {
     if (isLoaded && currentUser && allUsers) {
-      // Filter out users that have been liked/disliked
       const getSeenUserIds = async () => {
         const likesCol = collection(firestore, 'users', currentUser.id, 'likes');
         const likesSnapshot = await getDocs(likesCol);
@@ -63,8 +69,8 @@ export default function HomePageClient() {
       };
 
       getSeenUserIds().then(seenIds => {
-        const filteredFromDb = allUsers.filter(user => !seenIds.has(user.id));
-        const filteredUsers = applyFilters(filteredFromDb, filters, currentUser);
+        const unseenUsers = allUsers.filter(user => !seenIds.has(user.id));
+        const filteredUsers = applyFilters(unseenUsers, filters, currentUser);
         setUsers(filteredUsers);
         setCurrentIndex(0);
         setIsLoadingUsers(false);
@@ -74,32 +80,39 @@ export default function HomePageClient() {
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || currentIndex >= users.length) return;
+    
     const targetUser = users[currentIndex];
 
     if (action === 'message') {
-      // Find existing match or create a new one
-      const matchQuery = query(collection(firestore, 'matches'), where('users', '==', [currentUser.id, targetUser.id]));
+      const matchQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
       const matchSnapshot = await getDocs(matchQuery);
+      
+      let existingMatch: {id: string} | null = null;
+      matchSnapshot.forEach(doc => {
+          const match = doc.data();
+          if (match.users.includes(targetUser.id)) {
+              existingMatch = { id: doc.id, ...match };
+          }
+      });
+  
+      let matchId: string;
 
-      let matchId;
-      if (matchSnapshot.empty) {
-         // check for reverse order
-         const reverseMatchQuery = query(collection(firestore, 'matches'), where('users', '==', [targetUser.id, currentUser.id]));
-         const reverseMatchSnapshot = await getDocs(reverseMatchQuery);
-         if(reverseMatchSnapshot.empty) {
-            const newMatchRef = doc(collection(firestore, 'matches'));
-            await setDoc(newMatchRef, {
-                users: [currentUser.id, targetUser.id],
-                participants: [currentUser, targetUser],
-                lastMessage: '',
-                lastMessageTimestamp: serverTimestamp(),
-            });
-            matchId = newMatchRef.id;
-         } else {
-            matchId = reverseMatchSnapshot.docs[0].id;
-         }
+      if (existingMatch) {
+          matchId = existingMatch.id;
       } else {
-        matchId = matchSnapshot.docs[0].id;
+          const newMatchRef = doc(collection(firestore, 'matches'));
+          await setDoc(newMatchRef, {
+              id: newMatchRef.id,
+              users: [currentUser.id, targetUser.id],
+              participants: [
+                { id: currentUser.id, name: currentUser.name, photoUrl: currentUser.photoUrl },
+                { id: targetUser.id, name: targetUser.name, photoUrl: targetUser.photoUrl },
+              ],
+              matchDate: serverTimestamp(),
+              lastMessage: '',
+              lastMessageTimestamp: serverTimestamp(),
+          });
+          matchId = newMatchRef.id;
       }
       router.push(`/chat/${matchId}`);
       return;
@@ -108,32 +121,55 @@ export default function HomePageClient() {
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
 
-    // Record the like/dislike in Firestore
-    const likeRef = doc(collection(firestore, 'users', currentUser.id, 'likes'));
-    await setDoc(likeRef, {
-      likerId: currentUser.id,
-      likeeId: targetUser.id,
-      isLike: action === 'like',
-      timestamp: serverTimestamp(),
-    });
+    // --- Start Non-blocking Firestore operations ---
+    const recordLike = async () => {
+        if (!currentUser) return;
+        const likeRef = doc(collection(firestore, 'users', currentUser.id, 'likes'));
+        await setDoc(likeRef, {
+            likerId: currentUser.id,
+            likeeId: targetUser.id,
+            isLike: action === 'like',
+            timestamp: serverTimestamp(),
+        });
     
-    // Check for a mutual like
-    if (action === 'like') {
-        const theirLikeRef = doc(firestore, 'users', targetUser.id, 'likes', currentUser.id);
-        const theirLikeSnap = await getDoc(theirLikeRef);
-        if (theirLikeSnap.exists() && theirLikeSnap.data().isLike) {
-            // It's a match!
-            const matchRef = doc(collection(firestore, 'matches'));
-            await setDoc(matchRef, {
-                id: matchRef.id,
-                users: [currentUser.id, targetUser.id],
-                participants: [currentUser, targetUser],
-                matchDate: serverTimestamp(),
+        if (action === 'like') {
+            // Add current user to target user's "likedBy" list
+            const targetUserRef = doc(firestore, 'users', targetUser.id);
+            await updateDoc(targetUserRef, {
+                likedBy: arrayUnion(currentUser.id)
             });
+
+            // Check if the other user has liked us back
+            const theirLikeQuery = query(
+                collection(firestore, 'users', targetUser.id, 'likes'),
+                where('likeeId', '==', currentUser.id),
+                where('isLike', '==', true)
+            );
+            const theirLikeSnapshot = await getDocs(theirLikeQuery);
+
+            if (!theirLikeSnapshot.empty) {
+                // It's a match!
+                const newMatchRef = doc(collection(firestore, 'matches'));
+                await setDoc(newMatchRef, {
+                    id: newMatchRef.id,
+                    users: [currentUser.id, targetUser.id],
+                    participants: [
+                        // Storing a subset of user data for quick access in match lists
+                        { id: currentUser.id, name: currentUser.name, photoUrl: currentUser.photoUrl, lastSeen: currentUser.lastSeen },
+                        { id: targetUser.id, name: targetUser.name, photoUrl: targetUser.photoUrl, lastSeen: targetUser.lastSeen },
+                    ],
+                    matchDate: serverTimestamp(),
+                    lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+                    lastMessageTimestamp: serverTimestamp(),
+                });
+            }
         }
-    }
+    };
 
+    recordLike().catch(error => console.error("Failed to record like/dislike:", error));
+    // --- End Non-blocking Firestore operations ---
 
+    // Move to next card immediately
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
@@ -150,8 +186,6 @@ export default function HomePageClient() {
         </div>
       );
   }
-
-  const activeUser = users[currentIndex];
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -175,10 +209,10 @@ export default function HomePageClient() {
           ) : (
             users.map((user, index) => {
               const isActive = index === currentIndex;
-              if (index < currentIndex) return null;
+              if (index < currentIndex || index > currentIndex + 2) return null; // Render current and next few cards
               
               return (
-                <div key={user.id} className="absolute w-full h-full">
+                <div key={user.id} className="absolute w-full h-full" style={{ zIndex: users.length - index }}>
                   <ProfileCard
                     currentUser={currentUser}
                     potentialMatch={user}
@@ -191,7 +225,7 @@ export default function HomePageClient() {
           )}
         </div>
         
-        {activeUser && (
+        {currentIndex < users.length && (
           <div className="absolute bottom-24 z-20">
             <ActionButtons
               onDislike={() => handleAction('dislike')}
