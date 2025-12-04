@@ -12,9 +12,20 @@ import { useUser } from '@/contexts/user-context';
 export function NotificationSimulator() {
   const { toast } = useToast();
   const router = useRouter();
-  const { notificationSettings } = useUser();
+  const { notificationSettings, isLoaded } = useUser();
 
   useEffect(() => {
+    // Wait until context is loaded from localStorage
+    if (!isLoaded) {
+      return;
+    }
+
+    // Only run for signed-up users.
+    const isSignedUp = localStorage.getItem('isSignedUp') === 'true';
+    if (!isSignedUp) {
+        return;
+    }
+
     if (!notificationSettings.all) {
         return;
     }
@@ -100,7 +111,7 @@ export function NotificationSimulator() {
       clearTimeout(messageTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notificationSettings, router, toast]);
+  }, [isLoaded, notificationSettings, router, toast]);
 
   return null;
 }
