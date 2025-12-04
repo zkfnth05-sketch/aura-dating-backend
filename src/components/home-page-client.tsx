@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { potentialMatches } from '@/lib/data';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
