@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { X, Heart, MessageCircle } from 'lucide-react';
+import { X, Heart, Send } from 'lucide-react';
 
 type ActionButtonsProps = {
   onDislike: () => void;
@@ -14,7 +14,7 @@ export default function ActionButtons({ onDislike, onMessage, onLike }: ActionBu
         <X className="w-8 h-8" />
       </Button>
       <Button onClick={onMessage} variant="outline" size="icon" className="w-16 h-16 rounded-full bg-button-bg border-0 text-button-superlike hover:bg-button-bg/80">
-        <MessageCircle className="w-7 h-7" />
+        <Send className="w-7 h-7" />
       </Button>
       <Button onClick={onLike} variant="outline" size="icon" className="w-16 h-16 rounded-full bg-button-bg border-0 text-button-like hover:bg-button-bg/80">
         <Heart className="w-8 h-8 fill-current" />
