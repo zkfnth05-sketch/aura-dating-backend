@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 
 export default function CreateProfilePage() {
   const router = useRouter();
+  const { toast } = useToast();
   const { user, updateUser, authUser, isLoaded } = useUser();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -31,24 +33,37 @@ export default function CreateProfilePage() {
 
   const handleNext = async () => {
     if (!name || !age || !city) {
-      console.error('Please fill all fields');
+      toast({
+        variant: "destructive",
+        title: "입력 필요",
+        description: "이름, 나이, 도시를 모두 입력해주세요.",
+      });
       return;
     }
 
-    await updateUser({
-      name,
-      age: parseInt(age, 10),
-      location: city,
-      gender,
-      // Default values for a new user
-      hobbies: ['독서', '영화 감상'],
-      interests: ['맛집 탐방', '여행'],
-      bio: '새로운 만남을 기다립니다!',
-      lat: 37.5665, // Default to Seoul
-      lng: 126.9780,
-    });
+    try {
+      await updateUser({
+        name,
+        age: parseInt(age, 10),
+        location: city,
+        gender,
+        // Default values for a new user
+        hobbies: ['독서', '영화 감상'],
+        interests: ['맛집 탐방', '여행'],
+        bio: '새로운 만남을 기다립니다!',
+        lat: 37.5665, // Default to Seoul
+        lng: 126.9780,
+      });
 
-    router.push('/signup/photo');
+      router.push('/signup/photo');
+    } catch (error) {
+      console.error("Failed to update user:", error);
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
+      });
+    }
   };
 
   if (!isLoaded || !authUser) {
