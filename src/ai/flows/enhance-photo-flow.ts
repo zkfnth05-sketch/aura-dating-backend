@@ -60,7 +60,7 @@ const enhancePhotoFlow = ai.defineFlow(
             { text: enhancementPrompt },
         ],
         config: {
-            responseModalities: ['IMAGE'],
+            responseModalities: ['IMAGE', 'TEXT'],
         },
     });
 
