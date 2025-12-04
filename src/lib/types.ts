@@ -18,7 +18,7 @@ export type User = {
   communication?: string[];
   lifestyle?: string[];
   lastSeen?: 'Online' | string; // 'Online' or ISO 8601 date string
-  likeCount?: number;
+  likeCount: number;
   createdAt?: Timestamp;
 };
 

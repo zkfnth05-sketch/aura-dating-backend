@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 
@@ -147,14 +147,9 @@ export default function HomePageClient() {
         if (action === 'like') {
             // 2. Increment the likeCount on the target user
             const targetUserRef = doc(firestore, 'users', targetUser.id);
-            // We use getDoc here to ensure we have the latest data before incrementing
-            const targetUserSnap = await getDoc(targetUserRef);
-            const currentLikeCount = targetUserSnap.data()?.likeCount || 0;
-            batch.update(targetUserRef, {
-                likeCount: currentLikeCount + 1,
-            });
-
-            // Record who liked the user in a subcollection instead of an array
+            batch.update(targetUserRef, { likeCount: increment(1) });
+            
+            // Record who liked the user in a subcollection
             const likedByRef = doc(collection(firestore, 'users', targetUser.id, 'likedBy'));
             batch.set(likedByRef, {
                 likerId: currentUser.id,
@@ -187,6 +182,8 @@ export default function HomePageClient() {
                     lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
                     lastMessageTimestamp: serverTimestamp(),
                     unreadCount: 0,
+                    callStatus: 'idle',
+                    callerId: null
                 });
             }
         }

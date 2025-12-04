@@ -54,7 +54,7 @@ export default function CreateProfilePage() {
         lat: 37.5665, // Default to Seoul
         lng: 126.9780,
         createdAt: 'serverTimestamp' as any, // Use string placeholder
-        likeCount: 0, // Initialize like count
+        likeCount: 0,
       });
 
       router.push('/signup/photo');
