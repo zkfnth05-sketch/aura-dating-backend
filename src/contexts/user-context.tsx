@@ -11,11 +11,25 @@ interface NotificationSettings {
   videoCall: boolean;
 }
 
+export interface FilterSettings {
+    ageRange: { min: number; max: number };
+    gender: ('남성' | '여성' | '기타')[];
+    relationship: string[];
+    values: string[];
+    communication: string[];
+    lifestyle: string[];
+    hobbies: string[];
+    interests: string[];
+}
+
 interface UserContextType {
   user: User;
   updateUser: (newUserData: Partial<User>) => void;
   notificationSettings: NotificationSettings;
   updateNotificationSettings: (newSettings: Partial<NotificationSettings>) => void;
+  filters: FilterSettings;
+  updateFilters: (newFilters: Partial<FilterSettings>) => void;
+  resetFilters: () => void;
   isLoaded: boolean;
 }
 
@@ -28,9 +42,21 @@ const initialSettings: NotificationSettings = {
     videoCall: true,
 };
 
+const initialFilters: FilterSettings = {
+    ageRange: { min: 18, max: 99 },
+    gender: [],
+    relationship: [],
+    values: [],
+    communication: [],
+    lifestyle: [],
+    hobbies: [],
+    interests: [],
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(initialUser);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
+  const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isLoaded, setIsLoaded] = useState(false);
 
 
@@ -45,10 +71,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
           photoUrl: parsedData.photoUrl || prevUser.photoUrl,
           photoUrls: parsedData.photoUrls || prevUser.photoUrls,
         }));
+      } else {
+        // If no stored user, ensure initial user has correct photo URLs
+         setUser(prevUser => {
+            const photoUrls = initialUser.photoUrls || [initialUser.photoUrl];
+            return { ...prevUser, ...initialUser, photoUrl: photoUrls[0], photoUrls: photoUrls };
+        });
       }
+      
       const storedSettings = localStorage.getItem('notificationSettings');
       if(storedSettings) {
         setNotificationSettings(JSON.parse(storedSettings));
+      }
+
+      const storedFilters = localStorage.getItem('userFilters');
+      if (storedFilters) {
+        setFilters(JSON.parse(storedFilters));
       }
 
     } catch (error) {
@@ -66,16 +104,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         try {
           // Create a copy to avoid modifying the state directly before setting it
           const userToStore = { ...updatedUser };
-          
-          // Don't store large data URIs in localStorage to avoid exceeding limits
-          if (userToStore.photoUrls) {
-            userToStore.photoUrls = userToStore.photoUrls.filter(url => !url.startsWith('data:'));
-          }
-
-          // If the main photoUrl is a data URI, try to find a non-data URI as a replacement for storage
-          if (userToStore.photoUrl && userToStore.photoUrl.startsWith('data:')) {
-            userToStore.photoUrl = userToStore.photoUrls?.find(url => !url.startsWith('data:')) || initialUser.photoUrl;
-          }
           
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
         } catch (error) {
@@ -98,8 +126,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateFilters = (newFilters: Partial<FilterSettings>) => {
+    setFilters(prevFilters => {
+        const updatedFilters = { ...prevFilters, ...newFilters };
+        try {
+            localStorage.setItem('userFilters', JSON.stringify(updatedFilters));
+        } catch (error) {
+            console.error("Failed to save filters to localStorage", error);
+        }
+        return updatedFilters;
+    });
+  };
+
+  const resetFilters = () => {
+    setFilters(initialFilters);
+    try {
+        localStorage.setItem('userFilters', JSON.stringify(initialFilters));
+    } catch (error) {
+        console.error("Failed to save reset filters to localStorage", error);
+    }
+  };
+
   return (
-    <UserContext.Provider value={{ user, updateUser, notificationSettings, updateNotificationSettings, isLoaded }}>
+    <UserContext.Provider value={{ user, updateUser, notificationSettings, updateNotificationSettings, filters, updateFilters, resetFilters, isLoaded }}>
       {children}
     </UserContext.Provider>
   );
