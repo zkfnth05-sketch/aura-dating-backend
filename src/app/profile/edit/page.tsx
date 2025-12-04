@@ -84,6 +84,7 @@ export default function ProfileEditPage() {
   });
 
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
@@ -117,6 +118,8 @@ export default function ProfileEditPage() {
       return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
 
+  const isEnhancing = photos.some(p => p.isEnhancing);
+
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
     setProfile(prev => {
         const currentValues = prev[field] as string[];
@@ -132,6 +135,15 @@ export default function ProfileEditPage() {
   }
 
   const handleSave = async () => {
+    if (isEnhancing) {
+        toast({
+            variant: "destructive",
+            title: "AI 보정 중",
+            description: "사진 보정이 완료될 때까지 기다려주세요.",
+        });
+        return;
+    }
+    setIsSaving(true);
     const finalImageUris = photos.map(p => p.dataUri);
     await updateUser({
         ...profile,
@@ -139,6 +151,7 @@ export default function ProfileEditPage() {
         photoUrls: finalImageUris,
         photoUrl: finalImageUris[0] || currentUser.photoUrl,
     });
+    setIsSaving(false);
     toast({
       title: "프로필 저장됨",
       description: "프로필이 성공적으로 업데이트되었습니다.",
@@ -147,15 +160,13 @@ export default function ProfileEditPage() {
   };
 
   const processAndAddImage = async (dataUri: string) => {
-    const compressedUri = await compressImage(dataUri);
     const newPhotoId = `new-photo-${Date.now()}`;
-    const newPhoto: Photo = { id: newPhotoId, dataUri: compressedUri, isEnhancing: false };
+    // Show placeholder with loader immediately
+    setPhotos(prev => [...prev, { id: newPhotoId, dataUri: '', isEnhancing: true }]);
 
-    setPhotos(prev => [...prev, newPhoto]);
+    const compressedUri = await compressImage(dataUri);
 
     if (aiEnhancement) {
-      setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, isEnhancing: true } : p));
-      
       try {
         const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: profile.gender });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
@@ -167,8 +178,10 @@ export default function ProfileEditPage() {
           title: "AI 보정 실패",
           description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
         });
-        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, isEnhancing: false } : p));
+        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: compressedUri, isEnhancing: false } : p));
       }
+    } else {
+        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: compressedUri, isEnhancing: false } : p));
     }
   };
   
@@ -229,13 +242,13 @@ export default function ProfileEditPage() {
           <div className="grid grid-cols-3 gap-2">
             {photos.map((photo) => (
               <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
-                <Image src={photo.dataUri} alt={`My profile photo`} fill className="object-cover"/>
                 {photo.isEnhancing && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
                     <Loader2 className="h-8 w-8 animate-spin text-white" />
                   </div>
                 )}
-                <div className="absolute top-1 right-1">
+                {photo.dataUri && <Image src={photo.dataUri} alt={`My profile photo`} fill className="object-cover"/>}
+                <div className="absolute top-1 right-1 z-20">
                   <Button variant="destructive" size="icon" onClick={() => removeImage(photo.id)} className="w-6 h-6 rounded-full bg-black/50">
                     <X className="h-4 w-4" />
                   </Button>
@@ -367,7 +380,10 @@ export default function ProfileEditPage() {
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-zinc-800">
         <div className="flex w-full gap-2">
             <Button variant="secondary" onClick={() => router.back()} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">취소</Button>
-            <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">저장</Button>
+            <Button onClick={handleSave} disabled={isSaving || isEnhancing} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">
+                {(isSaving || isEnhancing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                저장
+            </Button>
         </div>
         <div className="text-center mt-4">
             <AlertDialog>

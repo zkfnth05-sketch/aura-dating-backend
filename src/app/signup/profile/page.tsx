@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function CreateProfilePage() {
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
   const [gender, setGender] = useState<'여성' | '남성' | '기타'>('여성');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isLoaded) {
@@ -40,6 +42,8 @@ export default function CreateProfilePage() {
       });
       return;
     }
+
+    setIsSubmitting(true);
 
     try {
       await updateUser({
@@ -65,6 +69,8 @@ export default function CreateProfilePage() {
         title: "오류",
         description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
       });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -92,6 +98,7 @@ export default function CreateProfilePage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="이름을 입력하세요"
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -106,6 +113,7 @@ export default function CreateProfilePage() {
               onChange={(e) => setAge(e.target.value)}
               placeholder="나이를 입력하세요"
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -120,6 +128,7 @@ export default function CreateProfilePage() {
               onChange={(e) => setCity(e.target.value)}
               placeholder="거주 도시를 입력하세요"
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -129,6 +138,7 @@ export default function CreateProfilePage() {
               <Button
                 onClick={() => setGender('여성')}
                 variant={gender === '여성' ? 'default' : 'ghost'}
+                disabled={isSubmitting}
                 className={cn(
                   'h-12 text-base rounded-none',
                   gender === '여성'
@@ -141,6 +151,7 @@ export default function CreateProfilePage() {
               <Button
                 onClick={() => setGender('남성')}
                 variant={gender === '남성' ? 'default' : 'ghost'}
+                disabled={isSubmitting}
                 className={cn(
                   'h-12 text-base rounded-none',
                   gender === '남성'
@@ -158,8 +169,10 @@ export default function CreateProfilePage() {
       <footer className="flex-shrink-0 mt-8">
         <Button
           onClick={handleNext}
+          disabled={isSubmitting}
           className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-full text-lg"
         >
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           다음
         </Button>
       </footer>

@@ -142,7 +142,11 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
       setSuggestions(result.suggestions);
     } catch (error) {
       console.error('Failed to get AI suggestions:', error);
-      // Optionally show a toast or error message to the user
+      toast({
+          variant: "destructive",
+          title: "AI 추천 실패",
+          description: "답장을 추천받는 데 실패했습니다. 잠시 후 다시 시도해주세요."
+      })
     } finally {
       setIsLoadingSuggestions(false);
     }

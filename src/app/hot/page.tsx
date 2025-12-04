@@ -44,41 +44,25 @@ export default function HotPage() {
     const fetchUsers = async () => {
       setIsLoading(true);
       
-      const getGenderFilter = () => {
-        if (currentUser.gender === '남성') return '여성';
-        if (currentUser.gender === '여성') return '남성';
-        return null; // For '기타', we might not filter by gender, or handle differently
-      };
-
-      const targetGender = getGenderFilter();
-      
-      // Base query
-      const baseConditions = [where('id', '!=', currentUser.id)];
-      if (targetGender) {
-        baseConditions.push(where('gender', '==', targetGender));
-      }
-
       try {
         // Fetch NEW Users
         const newUsersQuery = query(
           collection(firestore, 'users'),
-          ...baseConditions,
           orderBy('createdAt', 'desc'),
           limit(12)
         );
         const newUsersSnapshot = await getDocs(newUsersQuery);
-        const newUsersData = newUsersSnapshot.docs.map(doc => doc.data() as User);
+        const newUsersData = newUsersSnapshot.docs.map(doc => doc.data() as User).filter(user => user.id !== currentUser.id);
         setNewUsers(newUsersData);
 
         // Fetch HOT Users
         const hotUsersQuery = query(
           collection(firestore, 'users'),
-          ...baseConditions,
           orderBy('likeCount', 'desc'),
           limit(12)
         );
         const hotUsersSnapshot = await getDocs(hotUsersQuery);
-        const hotUsersData = hotUsersSnapshot.docs.map(doc => doc.data() as User);
+        const hotUsersData = hotUsersSnapshot.docs.map(doc => doc.data() as User).filter(user => user.id !== currentUser.id);
         setHotUsers(hotUsersData);
 
       } catch (error) {
