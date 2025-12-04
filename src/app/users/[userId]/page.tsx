@@ -92,6 +92,7 @@ export default function UserProfilePage() {
     }
 
     console.log(action, user.name);
+    // Go back to the previous page for like/dislike actions
     router.back();
   };
   
