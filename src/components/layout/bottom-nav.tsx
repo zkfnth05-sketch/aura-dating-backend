@@ -49,7 +49,7 @@ export default function BottomNav() {
   }, []);
 
   // Hide bottom nav on specific pages
-  if (pathname.startsWith('/chat/') || pathname.startsWith('/profile/edit') || pathname.startsWith('/users/')) {
+  if (pathname.startsWith('/chat/') || pathname.startsWith('/profile/edit') || pathname.startsWith('/users/') || pathname === '/filter') {
     return null;
   }
 
