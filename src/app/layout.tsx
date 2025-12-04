@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import BottomNav from '@/components/layout/bottom-nav';
-import { UserProvider } from '@/contexts/user-context';
+import { UserProvider, useUser } from '@/contexts/user-context';
 import { NotificationSimulator } from '@/components/notification-simulator';
 import { usePathname } from 'next/navigation';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
@@ -12,14 +12,36 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 // No metadata export from a 'use client' component. 
 // If you need metadata, you'd move this to a server component parent.
 
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { isLoaded, authUser, user } = useUser();
+  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
+  const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
+
+  const showBottomNav = isLoaded && authUser && user?.photoUrl;
+
+  return (
+    <>
+      <NotificationSimulator />
+      {needsPadding ? (
+        <div className="pb-24">
+          {children}
+        </div>
+      ) : (
+        children
+      )}
+      <Toaster />
+      {showBottomNav && <BottomNav />}
+    </>
+  );
+}
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname();
-  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
-  const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
 
   return (
     <html lang="ko" className="dark">
@@ -40,16 +62,9 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <UserProvider>
-            <NotificationSimulator />
-            {needsPadding ? (
-              <div className="pb-24">
-                {children}
-              </div>
-            ) : (
-              children
-            )}
-            <Toaster />
-            <BottomNav />
+            <AppLayout>
+              {children}
+            </AppLayout>
           </UserProvider>
         </FirebaseClientProvider>
       </body>
