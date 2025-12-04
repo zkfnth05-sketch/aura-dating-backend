@@ -29,7 +29,6 @@ const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false }: 
 
 export default function ProfilePage() {
   const { user: currentUser, notificationSettings, updateNotificationSettings, isLoaded } = useUser();
-  const [showLocationBanner, setShowLocationBanner] = useState(true);
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -94,13 +93,13 @@ export default function ProfilePage() {
           </div>
 
           <div className="container relative z-10 px-4 mt-6">
-            {showLocationBanner && (
+            {notificationSettings.locationShared && (
               <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-blue-300" />
                   <span>실시간 위치 공유가 활성화되어 있습니다.</span>
                 </div>
-                <button onClick={() => setShowLocationBanner(false)} className="text-blue-300 hover:text-white">
+                <button onClick={() => handleSettingChange('locationShared')(false)} className="text-blue-300 hover:text-white">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -172,8 +171,8 @@ export default function ProfilePage() {
                   <ProfileToggle 
                     id="location"
                     label="실시간 위치 공유" 
-                    checked={true} // This seems to be a placeholder, adjust if state is needed
-                    onCheckedChange={() => {}}
+                    checked={notificationSettings.locationShared}
+                    onCheckedChange={handleSettingChange('locationShared')}
                   />
                   <ProfileToggle 
                     id="notifications"

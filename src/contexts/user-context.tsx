@@ -9,6 +9,7 @@ interface NotificationSettings {
   newMatch: boolean;
   newMessage: boolean;
   videoCall: boolean;
+  locationShared: boolean;
 }
 
 export interface FilterSettings {
@@ -40,6 +41,7 @@ const initialSettings: NotificationSettings = {
     newMatch: true,
     newMessage: true,
     videoCall: true,
+    locationShared: true,
 };
 
 const initialFilters: FilterSettings = {
