@@ -86,8 +86,8 @@ export default function SignupPage() {
   const router = useRouter();
 
   const handleLogin = () => {
-    localStorage.setItem('isSignedUp', 'true');
-    router.push('/');
+    // We are not setting isSignedUp to true yet, because profile creation is next.
+    router.push('/signup/profile');
   };
 
   return (
