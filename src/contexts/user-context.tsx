@@ -105,7 +105,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         
         try {
           // Create a copy to avoid modifying the state directly before setting it
-          const userToStore = { ...updatedUser };
+          // Exclude large image data from localStorage to prevent quota errors.
+          const { photoUrl, photoUrls, ...userToStore } = updatedUser;
           
           localStorage.setItem('currentUser', JSON.stringify(userToStore));
         } catch (error) {
