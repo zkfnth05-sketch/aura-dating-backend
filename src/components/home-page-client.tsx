@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { potentialMatches } from '@/lib/data';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
@@ -9,6 +9,8 @@ import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
+import { getAIRecommendationReason } from '@/app/actions/ai-actions';
+
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
     return users.filter(user => {
@@ -69,7 +71,6 @@ export default function HomePageClient() {
     const user = users[currentIndex];
 
     if (action === 'message') {
-        // This is a simplified logic. In a real app, you'd find or create a match ID.
         const matchId = `match-${user.id.split('-')[1]}`;
         router.push(`/chat/${matchId}`);
         return;

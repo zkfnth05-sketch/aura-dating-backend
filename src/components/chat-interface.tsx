@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Match, Message } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Send, Sparkles, Loader2, Video } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Video, MessageCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';

@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { X, Heart, Send } from 'lucide-react';
+import { X, Heart, MessageCircle, Send } from 'lucide-react';
 
 type ActionButtonsProps = {
   onDislike: () => void;
