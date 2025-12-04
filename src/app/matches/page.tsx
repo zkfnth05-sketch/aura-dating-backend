@@ -16,20 +16,17 @@ export default function MatchesPage() {
   const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
 
   useEffect(() => {
-    const filteredMatches = potentialMatches.filter(user => {
-      if (currentUser.gender === '남성') return user.gender === '여성';
-      if (currentUser.gender === '여성') return user.gender === '남성';
-      return false;
-    });
-
     const sortUsersByTimestamp = (a: User, b: User) => {
       const dateA = a.likedTimestamp ? new Date(a.likedTimestamp).getTime() : 0;
       const dateB = b.likedTimestamp ? new Date(b.likedTimestamp).getTime() : 0;
       return dateB - dateA;
     };
     
-    setPeopleWhoLikedMe(filteredMatches.filter(u => u.likesMe).sort(sortUsersByTimestamp));
-    setPeopleILiked(filteredMatches.filter(u => u.likedByMe).sort(sortUsersByTimestamp));
+    // Correctly filter users who like the current user
+    setPeopleWhoLikedMe(potentialMatches.filter(u => u.likesMe).sort(sortUsersByTimestamp));
+
+    // Correctly filter users who the current user has liked
+    setPeopleILiked(potentialMatches.filter(u => u.likedByMe).sort(sortUsersByTimestamp));
     
   }, [currentUser.gender]);
 
