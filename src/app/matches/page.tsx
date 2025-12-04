@@ -6,7 +6,7 @@ import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, getDocs } from 'firebase/firestore';
 import type { User, Like, Match } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -35,9 +35,8 @@ export default function MatchesPage() {
 
       // Get users who liked me
       // The 'likedBy' field on the user object holds an array of user IDs.
-      const likedMeUserIds = currentUser.likedBy || [];
-      if (likedMeUserIds.length > 0) {
-        const userPromises = likedMeUserIds.map(id => getDoc(doc(firestore, 'users', id)));
+      if (currentUser.likedBy && currentUser.likedBy.length > 0) {
+        const userPromises = currentUser.likedBy.map(id => getDoc(doc(firestore, 'users', id)));
         const userDocs = await Promise.all(userPromises);
         const usersData = userDocs.map(snap => snap.data() as User).filter(Boolean); // Filter out undefined if a doc doesn't exist
         setPeopleWhoLikedMe(usersData);
@@ -51,9 +50,10 @@ export default function MatchesPage() {
       const likedUserIds = iLikedSnapshot.docs.map(d => d.data().likeeId);
       
       if (likedUserIds.length > 0) {
-        const userPromises = likedUserIds.map(id => getDoc(doc(firestore, 'users', id)));
-        const userDocs = await Promise.all(userPromises);
-        const usersData = userDocs.map(snap => snap.data() as User).filter(Boolean);
+         // Firestore 'in' query is limited to 10 items. For more, you'd need multiple queries.
+        const likedUsersQuery = query(collection(firestore, 'users'), where('id', 'in', likedUserIds.slice(0, 10)));
+        const userDocs = await getDocs(likedUsersQuery);
+        const usersData = userDocs.docs.map(snap => snap.data() as User).filter(Boolean);
         setPeopleILiked(usersData);
       } else {
         setPeopleILiked([]);

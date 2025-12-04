@@ -105,16 +105,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const updateUser = async (newUserData: Partial<User>) => {
     if (!authUser) return;
 
+    // Use a functional update to ensure you have the latest state
     setUser(prevUser => {
-        const updatedUser = { ...(prevUser || {}), ...newUserData, id: authUser.uid } as User;
-        
-        const userRef = doc(firestore, 'users', authUser.uid);
-        // Use setDoc with merge to create or update the user profile
-        setDoc(userRef, updatedUser, { merge: true }).catch(error => {
-            console.error("Failed to save user to Firestore", error);
-        });
+      const updatedUser = { ...(prevUser || {}), ...newUserData, id: authUser.uid } as User;
+      
+      const userRef = doc(firestore, 'users', authUser.uid);
+      // Use setDoc with merge to create or update the user profile
+      setDoc(userRef, updatedUser, { merge: true }).catch(error => {
+          console.error("Failed to save user to Firestore", error);
+      });
 
-        return updatedUser;
+      return updatedUser;
     });
   };
 

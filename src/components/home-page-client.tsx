@@ -28,7 +28,7 @@ const applyFilters = (users: User[], filters: FilterSettings, currentUser: User)
         if (currentUser.gender === '여성' && user.gender !== '남성') return false;
       }
       
-      const checkTags = (userTags: string[] | undefined, filterTags: string[]) => {
+      const checkTags = (userTags: string[] = [], filterTags: string[]) => {
         if (filterTags.length === 0) return true;
         if (!userTags || userTags.length === 0) return false;
         // Check if user has ALL of the filter tags. Use .some() if you want to check for ANY.
@@ -154,9 +154,6 @@ export default function HomePageClient() {
             });
 
             // 3. Check if the other user has liked us back (check their 'likes' subcollection)
-            const theirLikeRef = doc(collection(firestore, 'users', targetUser.id, 'likes'), currentUser.id); // Assuming doc ID is our ID
-             const theirLikeSnap = await getDoc(theirLikeRef);
-             
              const theirLikeQuery = query(
                  collection(firestore, 'users', targetUser.id, 'likes'),
                  where('likeeId', '==', currentUser.id),
