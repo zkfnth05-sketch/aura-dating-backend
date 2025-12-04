@@ -9,8 +9,6 @@ import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
-import { getAIRecommendationReason } from '@/app/actions/ai-actions';
-
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
     return users.filter(user => {
