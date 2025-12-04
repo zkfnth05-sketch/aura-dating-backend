@@ -81,15 +81,15 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * @description Users can create, read, and update their own profile. No other user can access it.
+     * @description Users can create, read, and update their own profile. Other users can read profiles.
      * @path /users/{userId}
-     * @allow (create) An authenticated user creating their own profile document. `auth.uid` must match `{userId}`.
-     * @deny (get) Another authenticated user trying to read this profile.
-     * @principle Restricts access to a user's own data tree.
+     * @allow (get, list) Any signed-in user can read any profile.
+     * @allow (create, update, delete) Only the owner of the profile can write to it.
+     * @principle Public read, private write for user profiles.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
