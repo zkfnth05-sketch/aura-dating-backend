@@ -55,7 +55,6 @@ export default function CreateProfilePage() {
         lng: 126.9780,
         createdAt: 'serverTimestamp' as any, // Use string placeholder
         likeCount: 0, // Initialize like count
-        likedBy: [], // Initialize likedBy array
       });
 
       router.push('/signup/photo');

@@ -137,6 +137,7 @@ export default function HomePageClient() {
         // 1. Record the like/dislike in the current user's subcollection
         const likeRef = doc(collection(firestore, 'users', currentUser.id, 'likes'));
         batch.set(likeRef, {
+            id: likeRef.id,
             likerId: currentUser.id,
             likeeId: targetUser.id,
             isLike: action === 'like',
@@ -151,8 +152,15 @@ export default function HomePageClient() {
             const currentLikeCount = targetUserSnap.data()?.likeCount || 0;
             batch.update(targetUserRef, {
                 likeCount: currentLikeCount + 1,
-                likedBy: arrayUnion(currentUser.id) // Also add to likedBy list
             });
+
+            // Record who liked the user in a subcollection instead of an array
+            const likedByRef = doc(collection(firestore, 'users', targetUser.id, 'likedBy'));
+            batch.set(likedByRef, {
+                likerId: currentUser.id,
+                timestamp: serverTimestamp(),
+            });
+
 
             // 3. Check if the other user has liked us back (check their 'likes' subcollection)
              const theirLikeQuery = query(

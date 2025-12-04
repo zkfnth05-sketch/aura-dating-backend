@@ -6,7 +6,7 @@ import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, getDocs, collectionGroup } from 'firebase/firestore';
 import type { User, Like, Match } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -33,25 +33,28 @@ export default function MatchesPage() {
     const fetchLikeData = async () => {
       setIsLoadingLikes(true);
 
-      // Get users who liked me
-      // The 'likedBy' field on the user object holds an array of user IDs.
-      if (currentUser.likedBy && currentUser.likedBy.length > 0) {
-        const userPromises = currentUser.likedBy.map(id => getDoc(doc(firestore, 'users', id)));
+      // Get users who liked me by querying the 'likedBy' subcollection across all users
+      const likedMeQuery = query(collectionGroup(firestore, 'likedBy'), where('likerId', '==', currentUser.id));
+      const likedMeSnapshot = await getDocs(likedMeQuery);
+      const likedMeUserIds = likedMeSnapshot.docs.map(d => d.ref.parent.parent!.id); // Get the user ID from the path
+
+      if (likedMeUserIds.length > 0) {
+        const userPromises = likedMeUserIds.map(id => getDoc(doc(firestore, 'users', id)));
         const userDocs = await Promise.all(userPromises);
-        const usersData = userDocs.map(snap => snap.data() as User).filter(Boolean); // Filter out undefined if a doc doesn't exist
+        const usersData = userDocs.map(snap => snap.data() as User).filter(Boolean);
         setPeopleWhoLikedMe(usersData);
       } else {
         setPeopleWhoLikedMe([]);
       }
-
+      
       // Get users I liked
       const iLikedQuery = query(collection(firestore, 'users', currentUser.id, 'likes'), where('isLike', '==', true));
       const iLikedSnapshot = await getDocs(iLikedQuery);
       const likedUserIds = iLikedSnapshot.docs.map(d => d.data().likeeId);
       
       if (likedUserIds.length > 0) {
-         // Firestore 'in' query is limited to 10 items. For more, you'd need multiple queries.
-        const likedUsersQuery = query(collection(firestore, 'users'), where('id', 'in', likedUserIds.slice(0, 10)));
+         // Firestore 'in' query is limited to 30 items in 2024. For more, you'd need multiple queries.
+        const likedUsersQuery = query(collection(firestore, 'users'), where('id', 'in', likedUserIds.slice(0, 30)));
         const userDocs = await getDocs(likedUsersQuery);
         const usersData = userDocs.docs.map(snap => snap.data() as User).filter(Boolean);
         setPeopleILiked(usersData);
