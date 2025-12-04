@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import Image from 'next/image';
@@ -25,6 +25,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+
+type Photo = {
+  id: string;
+  dataUri: string;
+  isEnhancing: boolean;
+};
 
 const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
   <div className="py-6">
@@ -76,10 +82,16 @@ export default function ProfileEditPage() {
     interests: currentUser.interests,
   });
 
-  const [images, setImages] = useState<string[]>(currentUser.photoUrls || [currentUser.photoUrl]);
+  const [photos, setPhotos] = useState<Photo[]>(
+    (currentUser.photoUrls || [currentUser.photoUrl]).map((url, i) => ({
+      id: `initial-photo-${i}`,
+      dataUri: url,
+      isEnhancing: false,
+    }))
+  );
+  
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState<number | null>(null);
 
   useEffect(() => {
     // Ensure local state is in sync with context if user data changes
@@ -96,7 +108,13 @@ export default function ProfileEditPage() {
         hobbies: currentUser.hobbies,
         interests: currentUser.interests,
     });
-    setImages(currentUser.photoUrls || [currentUser.photoUrl]);
+    setPhotos(
+      (currentUser.photoUrls || [currentUser.photoUrl]).map((url, i) => ({
+        id: `ctx-photo-${i}-${Date.now()}`,
+        dataUri: url,
+        isEnhancing: false,
+      }))
+    );
   }, [currentUser]);
 
 
@@ -115,11 +133,12 @@ export default function ProfileEditPage() {
   }
 
   const handleSave = () => {
+    const finalImageUris = photos.map(p => p.dataUri);
     updateUser({
         ...profile,
         age: parseInt(profile.age) || currentUser.age,
-        photoUrls: images,
-        photoUrl: images[0] || currentUser.photoUrl,
+        photoUrls: finalImageUris,
+        photoUrl: finalImageUris[0] || currentUser.photoUrl,
     });
     toast({
       title: "프로필 저장됨",
@@ -129,18 +148,17 @@ export default function ProfileEditPage() {
   };
 
   const processAndAddImage = async (dataUri: string) => {
-    const newImageIndex = images.length;
-    setImages(prev => [...prev, dataUri]);
+    const newPhotoId = `new-photo-${Date.now()}`;
+    const newPhoto: Photo = { id: newPhotoId, dataUri, isEnhancing: false };
+
+    setPhotos(prev => [...prev, newPhoto]);
 
     if (aiEnhancement) {
-      setIsEnhancing(newImageIndex);
+      setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, isEnhancing: true } : p));
+      
       try {
         const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
-        setImages(prev => {
-          const newImages = [...prev];
-          newImages[newImageIndex] = result.enhancedPhotoDataUri;
-          return newImages;
-        });
+        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: result.enhancedPhotoDataUri, isEnhancing: false } : p));
       } catch (error) {
         console.error("AI enhancement failed:", error);
         toast({
@@ -148,9 +166,7 @@ export default function ProfileEditPage() {
           title: "AI 보정 실패",
           description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
         });
-        // Keep the original image on failure, it's already in the state
-      } finally {
-        setIsEnhancing(null);
+        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, isEnhancing: false } : p));
       }
     }
   };
@@ -165,6 +181,7 @@ export default function ProfileEditPage() {
         }
       };
       reader.readAsDataURL(file);
+      event.target.value = ''; // Reset file input
     }
   };
 
@@ -173,8 +190,8 @@ export default function ProfileEditPage() {
     processAndAddImage(dataUri);
   };
   
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+  const removeImage = (id: string) => {
+    setPhotos(prev => prev.filter(p => p.id !== id));
   }
 
   const handleDeleteAccount = () => {
@@ -218,16 +235,16 @@ export default function ProfileEditPage() {
             <Switch checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {images.map((src, index) => (
-              <div key={index} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
-                <Image src={src} alt={`My profile photo ${index + 1}`} fill className="object-cover"/>
-                {isEnhancing === index && (
+            {photos.map((photo) => (
+              <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
+                <Image src={photo.dataUri} alt={`My profile photo`} fill className="object-cover"/>
+                {photo.isEnhancing && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/60">
                     <Loader2 className="h-8 w-8 animate-spin text-white" />
                   </div>
                 )}
                 <div className="absolute top-1 right-1">
-                  <Button variant="destructive" size="icon" onClick={() => removeImage(index)} className="w-6 h-6 rounded-full bg-black/50">
+                  <Button variant="destructive" size="icon" onClick={() => removeImage(photo.id)} className="w-6 h-6 rounded-full bg-black/50">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -384,3 +401,5 @@ export default function ProfileEditPage() {
       </footer>
     </div>
   );
+
+    
