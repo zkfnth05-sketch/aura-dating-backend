@@ -59,7 +59,7 @@ export default function ProfileCard({ currentUser, potentialMatch, isActive, swi
             </Badge>
 
             {commonalities.length > 0 && (
-                <Badge variant="secondary" className="bg-black/50 text-white border-none text-xs py-1">
+                <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
                     공통점 {commonalities.length}개
                 </Badge>
             )}
