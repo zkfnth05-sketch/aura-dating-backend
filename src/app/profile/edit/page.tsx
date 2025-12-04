@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { X, Plus, Video, Camera, ImageIcon, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { cn, compressImage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
@@ -147,8 +147,9 @@ export default function ProfileEditPage() {
   };
 
   const processAndAddImage = async (dataUri: string) => {
+    const compressedUri = await compressImage(dataUri);
     const newPhotoId = `new-photo-${Date.now()}`;
-    const newPhoto: Photo = { id: newPhotoId, dataUri, isEnhancing: false };
+    const newPhoto: Photo = { id: newPhotoId, dataUri: compressedUri, isEnhancing: false };
 
     setPhotos(prev => [...prev, newPhoto]);
 
@@ -156,8 +157,9 @@ export default function ProfileEditPage() {
       setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, isEnhancing: true } : p));
       
       try {
-        const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
-        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: result.enhancedPhotoDataUri, isEnhancing: false } : p));
+        const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: profile.gender });
+        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
+        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: finalCompressedUri, isEnhancing: false } : p));
       } catch (error) {
         console.error("AI enhancement failed:", error);
         toast({

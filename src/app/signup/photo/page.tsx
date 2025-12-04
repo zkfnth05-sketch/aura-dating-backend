@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import { compressImage } from '@/lib/utils';
 
 
 export default function UploadPhotoPage() {
@@ -33,12 +34,15 @@ export default function UploadPhotoPage() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         if (e.target?.result) {
+          setIsLoading(true);
           const dataUri = e.target.result as string;
+          const compressedUri = await compressImage(dataUri);
+          
           if (aiEnhancement) {
-            setIsLoading(true);
             try {
-              const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: user?.gender || '기타' });
-              setPhoto(result.enhancedPhotoDataUri);
+              const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: user?.gender || '기타' });
+              const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
+              setPhoto(finalCompressedUri);
             } catch (error) {
               console.error("AI enhancement failed:", error);
               toast({
@@ -46,12 +50,13 @@ export default function UploadPhotoPage() {
                 title: "AI 보정 실패",
                 description: "사진 보정에 실패했습니다. 원본 사진으로 등록됩니다.",
               });
-              setPhoto(dataUri);
+              setPhoto(compressedUri);
             } finally {
               setIsLoading(false);
             }
           } else {
-            setPhoto(dataUri);
+            setPhoto(compressedUri);
+            setIsLoading(false);
           }
         }
       };

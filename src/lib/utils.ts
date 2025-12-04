@@ -7,6 +7,55 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Compresses an image from a data URI.
+ * @param dataUri The data URI of the image to compress.
+ * @param quality The quality of the output image, from 0 to 1.
+ * @param maxWidth The maximum width of the output image.
+ * @param maxHeight The maximum height of the output image.
+ * @returns A promise that resolves with the compressed image data URI.
+ */
+export function compressImage(dataUri: string, quality = 0.8, maxWidth = 1024, maxHeight = 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round(height * (maxWidth / width));
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round(width * (maxHeight / height));
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        return reject(new Error('Failed to get canvas context'));
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = (error) => {
+      console.error("Image loading error for compression:", error);
+      // If loading fails, just return the original uri to not break the flow
+      resolve(dataUri);
+    };
+    img.src = dataUri;
+  });
+}
+
+
+/**
  * Calculates a compatibility score and finds commonalities between two users.
  * This is a simple, non-AI based implementation for fast results.
  */
