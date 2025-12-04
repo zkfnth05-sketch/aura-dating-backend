@@ -7,10 +7,12 @@ import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, Camera, ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
 import { compressImage } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import CameraDialog from '@/components/camera-dialog';
 
 
 export default function UploadPhotoPage() {
@@ -21,6 +23,9 @@ export default function UploadPhotoPage() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
+  const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
+
 
   useEffect(() => {
     if (isLoaded && !authUser) {
@@ -28,44 +33,60 @@ export default function UploadPhotoPage() {
     }
   }, [isLoaded, authUser, router]);
 
+  const processAndAddImage = async (dataUri: string) => {
+    setIsLoading(true);
+    setPhoto(null); // Clear previous photo while processing
+    const compressedUri = await compressImage(dataUri);
+    
+    if (aiEnhancement) {
+      try {
+        const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: user?.gender || '기타' });
+        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri, 0.8, 800, 800);
+        setPhoto(finalCompressedUri);
+      } catch (error) {
+        console.error("AI enhancement failed:", error);
+        toast({
+          variant: "destructive",
+          title: "AI 보정 실패",
+          description: "사진 보정에 실패했습니다. 원본 사진으로 등록됩니다.",
+        });
+        setPhoto(compressedUri);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setPhoto(compressedUri);
+      setIsLoading(false);
+    }
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
+      setIsPhotoSourceDialogOpen(false);
       const file = event.target.files[0];
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         if (e.target?.result) {
-          setIsLoading(true);
-          const dataUri = e.target.result as string;
-          const compressedUri = await compressImage(dataUri);
-          
-          if (aiEnhancement) {
-            try {
-              const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: user?.gender || '기타' });
-              const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
-              setPhoto(finalCompressedUri);
-            } catch (error) {
-              console.error("AI enhancement failed:", error);
-              toast({
-                variant: "destructive",
-                title: "AI 보정 실패",
-                description: "사진 보정에 실패했습니다. 원본 사진으로 등록됩니다.",
-              });
-              setPhoto(compressedUri);
-            } finally {
-              setIsLoading(false);
-            }
-          } else {
-            setPhoto(compressedUri);
-            setIsLoading(false);
-          }
+          processAndAddImage(e.target.result as string);
         }
       };
       reader.readAsDataURL(file);
     }
   };
+  
+  const handlePhotoTaken = (dataUri: string) => {
+    setIsCameraDialogOpen(false);
+    setIsPhotoSourceDialogOpen(false);
+    processAndAddImage(dataUri);
+  };
 
   const handleComplete = async () => {
     if (!photo) {
+      toast({
+        variant: "destructive",
+        title: "사진 필요",
+        description: "프로필 사진을 등록해주세요.",
+      });
       return;
     }
 
@@ -82,6 +103,7 @@ export default function UploadPhotoPage() {
   }
 
   return (
+    <>
     <div className="flex flex-col min-h-screen bg-black text-white px-8 py-12">
       <header className="flex-shrink-0">
         <h1 className="text-2xl font-bold text-center">프로필 만들기</h1>
@@ -90,26 +112,48 @@ export default function UploadPhotoPage() {
 
       <main className="flex-grow flex flex-col items-center justify-center text-center mt-8">
         <p className="text-zinc-400 mb-6">대표 사진을 등록해주세요.</p>
+        
+        <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
+          <DialogTrigger asChild>
+            <div
+              className="relative w-48 h-48 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
+            >
+              {isLoading ? (
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              ) : photo ? (
+                <Image src={photo} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
+              ) : (
+                <Plus className="w-10 h-10 text-zinc-500" />
+              )}
+            </div>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
+            <DialogHeader>
+              <DialogTitle>사진 추가</DialogTitle>
+              <DialogDescription>
+                프로필에 사진을 추가하는 방법을 선택하세요.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); }}>
+                <Camera className="mr-2 h-4 w-4" />
+                사진 촬영
+              </Button>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <ImageIcon className="mr-2 h-4 w-4" />
+                앨범에서 선택
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/*,image/heic,image/heif"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
 
-        <div
-          className="relative w-48 h-48 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {isLoading ? (
-            <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          ) : photo ? (
-            <Image src={photo} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
-          ) : (
-            <Plus className="w-10 h-10 text-zinc-500" />
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept="image/*"
-          />
-        </div>
 
         <div className="flex items-center justify-center gap-4 mt-8">
           <label htmlFor="ai-enhancement" className="text-sm font-medium text-zinc-400">
@@ -139,5 +183,7 @@ export default function UploadPhotoPage() {
         </Button>
       </footer>
     </div>
+    <CameraDialog isOpen={isCameraDialogOpen} onClose={() => setIsCameraDialogOpen(false)} onPhotoTaken={handlePhotoTaken} />
+    </>
   );
 }
