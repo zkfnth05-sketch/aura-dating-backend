@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { useRouter } from 'next/navigation';
+import type { Match } from '@/lib/types';
 
 export function IncomingCallToast() {
   const { user: currentUser } = useUser();
@@ -15,7 +16,10 @@ export function IncomingCallToast() {
   const router = useRouter();
 
   const activeMatchesQuery = useMemoFirebase(() => {
-    if (!currentUser) return null;
+    // Ensure currentUser and its id are available before creating the query
+    if (!currentUser?.id || !firestore) {
+      return null;
+    }
     return query(
       collection(firestore, 'matches'),
       where('users', 'array-contains', currentUser.id),
@@ -23,7 +27,7 @@ export function IncomingCallToast() {
     );
   }, [firestore, currentUser]);
 
-  const { data: ringingMatches } = useCollection(activeMatchesQuery);
+  const { data: ringingMatches } = useCollection<Match>(activeMatchesQuery);
 
   useEffect(() => {
     if (ringingMatches && ringingMatches.length > 0) {
