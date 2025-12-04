@@ -14,7 +14,7 @@ export default function CreateProfilePage() {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
-  const [gender, setGender] = useState<'여성' | '남성'>('여성');
+  const [gender, setGender] = useState<'여성' | '남성' | '기타'>('여성');
 
   const handleNext = () => {
     // Basic validation
@@ -31,9 +31,7 @@ export default function CreateProfilePage() {
       gender,
     });
 
-    // Mark signup as complete and navigate to home
-    localStorage.setItem('isSignedUp', 'true');
-    router.push('/');
+    router.push('/signup/photo');
   };
 
   return (
