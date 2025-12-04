@@ -59,6 +59,7 @@ export default function UserProfilePage() {
   const [isAiReasonLoading, setIsAiReasonLoading] = useState(false);
 
   useEffect(() => {
+    setIsLoading(true);
     const foundUser = potentialMatches.find(u => u.id === userId);
     
     if (foundUser) {
@@ -86,6 +87,8 @@ export default function UserProfilePage() {
     if (!user) return;
     
     if (action === 'message') {
+        // This is a simple way to create a match ID for the demo.
+        // In a real app, you would have a more robust system for creating/finding match IDs.
         const matchId = `match-${user.id.split('-')[1]}`;
         router.push(`/chat/${matchId}`);
         return;
