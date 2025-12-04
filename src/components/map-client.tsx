@@ -10,6 +10,7 @@ import { Button } from './ui/button';
 
 interface MapClientProps {
   users: User[];
+  currentUser: User;
 }
 
 const mapStyles: google.maps.MapTypeStyle[] = [
@@ -102,15 +103,14 @@ const distanceOptions = [
     { label: '100km', zoom: 8 },
 ];
 
-export default function MapClient({ users }: MapClientProps) {
+export default function MapClient({ users, currentUser }: MapClientProps) {
   const router = useRouter();
-  const currentUser = users[0];
   
   const [zoom, setZoom] = useState(11);
   const [center] = useState({ lat: currentUser.lat, lng: currentUser.lng });
 
   const handleMarkerClick = (userId: string) => {
-    if(userId === 'current-user' || userId === currentUser.id) {
+    if(userId === currentUser.id) {
       router.push('/profile');
     } else {
       router.push(`/users/${userId}`);

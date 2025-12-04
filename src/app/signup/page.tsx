@@ -11,6 +11,8 @@ import {
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/firebase';
+import { signInWithPopup, GoogleAuthProvider, getAuth } from 'firebase/auth';
 
 // Kakao icon
 const KakaoIcon = () => (
@@ -84,10 +86,23 @@ const PhoneIcon = () => (
 
 export default function SignupPage() {
   const router = useRouter();
+  const auth = useAuth();
 
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+        // On successful sign-in, the useEffect in HomePage will redirect.
+        router.push('/');
+    } catch (error) {
+        console.error("Google-Login-Fehler:", error);
+    }
+  };
+
+  // Dummy handler for other login methods
   const handleLogin = () => {
-    // We are not setting isSignedUp to true yet, because profile creation is next.
-    router.push('/signup/profile');
+    // For now, we only implement Google login
+    alert("현재는 Google 로그인만 지원됩니다.");
   };
 
   return (
@@ -109,7 +124,7 @@ export default function SignupPage() {
             카카오로 계속하기
           </Button>
           <Button
-            onClick={handleLogin}
+            onClick={handleGoogleLogin}
             variant="secondary"
             className="w-full h-12 bg-white text-black hover:bg-white/90 font-semibold text-base relative"
           >

@@ -2,11 +2,20 @@
 
 import MapClient from '@/components/map-client';
 import Header from '@/components/layout/header';
-import { potentialMatches, currentUser } from '@/lib/data';
+import { useUser } from '@/contexts/user-context';
 import { APIProvider } from '@vis.gl/react-google-maps';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
+import type { User } from '@/lib/types';
+import { Loader2 } from 'lucide-react';
 
 export default function MapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const { user: currentUser, isLoaded } = useUser();
+  const firestore = useFirestore();
+
+  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+  const { data: users, isLoading } = useCollection<User>(usersQuery);
 
   if (!apiKey) {
     return (
@@ -30,11 +39,22 @@ export default function MapPage() {
     );
   }
 
+  if (isLoading || !isLoaded || !currentUser || !users) {
+      return (
+        <div className="flex flex-col h-screen">
+            <Header />
+            <main className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </main>
+        </div>
+      );
+  }
+
   return (
     <APIProvider apiKey={apiKey}>
       <div className="flex flex-col h-screen">
         <Header />
-        <MapClient users={[currentUser, ...potentialMatches]} />
+        <MapClient users={users} currentUser={currentUser} />
       </div>
     </APIProvider>
   );

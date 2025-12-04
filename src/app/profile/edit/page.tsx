@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import { getAuth, signOut } from 'firebase/auth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,58 +66,56 @@ const allValues = {
 export default function ProfileEditPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: currentUser, updateUser } = useUser();
+  const { user: currentUser, updateUser, isLoaded } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState({
-    name: currentUser.name,
-    age: currentUser.age.toString(),
-    location: currentUser.location,
-    bio: currentUser.bio,
-    gender: currentUser.gender || ('여성' as '남성' | '여성' | '기타'),
-    relationship: currentUser.relationship || ['새로운 친구'],
-    values: currentUser.values || ['모험', '성장'],
-    communication: currentUser.communication || ['진솔함', '따뜻함'],
-    lifestyle: currentUser.lifestyle || ['활동적', '탐험가'],
-    hobbies: currentUser.hobbies,
-    interests: currentUser.interests,
+    name: '',
+    age: '',
+    location: '',
+    bio: '',
+    gender: '여성' as '남성' | '여성' | '기타',
+    relationship: [] as string[],
+    values: [] as string[],
+    communication: [] as string[],
+    lifestyle: [] as string[],
+    hobbies: [] as string[],
+    interests: [] as string[],
   });
 
-  const [photos, setPhotos] = useState<Photo[]>(
-    (currentUser.photoUrls || [currentUser.photoUrl]).map((url, i) => ({
-      id: `initial-photo-${i}`,
-      dataUri: url,
-      isEnhancing: false,
-    }))
-  );
+  const [photos, setPhotos] = useState<Photo[]>([]);
   
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Ensure local state is in sync with context if user data changes
-    setProfile({
-        name: currentUser.name,
-        age: currentUser.age.toString(),
-        location: currentUser.location,
-        bio: currentUser.bio,
-        gender: currentUser.gender || '여성',
-        relationship: currentUser.relationship || ['새로운 친구'],
-        values: currentUser.values || ['모험', '성장'],
-        communication: currentUser.communication || ['진솔함', '따뜻함'],
-        lifestyle: currentUser.lifestyle || ['활동적', '탐험가'],
-        hobbies: currentUser.hobbies,
-        interests: currentUser.interests,
-    });
-    setPhotos(
-      (currentUser.photoUrls || [currentUser.photoUrl]).map((url, i) => ({
-        id: `ctx-photo-${i}-${Date.now()}`,
-        dataUri: url,
-        isEnhancing: false,
-      }))
-    );
-  }, [currentUser]);
+    if (isLoaded && currentUser) {
+      setProfile({
+          name: currentUser.name || '',
+          age: currentUser.age?.toString() || '',
+          location: currentUser.location || '',
+          bio: currentUser.bio || '',
+          gender: currentUser.gender || '여성',
+          relationship: currentUser.relationship || [],
+          values: currentUser.values || [],
+          communication: currentUser.communication || [],
+          lifestyle: currentUser.lifestyle || [],
+          hobbies: currentUser.hobbies || [],
+          interests: currentUser.interests || [],
+      });
+      setPhotos(
+        (currentUser.photoUrls || (currentUser.photoUrl ? [currentUser.photoUrl] : [])).map((url, i) => ({
+          id: `ctx-photo-${i}-${Date.now()}`,
+          dataUri: url,
+          isEnhancing: false,
+        }))
+      );
+    }
+  }, [currentUser, isLoaded]);
 
+  if (!isLoaded || !currentUser) {
+      return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+  }
 
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
     setProfile(prev => {
@@ -132,9 +131,9 @@ export default function ProfileEditPage() {
     setProfile(prev => ({...prev, [field]: value}));
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const finalImageUris = photos.map(p => p.dataUri);
-    updateUser({
+    await updateUser({
         ...profile,
         age: parseInt(profile.age) || currentUser.age,
         photoUrls: finalImageUris,
@@ -194,30 +193,21 @@ export default function ProfileEditPage() {
     setPhotos(prev => prev.filter(p => p.id !== id));
   }
 
-  const handleDeleteAccount = () => {
+  const handleSignOut = async () => {
+    const auth = getAuth();
     try {
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('notificationSettings');
-        localStorage.removeItem('userFilters');
-        localStorage.removeItem('isSignedUp');
-        
+        await signOut(auth);
         toast({
-            title: "계정이 삭제되었습니다.",
-            description: "이용해주셔서 감사합니다.",
+            title: "로그아웃되었습니다.",
+            description: "성공적으로 로그아웃되었습니다.",
         });
-
-        // This will effectively reset the app state for the next user
         router.push('/signup');
-        // We might want to force a reload to clear all context state,
-        // but router.push should be sufficient for this prototype.
-        setTimeout(() => window.location.reload(), 500);
-
     } catch(e) {
-        console.error("Failed to delete account:", e);
+        console.error("Failed to sign out:", e);
         toast({
             variant: "destructive",
             title: "오류",
-            description: "계정을 삭제하는 중 오류가 발생했습니다.",
+            description: "로그아웃 중 오류가 발생했습니다.",
         });
     }
   };
@@ -380,19 +370,19 @@ export default function ProfileEditPage() {
         <div className="text-center mt-4">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="link" className="text-xs text-zinc-500">회원탈퇴</Button>
+                <Button variant="link" className="text-xs text-zinc-500">로그아웃</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
+                  <AlertDialogTitle>로그아웃 하시겠습니까?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    이 작업은 되돌릴 수 없습니다. 계정이 영구적으로 삭제되고 데이터가 서버에서 제거됩니다.
+                    언제든지 다시 로그인할 수 있습니다.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>취소</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAccount} className={cn(buttonVariants({ variant: "destructive" }))}>
-                    삭제
+                  <AlertDialogAction onClick={handleSignOut} className={cn(buttonVariants({ variant: "destructive" }))}>
+                    로그아웃
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

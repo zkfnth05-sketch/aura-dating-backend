@@ -5,41 +5,38 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { potentialMatches } from '@/lib/data';
 import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
+// Mock data is no longer the source of truth, but we can use it for simulation logic if needed.
+// For a real app, this might come from a Firestore listener.
+
+const simulatedUsersForNotifications = {
+    like: { id: 'user-7', name: '지민', photoUrl: 'https://images.unsplash.com/photo-1437623889155-075d40e2e59f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx3b21hbiUyMGNpdHl8ZW58MHx8fHwxNzY0NzQxODQ1fDA&ixlib=rb-4.1.0&q=80&w=1080' },
+    match: { id: 'user-5', name: '서연', photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1976&auto=format&fit=crop' },
+    message: { id: 'user-2', name: '서준', photoUrl: 'https://images.unsplash.com/photo-1659769431940-9157f010bcdd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxtYW4lMjBvdXRkb29yc3xlbnwwfHx8fDE3NjQ3MTMwMTB8MA&ixlib=rb-4.1.0&q=80&w=1080' },
+}
 
 export function NotificationSimulator() {
   const { toast } = useToast();
   const router = useRouter();
-  const { notificationSettings, isLoaded } = useUser();
+  const { notificationSettings, isLoaded, authUser } = useUser();
 
   useEffect(() => {
-    // Wait until context is loaded from localStorage
-    if (!isLoaded) {
+    if (!isLoaded || !authUser) {
       return;
-    }
-
-    // Only run for signed-up users.
-    const isSignedUp = localStorage.getItem('isSignedUp') === 'true';
-    if (!isSignedUp) {
-        return;
     }
 
     if (!notificationSettings.all) {
         return;
     }
 
-    // A user who likes the current user, but is not liked back yet.
-    const userForLike = potentialMatches.find(u => u.id === 'user-7');
-    // A user who is mutually liked.
-    const userForMatch = potentialMatches.find(u => u.id === 'user-5');
-    // A user for the message notification.
-    const userForMessage = potentialMatches.find(u => u.id === 'user-2');
+    const userForLike = simulatedUsersForNotifications.like as User;
+    const userForMatch = simulatedUsersForNotifications.match as User;
+    const userForMessage = simulatedUsersForNotifications.message as User;
 
 
     const showNewLikeToast = (user?: User) => {
-      if (!user || !notificationSettings.newMatch) return; // Using newMatch setting for likes as well
+      if (!user || !notificationSettings.newMatch) return; 
       toast({
         title: '새로운 좋아요! ❤️',
         description: (
@@ -73,7 +70,7 @@ export function NotificationSimulator() {
           </div>
         ),
         action: (
-          <Button variant="secondary" size="sm" onClick={() => router.push(`/chat/match-${user.id.split('-')[1]}`)}>
+          <Button variant="secondary" size="sm" onClick={() => router.push(`/chat/${user.id}`)}>
             대화하기
           </Button>
         ),
@@ -94,16 +91,16 @@ export function NotificationSimulator() {
           </div>
         ),
         action: (
-            <Button variant="secondary" size="sm" onClick={() => router.push('/chat/match-2')}>
+            <Button variant="secondary" size="sm" onClick={() => router.push(`/chat/${user.id}`)}>
               답장하기
             </Button>
           ),
       });
     };
 
-    const likeTimeout = setTimeout(() => showNewLikeToast(userForLike), 5000); // 5초 후: "좋아요" 알림
-    const matchTimeout = setTimeout(() => showNewMatchToast(userForMatch), 12000); // 12초 후: "매치" 알림
-    const messageTimeout = setTimeout(() => showNewMessageToast(userForMessage), 18000); // 18초 후: "메시지" 알림
+    const likeTimeout = setTimeout(() => showNewLikeToast(userForLike), 5000);
+    const matchTimeout = setTimeout(() => showNewMatchToast(userForMatch), 12000);
+    const messageTimeout = setTimeout(() => showNewMessageToast(userForMessage), 18000);
 
     return () => {
       clearTimeout(likeTimeout);
@@ -111,7 +108,7 @@ export function NotificationSimulator() {
       clearTimeout(messageTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, notificationSettings, router, toast]);
+  }, [isLoaded, authUser, notificationSettings, router, toast]);
 
   return null;
 }

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { Match, Message } from '@/lib/types';
+import type { Match, Message, User } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Send, Sparkles, Loader2, Video, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Loader2, Video } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -14,6 +14,8 @@ import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { CollectionReference, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -40,10 +42,9 @@ const VideoIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-export default function ChatInterface({ match, initialMessages }: { match: Match; initialMessages: Message[]}) {
+export default function ChatInterface({ match, messagesColRef }: { match: Match; messagesColRef: CollectionReference }) {
   const { user: currentUser } = useUser();
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -55,36 +56,42 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
   const audioChunksRef = useRef<Blob[]>([]);
 
   const [isCallActive, setIsCallActive] = useState(false);
+
+  const messagesQuery = useMemoFirebase(() => {
+    return query(messagesColRef, orderBy('timestamp', 'asc'));
+  }, [messagesColRef]);
+
+  const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
-  const otherUser = match.user;
+  if (!currentUser) return null;
+
+  const otherUser = match.participants.find(p => p.id !== currentUser.id)!;
   const [lastSeenText, setLastSeenText] = useState(formatLastSeen(otherUser.lastSeen));
 
 
-  const handleSendMessage = (e: React.FormEvent, text?: string) => {
+  const handleSendMessage = async (e: React.FormEvent, text?: string) => {
     e.preventDefault();
     const messageText = text || newMessage;
     if (messageText.trim() === '') return;
 
-    const message: Message = {
-      id: `msg-${Date.now()}`,
+    const message: Omit<Message, 'id'> = {
       senderId: currentUser.id,
       text: messageText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: serverTimestamp(),
     };
 
-    setMessages([...messages, message]);
+    await addDoc(messagesColRef, message);
     setNewMessage('');
-    setSuggestions([]); // Clear suggestions after sending a message
+    setSuggestions([]);
   };
 
-  const handleSendAudio = (audioUrl: string) => {
-    const message: Message = {
-      id: `msg-${Date.now()}`,
+  const handleSendAudio = async (audioUrl: string) => {
+    const message: Omit<Message, 'id'> = {
       senderId: currentUser.id,
       audioUrl: audioUrl,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: serverTimestamp(),
     };
-    setMessages(prev => [...prev, message]);
+    await addDoc(messagesColRef, message);
   };
 
 
@@ -100,13 +107,13 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
                 interests: currentUser.interests,
             },
             matchUser: {
-                name: match.user.name,
-                bio: match.user.bio,
-                hobbies: match.user.hobbies,
-                interests: match.user.interests,
+                name: otherUser.name,
+                bio: otherUser.bio,
+                hobbies: otherUser.hobbies,
+                interests: otherUser.interests,
             },
-            messages: messages.map(m => ({
-                senderName: m.senderId === currentUser.id ? currentUser.name : match.user.name,
+            messages: (messages || []).map(m => ({
+                senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name,
                 text: m.text || '음성 메시지',
             }))
         };
@@ -129,15 +136,12 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
       };
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = function() {
             const base64Audio = reader.result as string;
             handleSendAudio(base64Audio);
         }
-        
         audioChunksRef.current = [];
         stream.getTracks().forEach(track => track.stop());
       };
@@ -221,7 +225,8 @@ export default function ChatInterface({ match, initialMessages }: { match: Match
 
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {messages.map((message) => (
+          {areMessagesLoading && <div className="text-center text-muted-foreground">메시지 로딩 중...</div>}
+          {messages && messages.map((message) => (
             <div
               key={message.id}
               className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'justify-end' : 'justify-start')}

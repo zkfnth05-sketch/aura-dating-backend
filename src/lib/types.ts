@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore';
+
 export type User = {
   id: string;
   name: string;
@@ -24,10 +26,10 @@ export type User = {
 
 export type Match = {
   id: string;
-  userId: string;
-  user: User;
+  users: string[];
+  participants: User[];
   lastMessage: string;
-  lastMessageTimestamp: string;
+  lastMessageTimestamp: Timestamp;
   unreadCount?: number;
 };
 
@@ -36,5 +38,5 @@ export type Message = {
   senderId: string;
   text?: string;
   audioUrl?: string;
-  timestamp: string;
+  timestamp: Timestamp | any;
 };

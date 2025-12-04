@@ -1,35 +1,51 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
-import { matches, potentialMatches } from '@/lib/data';
-import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import type { User } from '@/lib/types';
 
 export default function MatchesPage() {
   const { user: currentUser } = useUser();
+  const firestore = useFirestore();
 
-  const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
-  const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
+  // Query for users who liked me
+  const likesMeQuery = useMemoFirebase(() => {
+    if (!currentUser) return null;
+    return query(
+        collection(firestore, 'likes'), 
+        where('likeeId', '==', currentUser.id)
+    );
+  }, [firestore, currentUser]);
+  const { data: likesMeData } = useCollection(likesMeQuery);
 
-  useEffect(() => {
-    const sortUsersByTimestamp = (a: User, b: User) => {
-      const dateA = a.likedTimestamp ? new Date(a.likedTimestamp).getTime() : 0;
-      const dateB = b.likedTimestamp ? new Date(b.likedTimestamp).getTime() : 0;
-      return dateB - dateA;
-    };
-    
-    // Correctly filter users who like the current user
-    setPeopleWhoLikedMe(potentialMatches.filter(u => u.likesMe).sort(sortUsersByTimestamp));
+  // In a real app you'd fetch user profiles based on likerId.
+  // For this demo, we'll just show a count.
+  const peopleWhoLikedMe: User[] = []; // This would be populated by fetching profiles
 
-    // Correctly filter users who the current user has liked
-    setPeopleILiked(potentialMatches.filter(u => u.likedByMe).sort(sortUsersByTimestamp));
-    
-  }, [currentUser.gender]);
+  // Query for users I liked
+  const iLikedQuery = useMemoFirebase(() => {
+    if (!currentUser) return null;
+    return query(
+        collection(firestore, 'likes'), 
+        where('likerId', '==', currentUser.id)
+    );
+  }, [firestore, currentUser]);
+  const { data: iLikedData } = useCollection(iLikedQuery);
 
+  // In a real app you'd fetch user profiles based on likeeId.
+  const peopleILiked: User[] = []; // This would be populated by fetching profiles
+
+  const matchesQuery = useMemoFirebase(() => {
+    if (!currentUser) return null;
+    return query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
+  }, [firestore, currentUser]);
+  const { data: matches } = useCollection(matchesQuery);
+  
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -56,12 +72,14 @@ export default function MatchesPage() {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="chats" className="mt-0 p-4">
-            <MatchList matches={matches} />
+            <MatchList matches={matches || []} />
           </TabsContent>
           <TabsContent value="liked-me" className="mt-0 p-4">
+             {/* This is a placeholder, a real implementation would fetch user profiles based on IDs from likesMeData */}
             <UserGrid users={peopleWhoLikedMe} />
           </TabsContent>
           <TabsContent value="i-liked" className="mt-0 p-4">
+              {/* This is a placeholder, a real implementation would fetch user profiles based on IDs from iLikedData */}
             <UserGrid users={peopleILiked} />
           </TabsContent>
         </Tabs>

@@ -7,6 +7,7 @@ import BottomNav from '@/components/layout/bottom-nav';
 import { UserProvider } from '@/contexts/user-context';
 import { NotificationSimulator } from '@/components/notification-simulator';
 import { usePathname } from 'next/navigation';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 // No metadata export from a 'use client' component. 
 // If you need metadata, you'd move this to a server component parent.
@@ -37,18 +38,20 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <UserProvider>
-          <NotificationSimulator />
-          {needsPadding ? (
-            <div className="pb-24">
-              {children}
-            </div>
-          ) : (
-            children
-          )}
-          <Toaster />
-          <BottomNav />
-        </UserProvider>
+        <FirebaseClientProvider>
+          <UserProvider>
+            <NotificationSimulator />
+            {needsPadding ? (
+              <div className="pb-24">
+                {children}
+              </div>
+            ) : (
+              children
+            )}
+            <Toaster />
+            <BottomNav />
+          </UserProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );

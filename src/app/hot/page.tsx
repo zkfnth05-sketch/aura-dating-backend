@@ -5,10 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
-import { potentialMatches } from '@/lib/data';
 import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { useState, useEffect } from 'react';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
 const UserCard = ({ user, uniqueKey }: { user: User, uniqueKey: string }) => (
   <Link href={`/users/${user.id}`} key={uniqueKey}>
@@ -33,22 +34,34 @@ export default function HotPage() {
   const { user: currentUser } = useUser();
   const [newUsers, setNewUsers] = useState<User[]>([]);
   const [hotUsers, setHotUsers] = useState<User[]>([]);
+  const firestore = useFirestore();
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!currentUser) return null;
+    return query(collection(firestore, 'users'));
+  }, [firestore, currentUser]);
+
+  const { data: allUsers } = useCollection<User>(usersQuery);
 
   useEffect(() => {
-    const filteredMatches = potentialMatches.filter(user => {
-      if (currentUser.gender === '남성') return user.gender === '여성';
-      if (currentUser.gender === '여성') return user.gender === '남성';
-      return false;
-    });
+    if (currentUser && allUsers) {
+        const filteredMatches = allUsers.filter(user => {
+            if (user.id === currentUser.id) return false;
+            if (currentUser.gender === '남성') return user.gender === '여성';
+            if (currentUser.gender === '여성') return user.gender === '남성';
+            return false;
+        });
 
-    // NEW 회원은 가입 순 (기존 데이터 순서)
-    setNewUsers(filteredMatches.slice(0, 12));
+        // For NEW, we'll sort by a timestamp if available, otherwise just use the order.
+        // This assumes a `createdAt` field might exist on the user object.
+        const sortedByNew = [...filteredMatches].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setNewUsers(sortedByNew.slice(0, 12));
 
-    // HOT 회원은 좋아요 순
-    const sortedByLikes = [...filteredMatches].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
-    setHotUsers(sortedByLikes.slice(0, 12));
-
-  }, [currentUser.gender]);
+        // For HOT, sort by likeCount.
+        const sortedByLikes = [...filteredMatches].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
+        setHotUsers(sortedByLikes.slice(0, 12));
+    }
+  }, [currentUser, allUsers]);
 
   return (
     <div className="flex flex-col min-h-screen">

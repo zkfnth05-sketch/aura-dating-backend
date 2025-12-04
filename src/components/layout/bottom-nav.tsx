@@ -6,7 +6,9 @@ import { usePathname } from 'next/navigation';
 import { Search, Map, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { matches } from '@/lib/data';
+import { useUser } from '@/contexts/user-context';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -39,19 +41,20 @@ const navItems = [
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    // In a real app, this would be fetched from an API or a global state manager.
-    // For now, we calculate it from the static data.
-    const totalUnread = matches.reduce((acc, match) => acc + (match.unreadCount || 0), 0);
-    setUnreadCount(totalUnread);
-  }, []);
+  const matchesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, 'matches'), where('users', 'array-contains', user.id));
+  }, [firestore, user]);
 
-  // Define paths where the bottom nav should be hidden
+  const { data: matches } = useCollection(matchesQuery);
+
+  const unreadCount = (matches || []).reduce((acc, match) => acc + (match.unreadCount || 0), 0);
+
   const noNavPaths = ['/signup', '/chat/', '/profile/edit', '/users/'];
 
-  // Hide bottom nav on specific pages
   const isNavHidden = noNavPaths.some(path => pathname.startsWith(path));
   if (isNavHidden) {
     return null;

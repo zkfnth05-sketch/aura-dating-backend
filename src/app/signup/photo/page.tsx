@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useUser } from '@/contexts/user-context';
@@ -14,12 +14,18 @@ import { getEnhancedPhoto } from '@/app/actions/ai-actions';
 
 export default function UploadPhotoPage() {
   const router = useRouter();
-  const { user, updateUser } = useUser();
+  const { user, updateUser, isLoaded, authUser } = useUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isLoaded && !authUser) {
+      router.replace('/signup');
+    }
+  }, [isLoaded, authUser, router]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -31,7 +37,7 @@ export default function UploadPhotoPage() {
           if (aiEnhancement) {
             setIsLoading(true);
             try {
-              const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: user.gender || '기타' });
+              const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: user?.gender || '기타' });
               setPhoto(result.enhancedPhotoDataUri);
             } catch (error) {
               console.error("AI enhancement failed:", error);
@@ -53,20 +59,22 @@ export default function UploadPhotoPage() {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (!photo) {
-      // This should not happen if button is disabled correctly
       return;
     }
 
-    updateUser({
+    await updateUser({
       photoUrl: photo,
       photoUrls: [photo],
     });
 
-    localStorage.setItem('isSignedUp', 'true');
     router.push('/profile');
   };
+  
+  if (!isLoaded || !authUser) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-black text-white px-8 py-12">

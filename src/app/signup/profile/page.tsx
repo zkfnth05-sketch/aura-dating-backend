@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
@@ -10,29 +10,50 @@ import { Progress } from '@/components/ui/progress';
 
 export default function CreateProfilePage() {
   const router = useRouter();
-  const { updateUser } = useUser();
+  const { user, updateUser, authUser, isLoaded } = useUser();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
   const [gender, setGender] = useState<'여성' | '남성' | '기타'>('여성');
 
-  const handleNext = () => {
-    // Basic validation
+  useEffect(() => {
+    if (isLoaded) {
+      if (!authUser) {
+        router.replace('/signup');
+      } else {
+        setName(user?.name || authUser.displayName || '');
+        setAge(user?.age?.toString() || '');
+        setCity(user?.location || '');
+        setGender(user?.gender || '여성');
+      }
+    }
+  }, [isLoaded, authUser, user, router]);
+
+  const handleNext = async () => {
     if (!name || !age || !city) {
-      // In a real app, show a toast or error message
       console.error('Please fill all fields');
       return;
     }
 
-    updateUser({
+    await updateUser({
       name,
       age: parseInt(age, 10),
       location: city,
       gender,
+      // Default values for a new user
+      hobbies: ['독서', '영화 감상'],
+      interests: ['맛집 탐방', '여행'],
+      bio: '새로운 만남을 기다립니다!',
+      lat: 37.5665, // Default to Seoul
+      lng: 126.9780,
     });
 
     router.push('/signup/photo');
   };
+
+  if (!isLoaded || !authUser) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-black text-white px-8 py-12">

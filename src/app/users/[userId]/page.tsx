@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@/contexts/user-context';
-import { potentialMatches } from '@/lib/data';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,8 @@ import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
 import { getAIRecommendationReason } from '@/app/actions/ai-actions';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 
 // Helper components for page structure
@@ -47,10 +48,15 @@ export default function UserProfilePage() {
   const searchParams = useSearchParams();
   const userId = params.userId as string;
   const source = searchParams.get('from');
+  const firestore = useFirestore();
 
-  const { user: currentUser } = useUser();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user: currentUser, isLoaded } = useUser();
+  
+  const userRef = useMemoFirebase(() => {
+    if (!userId) return null;
+    return doc(firestore, 'users', userId);
+  }, [firestore, userId]);
+  const { data: user, isLoading } = useDoc<User>(userRef);
   
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -59,47 +65,38 @@ export default function UserProfilePage() {
   const [isAiReasonLoading, setIsAiReasonLoading] = useState(false);
 
   useEffect(() => {
-    setIsLoading(true);
-    const foundUser = potentialMatches.find(u => u.id === userId);
-    
-    if (foundUser) {
-      setUser(foundUser);
-      
-      if (source === 'ai') {
-        setIsAiReasonLoading(true);
-        getAIRecommendationReason({ currentUser, potentialMatch: foundUser })
-          .then(result => {
-            setAiReason(result.reason);
-          })
-          .catch(error => {
-            console.error("Failed to get AI recommendation reason:", error);
-            setAiReason("추천 이유를 불러오는 데 실패했습니다.");
-          })
-          .finally(() => {
-            setIsAiReasonLoading(false);
-          });
-      }
+    if (user && currentUser && source === 'ai' && !aiReason) {
+      setIsAiReasonLoading(true);
+      getAIRecommendationReason({ currentUser, potentialMatch: user })
+        .then(result => {
+          setAiReason(result.reason);
+        })
+        .catch(error => {
+          console.error("Failed to get AI recommendation reason:", error);
+          setAiReason("추천 이유를 불러오는 데 실패했습니다.");
+        })
+        .finally(() => {
+          setIsAiReasonLoading(false);
+        });
     }
-    setIsLoading(false);
-  }, [userId, source, currentUser]);
+  }, [user, currentUser, source, aiReason]);
 
   const handleAction = (action: 'like' | 'dislike' | 'message') => {
     if (!user) return;
     
     if (action === 'message') {
-        // This is a simple way to create a match ID for the demo.
-        // In a real app, you would have a more robust system for creating/finding match IDs.
         const matchId = `match-${user.id.split('-')[1]}`;
         router.push(`/chat/${matchId}`);
         return;
     }
 
     console.log(action, user.name);
-    // Go back to the previous page for like/dislike actions
+    // In a real app, you'd handle the like/dislike action in the backend
+    // For this prototype, we just go back.
     router.back();
   };
   
-  if (isLoading) {
+  if (isLoading || !isLoaded) {
       return (
         <div className="flex items-center justify-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />

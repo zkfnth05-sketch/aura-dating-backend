@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { potentialMatches } from '@/lib/data';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
@@ -9,75 +8,131 @@ import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, writeBatch, getDoc } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
+
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
     return users.filter(user => {
-      // Don't show the current user in the swipe list
       if (user.id === currentUser.id) return false;
-
-      // Age range filter
-      if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) {
-        return false;
-      }
-  
-      // Gender filter
-      if (filters.gender.length > 0 && user.gender && !filters.gender.includes(user.gender)) {
-        return false;
-      }
-
-      // Default gender preference if no filter is set
+      if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
+      if (filters.gender.length > 0 && user.gender && !filters.gender.includes(user.gender)) return false;
       if (filters.gender.length === 0) {
         if (currentUser.gender === '남성' && user.gender !== '여성') return false;
         if (currentUser.gender === '여성' && user.gender !== '남성') return false;
       }
-  
-      // Tag-based filters (relationship, values, etc.)
       const checkTags = (userTags: string[] | undefined, filterTags: string[]) => {
         if (filterTags.length === 0) return true;
         if (!userTags) return false;
         return filterTags.every(tag => userTags.includes(tag));
       };
-  
       if (!checkTags(user.relationship, filters.relationship)) return false;
       if (!checkTags(user.values, filters.values)) return false;
       if (!checkTags(user.communication, filters.communication)) return false;
       if (!checkTags(user.lifestyle, filters.lifestyle)) return false;
       if (!checkTags(user.hobbies, filters.hobbies)) return false;
       if (!checkTags(user.interests, filters.interests)) return false;
-  
       return true;
     });
-  };
+};
 
 export default function HomePageClient() {
   const { user: currentUser, filters, isLoaded } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
   const [users, setUsers] = useState<User[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+
+  const usersQuery = useMemoFirebase(() => {
+      if (!isLoaded || !currentUser) return null;
+      return collection(firestore, 'users');
+  }, [firestore, isLoaded, currentUser]);
+
+  const { data: allUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
 
   useEffect(() => {
-    if (isLoaded) {
-      const filteredUsers = applyFilters(potentialMatches, filters, currentUser);
-      setUsers(filteredUsers);
-      setCurrentIndex(0); 
-    }
-  }, [filters, isLoaded, currentUser]);
+    if (isLoaded && currentUser && allUsers) {
+      // Filter out users that have been liked/disliked
+      const getSeenUserIds = async () => {
+        const likesCol = collection(firestore, 'users', currentUser.id, 'likes');
+        const likesSnapshot = await getDocs(likesCol);
+        return new Set(likesSnapshot.docs.map(doc => doc.data().likeeId));
+      };
 
-  const handleAction = (action: 'like' | 'dislike' | 'message') => {
-    if (currentIndex >= users.length) return;
-    const user = users[currentIndex];
+      getSeenUserIds().then(seenIds => {
+        const filteredFromDb = allUsers.filter(user => !seenIds.has(user.id));
+        const filteredUsers = applyFilters(filteredFromDb, filters, currentUser);
+        setUsers(filteredUsers);
+        setCurrentIndex(0);
+        setIsLoadingUsers(false);
+      });
+    }
+  }, [filters, isLoaded, currentUser, allUsers, firestore]);
+
+  const handleAction = async (action: 'like' | 'dislike' | 'message') => {
+    if (!currentUser || currentIndex >= users.length) return;
+    const targetUser = users[currentIndex];
 
     if (action === 'message') {
-        const matchId = `match-${user.id.split('-')[1]}`;
-        router.push(`/chat/${matchId}`);
-        return;
+      // Find existing match or create a new one
+      const matchQuery = query(collection(firestore, 'matches'), where('users', '==', [currentUser.id, targetUser.id]));
+      const matchSnapshot = await getDocs(matchQuery);
+
+      let matchId;
+      if (matchSnapshot.empty) {
+         // check for reverse order
+         const reverseMatchQuery = query(collection(firestore, 'matches'), where('users', '==', [targetUser.id, currentUser.id]));
+         const reverseMatchSnapshot = await getDocs(reverseMatchQuery);
+         if(reverseMatchSnapshot.empty) {
+            const newMatchRef = doc(collection(firestore, 'matches'));
+            await setDoc(newMatchRef, {
+                users: [currentUser.id, targetUser.id],
+                participants: [currentUser, targetUser],
+                lastMessage: '',
+                lastMessageTimestamp: serverTimestamp(),
+            });
+            matchId = newMatchRef.id;
+         } else {
+            matchId = reverseMatchSnapshot.docs[0].id;
+         }
+      } else {
+        matchId = matchSnapshot.docs[0].id;
+      }
+      router.push(`/chat/${matchId}`);
+      return;
     }
 
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
 
-    console.log(action, user.name);
+    // Record the like/dislike in Firestore
+    const likeRef = doc(collection(firestore, 'users', currentUser.id, 'likes'));
+    await setDoc(likeRef, {
+      likerId: currentUser.id,
+      likeeId: targetUser.id,
+      isLike: action === 'like',
+      timestamp: serverTimestamp(),
+    });
+    
+    // Check for a mutual like
+    if (action === 'like') {
+        const theirLikeRef = doc(firestore, 'users', targetUser.id, 'likes', currentUser.id);
+        const theirLikeSnap = await getDoc(theirLikeRef);
+        if (theirLikeSnap.exists() && theirLikeSnap.data().isLike) {
+            // It's a match!
+            const matchRef = doc(collection(firestore, 'matches'));
+            await setDoc(matchRef, {
+                id: matchRef.id,
+                users: [currentUser.id, targetUser.id],
+                participants: [currentUser, targetUser],
+                matchDate: serverTimestamp(),
+            });
+        }
+    }
+
 
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
@@ -85,6 +140,17 @@ export default function HomePageClient() {
     }, 500);
   };
   
+  if (isLoadingUsers || areUsersLoading) {
+      return (
+        <div className="flex flex-col h-screen bg-background">
+          <Header />
+          <main className="flex-grow flex items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </main>
+        </div>
+      );
+  }
+
   const activeUser = users[currentIndex];
 
   return (
@@ -92,12 +158,16 @@ export default function HomePageClient() {
       <Header />
       <main className="flex-grow flex flex-col items-center p-4 overflow-hidden">
         <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
-          {isLoaded && users.length === 0 ? (
+          {(!isLoaded || !currentUser) ? (
+             <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+             </div>
+          ) : users.length === 0 ? (
              <div className="text-center">
               <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
               <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
             </div>
-          ) : isLoaded && currentIndex >= users.length ? (
+          ) : currentIndex >= users.length ? (
             <div className="text-center">
               <h2 className="text-2xl font-bold text-primary">오늘은 여기까지예요!</h2>
               <p className="text-muted-foreground mt-2">새로운 상대를 보려면 나중에 다시 확인해주세요.</p>

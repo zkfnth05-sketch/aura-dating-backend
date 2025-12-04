@@ -1,8 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import type { User as AuthUser } from 'firebase/auth';
+import { useUser as useAuthUser, useFirestore } from '@/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
-import { currentUser as initialUser } from '@/lib/data';
 
 interface NotificationSettings {
   all: boolean;
@@ -24,8 +26,9 @@ export interface FilterSettings {
 }
 
 interface UserContextType {
-  user: User;
-  updateUser: (newUserData: Partial<User>) => void;
+  user: User | null;
+  authUser: AuthUser | null;
+  updateUser: (newUserData: Partial<User>) => Promise<void>;
   notificationSettings: NotificationSettings;
   updateNotificationSettings: (newSettings: Partial<NotificationSettings>) => void;
   filters: FilterSettings;
@@ -56,62 +59,60 @@ const initialFilters: FilterSettings = {
 }
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User>(initialUser);
+  const [user, setUser] = useState<User | null>(null);
+  const { user: authUser, isUserLoading } = useAuthUser();
+  const firestore = useFirestore();
+
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isLoaded, setIsLoaded] = useState(false);
 
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        const parsedData = JSON.parse(storedUser);
-        setUser(prevUser => ({
-          ...prevUser, 
-          ...parsedData,
-          photoUrl: parsedData.photoUrl || prevUser.photoUrl,
-          photoUrls: parsedData.photoUrls || prevUser.photoUrls,
-        }));
-      } else {
-        // If no stored user, ensure initial user has correct photo URLs
-         setUser(prevUser => {
-            const photoUrls = initialUser.photoUrls || [initialUser.photoUrl];
-            return { ...prevUser, ...initialUser, photoUrl: photoUrls[0], photoUrls: photoUrls };
-        });
-      }
-      
-      const storedSettings = localStorage.getItem('notificationSettings');
-      if(storedSettings) {
-        setNotificationSettings(JSON.parse(storedSettings));
-      }
-
-      const storedFilters = localStorage.getItem('userFilters');
-      if (storedFilters) {
-        setFilters(JSON.parse(storedFilters));
-      }
-
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-      localStorage.clear();
-    } finally {
-        setIsLoaded(true);
-    }
-  }, []);
-
-  const updateUser = (newUserData: Partial<User>) => {
-    setUser(prevUser => {
-        const updatedUser = { ...prevUser, ...newUserData };
-        
-        try {
-          // Create a copy to avoid modifying the state directly before setting it
-          // Exclude large image data from localStorage to prevent quota errors.
-          const { photoUrl, photoUrls, ...userToStore } = updatedUser;
-          
-          localStorage.setItem('currentUser', JSON.stringify(userToStore));
-        } catch (error) {
-          console.error("Failed to save user to localStorage", error);
+    const loadInitialData = async () => {
+        if (authUser) {
+            const userRef = doc(firestore, 'users', authUser.uid);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                setUser(userSnap.data() as User);
+            }
+        } else {
+            setUser(null);
         }
+
+        try {
+          const storedSettings = localStorage.getItem('notificationSettings');
+          if(storedSettings) {
+            setNotificationSettings(JSON.parse(storedSettings));
+          }
+
+          const storedFilters = localStorage.getItem('userFilters');
+          if (storedFilters) {
+            setFilters(JSON.parse(storedFilters));
+          }
+
+        } catch (error) {
+          console.error("Failed to parse data from localStorage", error);
+        } finally {
+            setIsLoaded(!isUserLoading);
+        }
+    };
+    
+    loadInitialData();
+
+  }, [authUser, isUserLoading, firestore]);
+
+  const updateUser = async (newUserData: Partial<User>) => {
+    if (!authUser) return;
+
+    setUser(prevUser => {
+        const updatedUser = { ...(prevUser || {}), ...newUserData, id: authUser.uid } as User;
+        
+        const userRef = doc(firestore, 'users', authUser.uid);
+        // Use setDoc with merge to create or update the user profile
+        setDoc(userRef, updatedUser, { merge: true }).catch(error => {
+            console.error("Failed to save user to Firestore", error);
+        });
 
         return updatedUser;
     });
@@ -150,8 +151,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const value = {
+    user,
+    authUser,
+    updateUser,
+    notificationSettings,
+    updateNotificationSettings,
+    filters,
+    updateFilters,
+    resetFilters,
+    isLoaded,
+  };
+
   return (
-    <UserContext.Provider value={{ user, updateUser, notificationSettings, updateNotificationSettings, filters, updateFilters, resetFilters, isLoaded }}>
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );

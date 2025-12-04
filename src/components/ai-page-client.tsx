@@ -2,7 +2,6 @@
 
 import React from 'react';
 import type { User } from '@/lib/types';
-import { currentUser } from '@/lib/data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
@@ -15,6 +14,7 @@ import { useRouter } from 'next/navigation';
 
 interface AiPageClientProps {
   recommendedUsers: User[];
+  currentUser: User;
 }
 
 const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: User }) => {
@@ -55,7 +55,7 @@ const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: U
 };
 
 
-export default function AiPageClient({ recommendedUsers }: AiPageClientProps) {
+export default function AiPageClient({ recommendedUsers, currentUser }: AiPageClientProps) {
 
   return (
     <div className="flex flex-col min-h-screen">
