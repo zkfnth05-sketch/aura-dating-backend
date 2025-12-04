@@ -9,10 +9,11 @@ import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { useState, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where, getDocs, limit } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
 
-const UserCard = ({ user, uniqueKey }: { user: User, uniqueKey: string }) => (
-  <Link href={`/users/${user.id}`} key={uniqueKey}>
+const UserCard = ({ user }: { user: User }) => (
+  <Link href={`/users/${user.id}`}>
     <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
       <Image
         src={user.photoUrl}
@@ -31,37 +32,75 @@ const UserCard = ({ user, uniqueKey }: { user: User, uniqueKey: string }) => (
 
 
 export default function HotPage() {
-  const { user: currentUser } = useUser();
+  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const [newUsers, setNewUsers] = useState<User[]>([]);
   const [hotUsers, setHotUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const firestore = useFirestore();
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!currentUser) return null;
-    return query(collection(firestore, 'users'));
-  }, [firestore, currentUser]);
-
-  const { data: allUsers } = useCollection<User>(usersQuery);
-
   useEffect(() => {
-    if (currentUser && allUsers) {
-        const filteredMatches = allUsers.filter(user => {
-            if (user.id === currentUser.id) return false;
-            if (currentUser.gender === '남성') return user.gender === '여성';
-            if (currentUser.gender === '여성') return user.gender === '남성';
-            return false;
-        });
+    if (!currentUser || !firestore) return;
 
-        // For NEW, we'll sort by a timestamp if available, otherwise just use the order.
-        // This assumes a `createdAt` field might exist on the user object.
-        const sortedByNew = [...filteredMatches].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-        setNewUsers(sortedByNew.slice(0, 12));
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      
+      const getGenderFilter = () => {
+        if (currentUser.gender === '남성') return '여성';
+        if (currentUser.gender === '여성') return '남성';
+        return null; // For '기타', we might not filter by gender, or handle differently
+      };
 
-        // For HOT, sort by likeCount.
-        const sortedByLikes = [...filteredMatches].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
-        setHotUsers(sortedByLikes.slice(0, 12));
-    }
-  }, [currentUser, allUsers]);
+      const targetGender = getGenderFilter();
+      
+      // Base query
+      const baseConditions = [where('id', '!=', currentUser.id)];
+      if (targetGender) {
+        baseConditions.push(where('gender', '==', targetGender));
+      }
+
+      try {
+        // Fetch NEW Users
+        const newUsersQuery = query(
+          collection(firestore, 'users'),
+          ...baseConditions,
+          orderBy('createdAt', 'desc'),
+          limit(12)
+        );
+        const newUsersSnapshot = await getDocs(newUsersQuery);
+        const newUsersData = newUsersSnapshot.docs.map(doc => doc.data() as User);
+        setNewUsers(newUsersData);
+
+        // Fetch HOT Users
+        const hotUsersQuery = query(
+          collection(firestore, 'users'),
+          ...baseConditions,
+          orderBy('likeCount', 'desc'),
+          limit(12)
+        );
+        const hotUsersSnapshot = await getDocs(hotUsersQuery);
+        const hotUsersData = hotUsersSnapshot.docs.map(doc => doc.data() as User);
+        setHotUsers(hotUsersData);
+
+      } catch (error) {
+        console.error("Error fetching hot/new users:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [currentUser, firestore]);
+
+  if (!isUserLoaded) {
+    return (
+        <div className="flex flex-col h-screen">
+            <Header />
+            <main className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </main>
+        </div>
+      );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -82,20 +121,28 @@ export default function HotPage() {
               HOT 회원
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="new" className="mt-0 p-4">
-            <div className="grid grid-cols-2 gap-4">
-                {newUsers.map((user, index) => (
-                    <UserCard key={`new-${user.id}-${index}`} user={user} uniqueKey={`new-${user.id}-${index}`} />
-                ))}
+          {isLoading ? (
+            <div className="flex items-center justify-center pt-20">
+                <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-          </TabsContent>
-          <TabsContent value="hot" className="mt-0 p-4">
-            <div className="grid grid-cols-2 gap-4">
-                {hotUsers.map((user, index) => (
-                    <UserCard key={`hot-${user.id}-${index}`} user={user} uniqueKey={`hot-${user.id}-${index}`} />
-                ))}
-            </div>
-          </TabsContent>
+          ) : (
+            <>
+              <TabsContent value="new" className="mt-0 p-4">
+                <div className="grid grid-cols-2 gap-4">
+                    {newUsers.map((user) => (
+                        <UserCard key={`new-${user.id}`} user={user} />
+                    ))}
+                </div>
+              </TabsContent>
+              <TabsContent value="hot" className="mt-0 p-4">
+                <div className="grid grid-cols-2 gap-4">
+                    {hotUsers.map((user) => (
+                        <UserCard key={`hot-${user.id}`} user={user} />
+                    ))}
+                </div>
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </main>
     </div>

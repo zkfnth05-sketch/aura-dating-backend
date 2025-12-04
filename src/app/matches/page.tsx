@@ -6,57 +6,67 @@ import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import type { User, Like } from '@/lib/types';
+import { collection, query, where, doc, getDoc } from 'firebase/firestore';
+import type { User, Like, Match } from '@/lib/types';
 import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export default function MatchesPage() {
-  const { user: currentUser } = useUser();
+  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const firestore = useFirestore();
+  
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
   const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
-  
-  const { data: allUsers } = useCollection<User>(useMemoFirebase(() => collection(firestore, 'users'), [firestore]));
+  const [isLoadingLikes, setIsLoadingLikes] = useState(true);
 
-  // Query for users who liked me
-  const likesMeQuery = useMemoFirebase(() => {
-    if (!currentUser) return null;
-    return query(
-      collection(firestore, 'users'), 
-      where('likedBy', 'array-contains', currentUser.id)
-    );
-  }, [firestore, currentUser]);
-  const { data: likesMeData } = useCollection<User>(likesMeQuery);
-  
-  useEffect(() => {
-      if(likesMeData) {
-        setPeopleWhoLikedMe(likesMeData);
-      }
-  }, [likesMeData]);
-
-
-  // Query for users I liked
-  const iLikedQuery = useMemoFirebase(() => {
-    if (!currentUser) return null;
-    return query(
-      collection(firestore, 'users', currentUser.id, 'likes')
-    );
-  }, [firestore, currentUser]);
-  const { data: iLikedData } = useCollection<Like>(iLikedQuery);
-
-  useEffect(() => {
-    if(iLikedData && allUsers) {
-        const likedUserIds = iLikedData.map(like => like.likeeId);
-        const likedUsers = allUsers.filter(user => likedUserIds.includes(user.id));
-        setPeopleILiked(likedUsers);
-    }
-  }, [iLikedData, allUsers]);
-
+  // --- 1. Get matches for the "Chats" tab ---
   const matchesQuery = useMemoFirebase(() => {
-    if (!currentUser) return null;
+    if (!currentUser || !firestore) return null;
     return query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
   }, [firestore, currentUser]);
-  const { data: matches } = useCollection(matchesQuery);
+  const { data: matches, isLoading: areMatchesLoading } = useCollection<Match>(matchesQuery);
+
+  // --- 2. Get users who liked me and users I liked ---
+  useEffect(() => {
+    if (!currentUser || !firestore) return;
+
+    const fetchLikeData = async () => {
+      setIsLoadingLikes(true);
+
+      // Get users who liked me
+      // The 'likedBy' field on the user object holds an array of user IDs.
+      const likedMeUserIds = currentUser.likedBy || [];
+      if (likedMeUserIds.length > 0) {
+        const userPromises = likedMeUserIds.map(id => getDoc(doc(firestore, 'users', id)));
+        const userDocs = await Promise.all(userPromises);
+        const usersData = userDocs.map(snap => snap.data() as User).filter(Boolean); // Filter out undefined if a doc doesn't exist
+        setPeopleWhoLikedMe(usersData);
+      } else {
+        setPeopleWhoLikedMe([]);
+      }
+
+      // Get users I liked
+      const iLikedQuery = query(collection(firestore, 'users', currentUser.id, 'likes'), where('isLike', '==', true));
+      const iLikedSnapshot = await getDocs(iLikedQuery);
+      const likedUserIds = iLikedSnapshot.docs.map(d => d.data().likeeId);
+      
+      if (likedUserIds.length > 0) {
+        const userPromises = likedUserIds.map(id => getDoc(doc(firestore, 'users', id)));
+        const userDocs = await Promise.all(userPromises);
+        const usersData = userDocs.map(snap => snap.data() as User).filter(Boolean);
+        setPeopleILiked(usersData);
+      } else {
+        setPeopleILiked([]);
+      }
+
+      setIsLoadingLikes(false);
+    };
+
+    fetchLikeData();
+
+  }, [currentUser, firestore]);
+  
+  const isLoading = !isUserLoaded || areMatchesLoading || isLoadingLikes;
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -83,15 +93,24 @@ export default function MatchesPage() {
               내가 좋아요 한 사람
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="chats" className="mt-0 p-4">
-            <MatchList matches={matches || []} />
-          </TabsContent>
-          <TabsContent value="liked-me" className="mt-0 p-4">
-            <UserGrid users={peopleWhoLikedMe} />
-          </TabsContent>
-          <TabsContent value="i-liked" className="mt-0 p-4">
-            <UserGrid users={peopleILiked} />
-          </TabsContent>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center pt-20">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <>
+              <TabsContent value="chats" className="mt-0 p-4">
+                <MatchList matches={matches || []} />
+              </TabsContent>
+              <TabsContent value="liked-me" className="mt-0 p-4">
+                <UserGrid users={peopleWhoLikedMe} />
+              </TabsContent>
+              <TabsContent value="i-liked" className="mt-0 p-4">
+                <UserGrid users={peopleILiked} />
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </main>
     </div>
