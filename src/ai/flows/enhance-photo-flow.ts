@@ -59,9 +59,6 @@ const enhancePhotoFlow = ai.defineFlow(
             { media: { url: input.photoDataUri } },
             { text: enhancementPrompt },
         ],
-        config: {
-            responseModalities: ['IMAGE', 'TEXT'],
-        },
     });
 
     if (!media || !media.url) {
