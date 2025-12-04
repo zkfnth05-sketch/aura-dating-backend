@@ -41,18 +41,12 @@ export default function HotPage() {
       return false;
     });
 
-    const generateUsers = (count: number, reverse: boolean = false): User[] => {
-      const users: User[] = [];
-      const sourceUsers = reverse ? [...filteredMatches].reverse() : filteredMatches;
-      if (sourceUsers.length === 0) return [];
-      for (let i = 0; i < count; i++) {
-        users.push(sourceUsers[i % sourceUsers.length]);
-      }
-      return users;
-    };
-    
-    setNewUsers(generateUsers(12));
-    setHotUsers(generateUsers(12, true));
+    // NEW 회원은 가입 순 (기존 데이터 순서)
+    setNewUsers(filteredMatches.slice(0, 12));
+
+    // HOT 회원은 좋아요 순
+    const sortedByLikes = [...filteredMatches].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
+    setHotUsers(sortedByLikes.slice(0, 12));
 
   }, [currentUser.gender]);
 
