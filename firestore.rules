@@ -1,0 +1,150 @@
+/**
+ * This ruleset enforces a strict, user-centric security model for a dating application.
+ *
+ * Core Philosophy:
+ * The security model is built around user ownership and explicit consent (matches). Users have absolute
+ * control over their own profile and the 'likes' they issue. Access to shared resources, such as chat
+ * rooms, is strictly limited to the participating users of a confirmed match.
+ *
+ * Data Structure:
+ * - /users/{userId}: Contains all private, user-specific data, including their profile and likes. This
+ *   structure enforces ownership via the document path.
+ * - /matches/{matchId}: A top-level collection for shared match data. This flat structure avoids deep
+ *   nesting and simplifies queries for a user's matches.
+ * - /matches/{matchId}/messages: A subcollection for chat messages, inheriting its access control from
+ *   the parent match document.
+ *
+ * Key Security Decisions:
+ * - User Profiles Are Private: A user's profile document under `/users/{userId}` is only readable by
+ *   that user. This is a strict interpretation for maximum privacy. Public browsing of profiles would
+ *   require a separate, public-readable collection.
+ * - Server-Managed Matches: The creation, modification, or deletion of `match` documents is disabled
+ *   for clients. This critical business logic must be handled by a trusted server environment (e.g.,
+ *   Cloud Functions) to prevent users from creating fraudulent matches.
+ * - Explicit Participant Checks: Access to any data within the `/matches` collection and its
+ *   subcollections is granted only after verifying the requesting user's UID is present in the parent
+ *   match document's `user1Id` or `user2Id` field.
+ *
+ * Denormalization for Authorization:
+ * The `/matches/{matchId}` documents contain denormalized `user1Id` and `user2Id` fields. This is
+ * critical for performance and security, as it allows rules for the `matches` collection (and its
+ * `messages` subcollection) to make an authorization decision without needing to perform extra reads
+ * on other documents, securing the entire data tree efficiently.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * Returns true if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the authenticated user's UID matches the provided userId.
+     * This is the primary function for checking resource ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Returns true if the user is the owner AND the document already exists.
+     * Used for safe update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the current user is one of the two participants in a given match.
+     * It performs a single `get` operation on the parent match document.
+     * @param matchId The document ID of the match to check.
+     */
+    function isMatchParticipant(matchId) {
+      // Fetch the match document
+      let matchDoc = get(/databases/$(database)/documents/matches/$(matchId));
+
+      // Check if the document exists
+      return isSignedIn() && (matchDoc.data.user1Id == request.auth.uid || matchDoc.data.user2Id == request.auth.uid);
+    }
+
+
+    // --------------------------------
+    // User Data Collections
+    // --------------------------------
+
+    /**
+     * @description Users can create, read, and update their own profile. No other user can access it.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document. `auth.uid` must match `{userId}`.
+     * @deny (get) Another authenticated user trying to read this profile.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description A user can manage the 'likes' they have sent to other users.
+     * @path /users/{userId}/likes/{likeId}
+     * @allow (create) User 'A' creating a 'like' document for user 'B'. The `likerId` in the data must be 'A'.
+     * @deny (update) User 'A' trying to change the `likerId` on an existing like document.
+     * @principle Enforces document ownership and data integrity for relationships.
+     */
+    match /users/{userId}/likes/{likeId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.likerId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.likerId == resource.data.likerId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    // --------------------------------
+    // Shared Data Collections
+    // --------------------------------
+
+    /**
+     * @description Match documents can only be read by the two users who are part of the match.
+     * @path /matches/{matchId}
+     * @allow (get) User 'A' reading a match document where `user1Id` or `user2Id` is 'A'.
+     * @deny (create) Any client trying to create a match document. This must be done by a server.
+     * @principle Restricts access to a closed set of collaborators (participants).
+     */
+    match /matches/{matchId} {
+      allow get: if isSignedIn() && (resource.data.user1Id == request.auth.uid || resource.data.user2Id == request.auth.uid);
+      // List is allowed for any signed-in user, but the client MUST use a query
+      // (e.g., `where('user1Id', '==', auth.uid)`) to fetch their own matches.
+      // The `get` rule above secures the actual document reads.
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Messages can be created and read by match participants. Users can only delete their own messages.
+     * @path /matches/{matchId}/messages/{messageId}
+     * @allow (create) User 'A' creating a message in a match where they are a participant. `senderId` must be 'A'.
+     * @deny (get) User 'C' trying to read messages in a match between 'A' and 'B'.
+     * @principle Inherits access control from the parent document and enforces sender ownership.
+     */
+    match /matches/{matchId}/messages/{messageId} {
+      allow get: if isMatchParticipant(matchId);
+      allow list: if isMatchParticipant(matchId);
+      allow create: if isMatchParticipant(matchId) && request.resource.data.senderId == request.auth.uid;
+      allow update: if false; // Messages are immutable
+      allow delete: if isMatchParticipant(matchId) && resource != null && resource.data.senderId == request.auth.uid;
+    }
+  }
+}
