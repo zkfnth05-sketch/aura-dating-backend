@@ -241,12 +241,12 @@ export default function ProfileEditPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white pb-32">
       <header className="sticky top-0 z-10 p-4 bg-black/80 backdrop-blur-sm">
         <h1 className="text-xl font-bold text-center">프로필 수정</h1>
       </header>
 
-      <main className="container pb-24 px-4">
+      <main className="container px-4">
         <Section title="사진 및 동영상">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm">AI 보정</span>
