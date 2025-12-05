@@ -93,7 +93,7 @@ export default function SignupPage() {
   const handleAnonymousLogin = async () => {
     try {
       await signInAnonymously(auth);
-      router.push('/');
+      router.push('/signup/profile');
     } catch (error) {
       console.error("Anonymous sign-in failed", error);
       toast({
