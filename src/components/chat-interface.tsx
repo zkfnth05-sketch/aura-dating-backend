@@ -95,24 +95,51 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     const messageText = text || newMessage;
     if (messageText.trim() === '') return;
 
-    const message: Omit<Message, 'id'> = {
+    const batch = writeBatch(firestore);
+
+    // 1. Add new message to the messages subcollection
+    const messageRef = doc(collection(messagesColRef));
+    const messageData: Omit<Message, 'id'> = {
       senderId: currentUser.id,
       text: messageText,
       timestamp: serverTimestamp(),
     };
+    batch.set(messageRef, messageData);
 
-    await addDoc(messagesColRef, message);
+    // 2. Update the last message on the parent match document
+    const matchRef = doc(firestore, 'matches', match.id);
+    batch.update(matchRef, {
+      lastMessage: messageText,
+      lastMessageTimestamp: serverTimestamp(),
+      unreadCount: increment(1) // Increment unread count for the other user
+    });
+
+    await batch.commit();
     setNewMessage('');
     setSuggestions([]);
   };
 
   const handleSendAudio = async (audioUrl: string) => {
-    const message: Omit<Message, 'id'> = {
+    const batch = writeBatch(firestore);
+
+    // 1. Add new audio message
+    const messageRef = doc(collection(messagesColRef));
+    const messageData: Omit<Message, 'id'> = {
       senderId: currentUser.id,
       audioUrl: audioUrl,
       timestamp: serverTimestamp(),
     };
-    await addDoc(messagesColRef, message);
+    batch.set(messageRef, messageData);
+
+    // 2. Update last message on match document
+    const matchRef = doc(firestore, 'matches', match.id);
+    batch.update(matchRef, {
+        lastMessage: '음성 메시지',
+        lastMessageTimestamp: serverTimestamp(),
+        unreadCount: increment(1)
+    });
+
+    await batch.commit();
   };
 
 
