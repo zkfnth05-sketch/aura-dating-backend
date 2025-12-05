@@ -107,7 +107,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     const userRef = doc(firestore, 'users', authUser.uid);
   
-    // Ensure the ID is always included when saving to Firestore
+    // Ensure the ID is always included and correct when saving to Firestore
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     
     if (newUserData.createdAt === 'serverTimestamp') {
@@ -117,7 +117,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     await setDoc(userRef, dataToSave, { merge: true });
   
     setUser(prevUser => {
-      const updatedUser = { ...(prevUser || {}), ...newUserData, id: authUser.uid } as User;
+      const updatedUser = { ...(prevUser || {}), ...dataToSave } as User;
       
       // Prevent storing the string 'serverTimestamp' in the local state
       if (newUserData.createdAt === 'serverTimestamp') {

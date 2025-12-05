@@ -42,11 +42,20 @@ export default function CreateProfilePage() {
       });
       return;
     }
+    if (!authUser) {
+        toast({
+            variant: "destructive",
+            title: "인증 오류",
+            description: "사용자 인증 정보를 찾을 수 없습니다.",
+        });
+        return;
+    }
 
     setIsSubmitting(true);
 
     try {
       await updateUser({
+        id: authUser.uid, // Explicitly set the ID to match the document ID
         name,
         age: parseInt(age, 10),
         location: city,
