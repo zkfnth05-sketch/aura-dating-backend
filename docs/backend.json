@@ -180,6 +180,27 @@
         "isLike",
         "timestamp"
       ]
+    },
+    "LikedBy": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LikedBy",
+      "type": "object",
+      "description": "Represents a record of a user being liked by another.",
+      "properties": {
+        "likerId": {
+          "type": "string",
+          "description": "ID of the user who performed the like."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the like was recorded.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "likerId",
+        "timestamp"
+      ]
     }
   },
   "auth": {
@@ -199,30 +220,26 @@
             "$ref": "#/backend/entities/UserProfile"
           },
           "description": "Stores user profile data. Path-based ownership ensures only the user can access their own profile.",
-          "params": [
+          "subcollections": [
             {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/likes/{likeId}",
-        "definition": {
-          "entityName": "Like",
-          "schema": {
-            "$ref": "#/backend/entities/Like"
-          },
-          "description": "Stores user likes/dislikes. Path-based ownership, only the user can manage their likes.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user who is liking."
+              "path": "likes",
+              "definition": {
+                "entityName": "Like",
+                "schema": {
+                  "$ref": "#/backend/entities/Like"
+                },
+                "description": "Stores the likes/dislikes that this user has sent to other users. The document ID can be the ID of the 'likee'."
+              }
             },
             {
-              "name": "likeId",
-              "description": "The unique identifier for the like."
+              "path": "likedBy",
+              "definition": {
+                "entityName": "LikedBy",
+                "schema": {
+                  "$ref": "#/backend/entities/LikedBy"
+                },
+                "description": "Stores records of other users who have liked this user. The document ID can be the ID of the 'liker'."
+              }
             }
           ]
         }
@@ -235,35 +252,21 @@
             "$ref": "#/backend/entities/Match"
           },
           "description": "Stores match data between two users. Includes denormalized 'user1Id' and 'user2Id' for authorization independence.",
-          "params": [
+          "subcollections": [
             {
-              "name": "matchId",
-              "description": "The unique identifier for the match."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/matches/{matchId}/messages/{messageId}",
-        "definition": {
-          "entityName": "ChatMessage",
-          "schema": {
-            "$ref": "#/backend/entities/ChatMessage"
-          },
-          "description": "Stores chat messages between matched users. Authorization is based on membership in the match, which is validated using the denormalized 'user1Id' and 'user2Id' in the /matches/{matchId} document.",
-          "params": [
-            {
-              "name": "matchId",
-              "description": "The unique identifier for the match."
-            },
-            {
-              "name": "messageId",
-              "description": "The unique identifier for the message."
+              "path": "messages",
+              "definition": {
+                "entityName": "ChatMessage",
+                "schema": {
+                  "$ref": "#/backend/entities/ChatMessage"
+                },
+                "description": "Stores chat messages for a specific match."
+              }
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the core features of the GoldChic Dating app, focusing on user profiles, matching, likes, and real-time chat. The design emphasizes authorization independence and efficient data retrieval, adhering to the core design principles.\n\n*   **UserProfile:** User profiles are stored in `/users/{userId}`. This path-based ownership ensures that only the user can read and write their profile data. This approach naturally supports QAPs as only the user can query their own data.\n*   **Likes:** Likes/dislikes are stored in `/users/{userId}/likes/{likeId}`. This structure uses path-based ownership for managing likes. A user can only create, update, or delete likes associated with their own profile. The `likeeId` is stored within the like document.  Queries for likes given and received are possible using collection group queries (though potentially expensive at scale).\n*   **Matches:** Matches are stored in a top-level `/matches/{matchId}` collection. Each match document contains `user1Id` and `user2Id` fields.  To ensure authorization independence, the members of the match (`user1Id`, `user2Id`) are copied to each document. This design enables rules to verify if the requesting user is either `user1Id` or `user2Id` without additional `get()` calls. This addresses authorization independence and supports listing matches for a user without filtering.\n*   **Chat Messages:** Chat messages are stored in `/matches/{matchId}/messages/{messageId}`.  Authorization depends on the user being a member of the match. The `matchId` links to the match document, and because the match document denormalizes the `user1Id` and `user2Id`, security rules can validate that the user is authorized to view or send messages within that match.\n\nThis structure promotes security, scalability, and debuggability by minimizing hierarchical dependencies and clearly defining ownership and access rights."
+    "reasoning": "The Firestore data structure is designed to support the core features of the GoldChic Dating app, focusing on user profiles, matching, likes, and real-time chat. The design emphasizes authorization independence and efficient data retrieval, adhering to the core design principles.\n\n*   **UserProfile:** User profiles are stored in `/users/{userId}`. This path-based ownership ensures that only the user can read and write their profile data.\n*   **Likes & LikedBy (Subcollections):** To manage relationships efficiently, two subcollections are used under each user's profile:\n    *   `/users/{userId}/likes`: This stores all the 'like' or 'dislike' actions performed by the user. It makes it easy to query for all the people a user has swiped on.\n    *   `/users/{userId}/likedBy`: This stores who has liked the current user. This allows the 'Who liked me' feature to be implemented with a simple collection query, which is highly efficient.\n*   **Matches:** Matches are stored in a top-level `/matches/{matchId}` collection to keep the data structure flat. Each match document contains a `users` array with the UIDs of the two matched users. This design allows for efficient querying of all matches for a given user (e.g., `where('users', 'array-contains', currentUserId)`).\n*   **Chat Messages:** Chat messages are a subcollection of a match (`/matches/{matchId}/messages/{messageId}`). This structure logically groups all messages for a conversation and allows security rules to easily grant access only to the participants of the parent match document.\n\nThis structure promotes security, scalability, and debuggability by minimizing hierarchical dependencies and clearly defining ownership and access rights."
   }
 }
