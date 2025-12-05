@@ -9,10 +9,11 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { useToast } from '@/hooks/use-toast';
 
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
@@ -48,6 +49,7 @@ const applyFilters = (users: User[], filters: FilterSettings, currentUser: User)
 
 export default function HomePageClient() {
   const { user: currentUser, filters, isLoaded } = useUser();
+  const { toast } = useToast();
   const router = useRouter();
   const firestore = useFirestore();
   const [users, setUsers] = useState<User[]>([]);
@@ -63,19 +65,32 @@ export default function HomePageClient() {
 
         setIsLoadingUsers(true);
 
-        const likesCol = collection(firestore, 'users', currentUser.id, 'likes');
-        const likesSnapshot = await getDocs(likesCol);
+        const likesColRef = collection(firestore, 'users', currentUser.id, 'likes');
+        const likesSnapshot = await getDocs(likesColRef);
         const seenUserIds = new Set(likesSnapshot.docs.map(doc => doc.data().likeeId));
         seenUserIds.add(currentUser.id);
-
-        const seenIdsArray = Array.from(seenUserIds);
-
-        const usersSnapshot = await getDocs(collection(firestore, 'users'));
-        let allUnseenUsers = usersSnapshot.docs
-            .map(doc => doc.data() as User)
-            .filter(user => !seenUserIds.has(user.id));
         
-        const filteredUsers = applyFilters(allUnseenUsers, filters, currentUser);
+        let unseenUserIds: string[] = [];
+        const allUsersSnapshot = await getDocs(collection(firestore, 'users'));
+        allUsersSnapshot.forEach(doc => {
+            if (!seenUserIds.has(doc.id)) {
+                unseenUserIds.push(doc.id);
+            }
+        });
+        
+        let filteredUsers: User[] = [];
+        if(unseenUserIds.length > 0) {
+            // Firestore 'in' query has a limit of 30 items
+            const CHUNK_SIZE = 30;
+            let unseenUsers: User[] = [];
+            for (let i = 0; i < unseenUserIds.length; i += CHUNK_SIZE) {
+                const chunk = unseenUserIds.slice(i, i + CHUNK_SIZE);
+                const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
+                const userDocs = await getDocs(usersQuery);
+                unseenUsers.push(...userDocs.docs.map(d => d.data() as User));
+            }
+            filteredUsers = applyFilters(unseenUsers, filters, currentUser);
+        }
         
         setUsers(filteredUsers);
         setCurrentIndex(0);
@@ -91,7 +106,6 @@ export default function HomePageClient() {
     const targetUserId = activeUser.id;
 
     if (!targetUserId) {
-        // This case should ideally not happen if activeUser is present
         toast({
           variant: "destructive",
           title: "오류",
@@ -121,7 +135,7 @@ export default function HomePageClient() {
           // You might want to prevent messaging if there is no match.
           // For now, let's create a match document.
           const newMatchRef = doc(collection(firestore, 'matches'));
-          const targetUser = activeUser; // use activeUser here
+          const targetUser = activeUser;
           await setDoc(newMatchRef, {
               id: newMatchRef.id,
               users: [currentUser.id, targetUserId],
@@ -198,23 +212,25 @@ export default function HomePageClient() {
             }
         }
         
-        await batch.commit();
+        try {
+          await batch.commit();
+        } catch(e: any) {
+          const isPermissionError = e.code === 'permission-denied';
+
+          if (isPermissionError) {
+              const contextualError = new FirestorePermissionError({
+                  operation: 'write',
+                  path: `users/${userId}/likes`,
+                  requestResourceData: { likeeId: targetUserId, isLike: action === 'like' }
+              });
+              errorEmitter.emit('permission-error', contextualError);
+          } else {
+              console.error("Failed to record like/dislike:", e);
+          }
+        }
     };
 
-    recordLike(currentUser.id, targetUserId).catch(error => {
-      const isPermissionError = error.code === 'permission-denied';
-
-      if (isPermissionError) {
-          const contextualError = new FirestorePermissionError({
-              operation: 'write',
-              path: `users/${currentUser.id}/likes`,
-              requestResourceData: { likeeId: targetUserId, isLike: action === 'like' }
-          });
-          errorEmitter.emit('permission-error', contextualError);
-      } else {
-          console.error("Failed to record like/dislike:", error);
-      }
-    });
+    recordLike(currentUser.id, targetUserId);
     // --- End Non-blocking Firestore operations ---
 
     // Move to next card immediately
@@ -255,20 +271,26 @@ export default function HomePageClient() {
               <p className="text-muted-foreground mt-2">새로운 상대를 보려면 나중에 다시 확인해주세요.</p>
             </div>
           ) : (
-            users.map((user, index) => {
-              const isActive = index === currentIndex;
-              if (index < currentIndex || index > currentIndex + 2) return null;
-              
-              return (
-                  <ProfileCard
-                    key={user.id}
-                    currentUser={currentUser}
-                    potentialMatch={user}
-                    isActive={isActive}
-                    swipeState={isActive ? swipeState : null}
-                  />
-              );
-            })
+            <>
+              {users[currentIndex + 1] && (
+                <ProfileCard
+                  key={users[currentIndex + 1].id + '-next'}
+                  currentUser={currentUser}
+                  potentialMatch={users[currentIndex + 1]}
+                  isActive={false}
+                  swipeState={null}
+                />
+              )}
+              {activeUser && (
+                <ProfileCard
+                  key={activeUser.id}
+                  currentUser={currentUser}
+                  potentialMatch={activeUser}
+                  isActive={true}
+                  swipeState={swipeState}
+                />
+              )}
+            </>
           )}
         </div>
         
