@@ -21,18 +21,14 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   const showBottomNav = isLoaded && authUser && user?.photoUrls && user.photoUrls.length > 0;
 
   return (
-    <>
+    <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
       {authUser && <IncomingCallToast />}
-      {needsPadding ? (
-        <div className="pb-24">
+      <main className={`flex-1 ${needsPadding ? 'pb-24' : ''}`}>
           {children}
-        </div>
-      ) : (
-        children
-      )}
+      </main>
       <Toaster />
       {showBottomNav && <BottomNav />}
-    </>
+    </div>
   );
 }
 
@@ -59,7 +55,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="font-body antialiased mx-auto max-w-screen-sm">
+      <body className="font-body antialiased">
         <FirebaseClientProvider>
           <UserProvider>
             <AppLayout>
