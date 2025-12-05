@@ -160,13 +160,13 @@ export default function HomePageClient() {
     setSwipeState(direction);
 
     // --- Non-blocking Firestore operations ---
-    const recordLike = async (userId: string, targetUserId: string) => {
+    const recordLike = async (userId: string, likeeId: string) => {
         const batch = writeBatch(firestore);
         
         const likeData = {
             id: '', // Will be overridden by doc ref id
             likerId: userId,
-            likeeId: targetUserId,
+            likeeId: likeeId,
             isLike: action === 'like',
             timestamp: serverTimestamp(),
         };
@@ -176,17 +176,17 @@ export default function HomePageClient() {
         batch.set(likeRef, likeData);
     
         if (action === 'like') {
-            const targetUserRef = doc(firestore, 'users', targetUserId);
+            const targetUserRef = doc(firestore, 'users', likeeId);
             batch.update(targetUserRef, { likeCount: increment(1) });
             
-            const likedByRef = doc(collection(firestore, 'users', targetUserId, 'likedBy'));
+            const likedByRef = doc(collection(firestore, 'users', likeeId, 'likedBy'));
             batch.set(likedByRef, {
                 likerId: userId,
                 timestamp: serverTimestamp(),
             });
 
              const theirLikeQuery = query(
-                 collection(firestore, 'users', targetUserId, 'likes'),
+                 collection(firestore, 'users', likeeId, 'likes'),
                  where('likeeId', '==', userId),
                  where('isLike', '==', true)
              );
@@ -197,15 +197,15 @@ export default function HomePageClient() {
                 const targetUser = activeUser;
                 batch.set(newMatchRef, {
                     id: newMatchRef.id,
-                    users: [userId, targetUserId],
+                    users: [userId, likeeId],
                     participants: [
                         { id: userId, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-                        { id: targetUserId, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
+                        { id: likeeId, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
                     ],
                     matchDate: serverTimestamp(),
                     lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
                     lastMessageTimestamp: serverTimestamp(),
-                    unreadCounts: { [userId]: 0, [targetUserId]: 0 },
+                    unreadCounts: { [userId]: 0, [likeeId]: 0 },
                     callStatus: 'idle',
                     callerId: null
                 });
@@ -221,7 +221,7 @@ export default function HomePageClient() {
               const contextualError = new FirestorePermissionError({
                   operation: 'write',
                   path: `users/${userId}/likes`,
-                  requestResourceData: { likeeId: targetUserId, isLike: action === 'like' }
+                  requestResourceData: { likeeId: likeeId, isLike: action === 'like' }
               });
               errorEmitter.emit('permission-error', contextualError);
           } else {
@@ -271,25 +271,15 @@ export default function HomePageClient() {
               <p className="text-muted-foreground mt-2">새로운 상대를 보려면 나중에 다시 확인해주세요.</p>
             </div>
           ) : (
-            <>
-              {users.map((user, index) => {
-                if (index < currentIndex) return null;
-                if (index > currentIndex + 2) return null; // Render current, and next 2 cards for smoother transition
-                
-                const isActive = index === currentIndex;
-
-                return (
-                  <ProfileCard
-                    key={user.id}
-                    currentUser={currentUser}
-                    potentialMatch={user}
-                    isActive={isActive}
-                    swipeState={isActive ? swipeState : null}
-                    zIndex={users.length - index}
-                  />
-                );
-              })}
-            </>
+            activeUser && (
+              <ProfileCard
+                currentUser={currentUser}
+                potentialMatch={activeUser}
+                isActive={true}
+                swipeState={swipeState}
+                zIndex={1}
+              />
+            )
           )}
         </div>
         

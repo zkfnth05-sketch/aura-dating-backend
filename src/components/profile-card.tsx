@@ -22,11 +22,9 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
     transform: `
       translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
       rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
-      scale(${1 - (zIndex - (users.length - currentIndex)) * 0.05})
-      translateY(-${(zIndex - (users.length - currentIndex)) * 10}px)
     `,
     transition: 'transform 0.5s ease-in-out',
-    opacity: isActive ? 1 : 0.5,
+    opacity: 1, // Always opaque as only one is rendered
     zIndex: zIndex,
   };
 
