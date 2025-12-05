@@ -57,8 +57,6 @@ export default function HomePageClient() {
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   
-  const activeUser = users[currentIndex];
-
   useEffect(() => {
     const fetchAndFilterUsers = async () => {
         if (!isLoaded || !currentUser || !firestore) return;
@@ -99,6 +97,8 @@ export default function HomePageClient() {
 
     fetchAndFilterUsers();
   }, [filters, isLoaded, currentUser, firestore]);
+  
+  const activeUser = users[currentIndex];
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || !activeUser) return;
@@ -272,24 +272,23 @@ export default function HomePageClient() {
             </div>
           ) : (
             <>
-              {users[currentIndex + 1] && (
-                <ProfileCard
-                  key={users[currentIndex + 1].id + '-next'}
-                  currentUser={currentUser}
-                  potentialMatch={users[currentIndex + 1]}
-                  isActive={false}
-                  swipeState={null}
-                />
-              )}
-              {activeUser && (
-                <ProfileCard
-                  key={activeUser.id}
-                  currentUser={currentUser}
-                  potentialMatch={activeUser}
-                  isActive={true}
-                  swipeState={swipeState}
-                />
-              )}
+              {users.map((user, index) => {
+                if (index < currentIndex) return null;
+                if (index > currentIndex + 2) return null; // Render current, and next 2 cards for smoother transition
+                
+                const isActive = index === currentIndex;
+
+                return (
+                  <ProfileCard
+                    key={user.id}
+                    currentUser={currentUser}
+                    potentialMatch={user}
+                    isActive={isActive}
+                    swipeState={isActive ? swipeState : null}
+                    zIndex={users.length - index}
+                  />
+                );
+              })}
             </>
           )}
         </div>
