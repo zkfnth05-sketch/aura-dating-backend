@@ -10,7 +10,7 @@ export default function UserGrid({ users }: { users: User[] }) {
         <Link href={`/users/${user.id}`} key={user.id}>
           <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
             <Image
-              src={user.photoUrl}
+              src={user.photoUrls[0]}
               alt={`Profile of ${user.name}`}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"

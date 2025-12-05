@@ -91,7 +91,6 @@ export default function UploadPhotoPage() {
     }
 
     await updateUser({
-      photoUrl: photo,
       photoUrls: [photo],
     });
 

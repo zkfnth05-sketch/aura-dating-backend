@@ -42,7 +42,7 @@ export function IncomingCallToast() {
             description: (
               <div className="flex items-center gap-3 mt-2">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={caller.photoUrl} alt={caller.name} />
+                  <AvatarImage src={caller.photoUrls?.[0]} alt={caller.name} />
                   <AvatarFallback>{caller.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <span>{caller.name}님이 영상 통화를 요청했습니다.</span>

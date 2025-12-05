@@ -40,8 +40,8 @@ export default function MatchList({ matches }: { matches: Match[] }) {
             <div key={match.id} className="flex items-center gap-4 p-2 rounded-lg transition-colors hover:bg-accent">
             <Link href={`/users/${otherUser.id}`} onClick={(e) => e.stopPropagation()}>
                 <Avatar className="h-14 w-14 border-2 border-primary/50 cursor-pointer">
-                <AvatarImage src={otherUser.photoUrl} alt={otherUser.name} />
-                <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={otherUser.photoUrls?.[0]} alt={otherUser.name} />
+                <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
             </Link>
             <Link href={`/chat/${match.id}`} className="flex-1">

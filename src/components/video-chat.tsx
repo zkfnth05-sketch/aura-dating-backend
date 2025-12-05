@@ -106,7 +106,7 @@ export default function VideoChat({
         ) : (
             <div className="h-full w-full bg-zinc-900 flex flex-col items-center justify-center">
                 <Avatar className="w-24 h-24">
-                    <AvatarImage src={remoteUser.photoUrl} />
+                    <AvatarImage src={remoteUser.photoUrls[0]} />
                     <AvatarFallback>{remoteUser.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <p className="mt-4 text-xl font-semibold">{remoteUser.name}</p>

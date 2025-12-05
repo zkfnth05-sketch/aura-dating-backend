@@ -25,7 +25,7 @@ const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: U
       <Card className="overflow-hidden relative group cursor-pointer">
         <div className="relative aspect-[3/4]">
           <Image
-            src={user.photoUrl}
+            src={user.photoUrls[0]}
             alt={`Profile of ${user.name}`}
             fill
             className="object-cover"

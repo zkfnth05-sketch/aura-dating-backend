@@ -36,7 +36,7 @@ export default function ProfilePage() {
     updateNotificationSettings({ [id]: checked });
   };
   
-  if (!isLoaded) {
+  if (!isLoaded || !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -44,7 +44,7 @@ export default function ProfilePage() {
     );
   }
 
-  const allPhotos = currentUser.photoUrls || [currentUser.photoUrl];
+  const allPhotos = currentUser.photoUrls || [];
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);

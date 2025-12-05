@@ -155,7 +155,7 @@ export default function MapClient({ users, currentUser }: MapClientProps) {
                   user.id === currentUser.id ? "border-primary" : "border-transparent"
               )}>
                 <Image
-                  src={user.photoUrl}
+                  src={user.photoUrls[0]}
                   alt={user.name}
                   fill
                   className="object-cover rounded-full"

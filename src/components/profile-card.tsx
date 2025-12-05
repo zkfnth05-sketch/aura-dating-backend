@@ -44,7 +44,7 @@ export default function ProfileCard({ currentUser, potentialMatch, isActive, swi
     >
       <Link href={`/users/${potentialMatch.id}`} className="block w-full h-full">
         <Image
-          src={potentialMatch.photoUrl}
+          src={potentialMatch.photoUrls[0]}
           alt={`Profile of ${potentialMatch.name}`}
           fill
           className="object-cover"

@@ -105,7 +105,7 @@ export default function ProfileEditPage() {
           interests: currentUser.interests || [],
       });
       setPhotos(
-        (currentUser.photoUrls || (currentUser.photoUrl ? [currentUser.photoUrl] : [])).map((url, i) => ({
+        (currentUser.photoUrls || []).map((url, i) => ({
           id: `ctx-photo-${i}-${Date.now()}`,
           dataUri: url,
           isEnhancing: false,
@@ -149,7 +149,6 @@ export default function ProfileEditPage() {
         ...profile,
         age: parseInt(profile.age) || currentUser.age,
         photoUrls: finalImageUris,
-        photoUrl: finalImageUris[0] || currentUser.photoUrl,
     });
     setIsSaving(false);
     toast({

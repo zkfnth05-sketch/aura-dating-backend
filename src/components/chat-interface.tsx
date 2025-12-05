@@ -283,7 +283,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     return (
       <VideoChat
         localUser={currentUser}
-        remoteUser={otherUser}
+        remoteUser={otherUser as User}
         onEndCall={handleEndCall}
       />
     );
@@ -299,8 +299,8 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
         </Button>
         <div className="flex items-center gap-3 flex-1">
           <Avatar>
-            <AvatarImage src={otherUser.photoUrl} alt={otherUser.name} />
-            <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={otherUser.photoUrls?.[0]} alt={otherUser.name} />
+            <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>
             <p className="font-semibold">{otherUser.name}</p>
@@ -322,8 +322,8 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
             >
               {message.senderId !== currentUser.id && (
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={otherUser.photoUrl} />
-                  <AvatarFallback>{otherUser.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={otherUser.photoUrls?.[0]} />
+                  <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
               )}
               <div

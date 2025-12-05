@@ -10,8 +10,7 @@ export type User = {
   bio: string;
   hobbies: string[];
   interests: string[];
-  photoUrl: string;
-  photoUrls?: string[];
+  photoUrls: string[];
   gender: '남성' | '여성' | '기타';
   relationship?: string[];
   values?: string[];

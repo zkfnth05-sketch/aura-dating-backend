@@ -113,8 +113,8 @@ export default function HomePageClient() {
               id: newMatchRef.id,
               users: [currentUser.id, targetUser.id],
               participants: [
-                { id: currentUser.id, name: currentUser.name, photoUrl: currentUser.photoUrl, lastSeen: currentUser.lastSeen },
-                { id: targetUser.id, name: targetUser.name, photoUrl: targetUser.photoUrl, lastSeen: targetUser.lastSeen },
+                { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
+                { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
               ],
               matchDate: serverTimestamp(),
               lastMessage: '새로운 대화를 시작해보세요!',
@@ -176,8 +176,8 @@ export default function HomePageClient() {
                     id: newMatchRef.id,
                     users: [currentUser.id, targetUser.id],
                     participants: [
-                        { id: currentUser.id, name: currentUser.name, photoUrl: currentUser.photoUrl, lastSeen: currentUser.lastSeen },
-                        { id: targetUser.id, name: targetUser.name, photoUrl: targetUser.photoUrl, lastSeen: targetUser.lastSeen },
+                        { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
+                        { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
                     ],
                     matchDate: serverTimestamp(),
                     lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
