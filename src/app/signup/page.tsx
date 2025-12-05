@@ -39,7 +39,7 @@ const GoogleIcon = () => (
   <svg
     width="24"
     height="24"
-    viewBox="0 0 24 24"
+    viewBox="0.0 -3.0 24 24"
     xmlns="http://www.w3.org/2000/svg"
     className="absolute left-4"
   >
@@ -89,19 +89,19 @@ export default function SignupPage() {
   const auth = useAuth();
 
   const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
     try {
-        await signInAnonymously(auth);
+        await signInWithPopup(auth, provider);
         // On successful sign-in, the useEffect in HomePage will redirect.
         router.push('/');
     } catch (error) {
-        console.error("Anonymous-Login-Error:", error);
     }
   };
 
   // Dummy handler for other login methods
   const handleLogin = () => {
     // For now, we only implement Google login
-    alert("현재는 익명 로그인만 지원됩니다.");
+    alert("현재는 Google 로그인만 지원됩니다.");
   };
 
   return (
