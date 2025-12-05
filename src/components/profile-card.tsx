@@ -53,7 +53,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
           data-ai-hint="person portrait"
           priority={isActive}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
             <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
