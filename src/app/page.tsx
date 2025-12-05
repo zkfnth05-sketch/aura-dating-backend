@@ -15,15 +15,15 @@ export default function HomePage() {
     if (isLoaded) {
       if (!authUser) {
         router.replace('/signup');
-      } else if (!user?.photoUrl) {
-        // If user is authenticated but has no profile photo,
+      } else if (!user) {
+        // If user is authenticated but has no profile data,
         // it means they haven't completed the signup flow.
         router.replace('/signup/profile');
       }
     }
   }, [authUser, isLoaded, user, router]);
 
-  if (!isLoaded || !authUser || !user?.photoUrl) {
+  if (!isLoaded || !authUser || !user) {
     // Show a splash screen while loading or redirecting
     return <SplashScreen />;
   }
