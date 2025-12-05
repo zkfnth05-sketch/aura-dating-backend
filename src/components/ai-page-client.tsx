@@ -31,7 +31,6 @@ const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: U
             className="object-cover"
             data-ai-hint="person portrait"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         </div>
 
         <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
@@ -46,7 +45,7 @@ const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: U
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+        <div className="absolute bottom-0 left-0 right-0 p-4 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)]">
           <p className="font-semibold truncate">{user.name}, {user.age}</p>
         </div>
       </Card>

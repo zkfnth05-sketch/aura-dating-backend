@@ -66,7 +66,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
             )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.5)]">
+        <div className="absolute bottom-0 left-0 right-0 p-6 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)]">
           <div className="flex items-center gap-2">
             <h2 className="text-3xl font-bold">
               {potentialMatch.name}, <span className="font-light">{potentialMatch.age}, {potentialMatch.gender}</span>

@@ -22,8 +22,7 @@ const UserCard = ({ user }: { user: User }) => (
         className="object-cover transition-transform duration-300 group-hover:scale-105"
         data-ai-hint="person portrait"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+      <div className="absolute bottom-0 left-0 right-0 p-3 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)]">
         <p className="font-semibold truncate">{user.name}, {user.age}</p>
       </div>
     </Card>
