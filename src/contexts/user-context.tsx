@@ -107,27 +107,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     const userRef = doc(firestore, 'users', authUser.uid);
   
-    // Special handling for serverTimestamp
     const dataToSave: any = { ...newUserData };
     if (newUserData.createdAt === 'serverTimestamp') {
         dataToSave.createdAt = serverTimestamp();
     }
   
-    // Use setDoc with merge to create or update the user profile
     await setDoc(userRef, dataToSave, { merge: true });
   
-    // After successful save, update the local state
     setUser(prevUser => {
-      // Create the updated user state, but don't re-assign serverTimestamp function
       const updatedUser = { ...(prevUser || {}), ...newUserData, id: authUser.uid } as User;
       
-      // If we used serverTimestamp, the local state shouldn't hold the function
-      // It will be updated on the next snapshot read if needed.
-      // For now, we can just remove it from the immediate local state.
-      if (updatedUser.createdAt) {
-        // This is a simple way to handle it. In a real app you might want to
-        // get the fresh data from the server.
-        delete updatedUser.createdAt; 
+      // Prevent storing the string 'serverTimestamp' in the local state
+      if (newUserData.createdAt === 'serverTimestamp') {
+        delete (updatedUser as Partial<User>).createdAt;
       }
 
       return updatedUser;
