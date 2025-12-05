@@ -48,3 +48,9 @@ export type Like = {
     isLike: boolean;
     timestamp: Timestamp;
 };
+
+export type LikedBy = {
+    id: string;
+    likerId: string;
+    timestamp: Timestamp;
+}

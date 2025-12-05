@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import BottomNav from '@/components/layout/bottom-nav';
 import { UserProvider, useUser } from '@/contexts/user-context';
 import { IncomingCallToast } from '@/components/incoming-call-toast';
+import { NewLikeToast } from '@/components/new-like-toast';
 import { usePathname } from 'next/navigation';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
@@ -23,6 +24,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
       {authUser && <IncomingCallToast />}
+      {authUser && <NewLikeToast />}
       <main className={`flex-1 ${needsPadding ? 'pb-24' : ''}`}>
           {children}
       </main>

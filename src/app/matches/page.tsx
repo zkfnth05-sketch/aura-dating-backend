@@ -6,8 +6,8 @@ import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDoc, getDocs, collectionGroup, documentId, Query, Firestore } from 'firebase/firestore';
-import type { User, Like, Match } from '@/lib/types';
+import { collection, query, where, doc, getDoc, getDocs, collectionGroup, documentId, Query, Firestore, orderBy } from 'firebase/firestore';
+import type { User, Like, Match, LikedBy } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
@@ -39,32 +39,41 @@ export default function MatchesPage() {
   
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
   const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
-  const [isLoadingLikes, setIsLoadingLikes] = useState(true);
+  const [isLoadingILiked, setIsLoadingILiked] = useState(true);
 
-  // --- 1. Get matches for the "Chats" tab ---
+  // --- 1. Get matches for the "Chats" tab (real-time) ---
   const matchesQuery = useMemoFirebase(() => {
     if (!currentUser || !firestore) return null;
     return query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
   }, [firestore, currentUser]);
   const { data: matches, isLoading: areMatchesLoading } = useCollection<Match>(matchesQuery);
 
-  // --- 2. Get users who liked me and users I liked ---
+  // --- 2. Get users who liked me (real-time) ---
+  const likedMeQuery = useMemoFirebase(() => {
+    if (!currentUser) return null;
+    return query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
+  }, [firestore, currentUser]);
+  const { data: likedByList, isLoading: areLikedByLoading } = useCollection<LikedBy>(likedMeQuery);
+
+  useEffect(() => {
+      if (!likedByList || !firestore) return;
+      const fetchLikerProfiles = async () => {
+          const likerIds = likedByList.map(like => like.likerId);
+          const users = await fetchUsersByIds(firestore, likerIds);
+          // Preserve order from likedByList
+          const orderedUsers = likerIds.map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
+          setPeopleWhoLikedMe(orderedUsers);
+      };
+      fetchLikerProfiles();
+  }, [likedByList, firestore]);
+
+  // --- 3. Get users I liked (one-time fetch) ---
   useEffect(() => {
     if (!currentUser || !firestore) return;
 
-    const fetchLikeData = async () => {
-      setIsLoadingLikes(true);
-      
+    const fetchILikedData = async () => {
+      setIsLoadingILiked(true);
       try {
-        // --- Get users who liked me ---
-        const likedMeQuery = query(collection(firestore, 'users', currentUser.id, 'likedBy'));
-        const likedMeSnapshot = await getDocs(likedMeQuery);
-        const likerIds = likedMeSnapshot.docs.map(d => d.data().likerId);
-        
-        const likedMeUsers = await fetchUsersByIds(firestore, likerIds);
-        setPeopleWhoLikedMe(likedMeUsers);
-        
-        // --- Get users I liked ---
         const iLikedQuery = query(collection(firestore, 'users', currentUser.id, 'likes'), where('isLike', '==', true));
         const iLikedSnapshot = await getDocs(iLikedQuery);
         const likedUserIds = iLikedSnapshot.docs.map(d => d.data().likeeId);
@@ -73,19 +82,18 @@ export default function MatchesPage() {
         setPeopleILiked(iLikedUsers);
 
       } catch (error) {
-        console.error("Error fetching like data:", error);
-        setPeopleWhoLikedMe([]);
+        console.error("Error fetching 'I liked' data:", error);
         setPeopleILiked([]);
       } finally {
-        setIsLoadingLikes(false);
+        setIsLoadingILiked(false);
       }
     };
 
-    fetchLikeData();
+    fetchILikedData();
 
   }, [currentUser, firestore]);
   
-  const isLoading = !isUserLoaded || areMatchesLoading || isLoadingLikes;
+  const isLoading = !isUserLoaded || areMatchesLoading || areLikedByLoading || isLoadingILiked;
   
   return (
     <div className="flex flex-col min-h-screen">
