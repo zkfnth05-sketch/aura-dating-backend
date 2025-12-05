@@ -12,7 +12,8 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/firebase';
-import { signInWithPopup, GoogleAuthProvider, getAuth, signInAnonymously } from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 // Kakao icon
 const KakaoIcon = () => (
@@ -87,21 +88,20 @@ const PhoneIcon = () => (
 export default function SignupPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { toast } = useToast();
 
-  const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
+  const handleAnonymousLogin = async () => {
     try {
-        await signInWithPopup(auth, provider);
-        // On successful sign-in, the useEffect in HomePage will redirect.
-        router.push('/');
+      await signInAnonymously(auth);
+      router.push('/');
     } catch (error) {
+      console.error("Anonymous sign-in failed", error);
+      toast({
+        variant: "destructive",
+        title: "로그인 실패",
+        description: "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+      });
     }
-  };
-
-  // Dummy handler for other login methods
-  const handleLogin = () => {
-    // For now, we only implement Google login
-    alert("현재는 Google 로그인만 지원됩니다.");
   };
 
   return (
@@ -116,14 +116,14 @@ export default function SignupPage() {
 
         <div className="space-y-3 w-full">
           <Button
-            onClick={handleLogin}
+            onClick={handleAnonymousLogin}
             className="w-full h-12 bg-[#FEE500] text-black hover:bg-[#FEE500]/90 font-semibold text-base relative"
           >
             <KakaoIcon />
             카카오로 계속하기
           </Button>
           <Button
-            onClick={handleGoogleLogin}
+            onClick={handleAnonymousLogin}
             variant="secondary"
             className="w-full h-12 bg-white text-black hover:bg-white/90 font-semibold text-base relative"
           >
@@ -131,7 +131,7 @@ export default function SignupPage() {
             Google로 계속하기
           </Button>
           <Button
-            onClick={handleLogin}
+            onClick={handleAnonymousLogin}
             variant="secondary"
             className="w-full h-12 bg-neutral-800 text-white hover:bg-neutral-700 font-semibold text-base relative"
           >
