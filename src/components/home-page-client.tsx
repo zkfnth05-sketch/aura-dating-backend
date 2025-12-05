@@ -11,6 +11,8 @@ import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
@@ -52,6 +54,8 @@ export default function HomePageClient() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  
+  const activeUser = users[currentIndex];
 
   useEffect(() => {
     const fetchAndFilterUsers = async () => {
@@ -59,33 +63,18 @@ export default function HomePageClient() {
 
         setIsLoadingUsers(true);
 
-        // 1. Get IDs of users already seen by the current user
         const likesCol = collection(firestore, 'users', currentUser.id, 'likes');
         const likesSnapshot = await getDocs(likesCol);
         const seenUserIds = new Set(likesSnapshot.docs.map(doc => doc.data().likeeId));
-        // Also exclude the current user
         seenUserIds.add(currentUser.id);
 
         const seenIdsArray = Array.from(seenUserIds);
 
-        // 2. Fetch users excluding the seen ones
-        let usersQuery;
-        if (seenIdsArray.length > 0) {
-            // Firestore 'not-in' query is limited to 10 items.
-            // A more robust solution for large scale would be to keep a "seen" array on the user doc
-            // and filter there, or use a backend process. For now, we fetch all and filter client side
-            // BUT we could at least filter out the current user on the backend.
-             usersQuery = query(collection(firestore, 'users'), where(documentId(), '!=', currentUser.id));
-        } else {
-             usersQuery = collection(firestore, 'users');
-        }
-
-        const usersSnapshot = await getDocs(usersQuery);
+        const usersSnapshot = await getDocs(collection(firestore, 'users'));
         let allUnseenUsers = usersSnapshot.docs
             .map(doc => doc.data() as User)
-            .filter(user => !seenIdsArray.includes(user.id));
-
-        // 3. Apply client-side filters (for tags, etc.)
+            .filter(user => !seenUserIds.has(user.id));
+        
         const filteredUsers = applyFilters(allUnseenUsers, filters, currentUser);
         
         setUsers(filteredUsers);
@@ -97,12 +86,21 @@ export default function HomePageClient() {
   }, [filters, isLoaded, currentUser, firestore]);
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
-    if (!currentUser || currentIndex >= users.length) return;
+    if (!currentUser || !activeUser) return;
     
-    const targetUser = users[currentIndex];
+    const targetUserId = activeUser.id;
 
+    if (!targetUserId) {
+        // This case should ideally not happen if activeUser is present
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: "사용자 정보를 찾을 수 없습니다."
+        });
+        return;
+    }
+    
     // For messaging, we assume a match is required.
-    // This part of the logic might need to be adjusted based on whether you can message without a match.
     if (action === 'message') {
       const matchQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
       const matchSnapshot = await getDocs(matchQuery);
@@ -110,7 +108,7 @@ export default function HomePageClient() {
       let existingMatch: {id: string} | null = null;
       matchSnapshot.forEach(doc => {
           const match = doc.data();
-          if (match.users.includes(targetUser.id)) {
+          if (match.users.includes(targetUserId)) {
               existingMatch = { id: doc.id, ...match };
           }
       });
@@ -123,9 +121,10 @@ export default function HomePageClient() {
           // You might want to prevent messaging if there is no match.
           // For now, let's create a match document.
           const newMatchRef = doc(collection(firestore, 'matches'));
+          const targetUser = activeUser; // use activeUser here
           await setDoc(newMatchRef, {
               id: newMatchRef.id,
-              users: [currentUser.id, targetUser.id],
+              users: [currentUser.id, targetUserId],
               participants: [
                 { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
                 { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
@@ -133,7 +132,9 @@ export default function HomePageClient() {
               matchDate: serverTimestamp(),
               lastMessage: '새로운 대화를 시작해보세요!',
               lastMessageTimestamp: serverTimestamp(),
-              unreadCounts: { [currentUser.id]: 0, [targetUser.id]: 0 },
+              unreadCounts: { [currentUser.id]: 0, [targetUserId]: 0 },
+              callStatus: 'idle',
+              callerId: null
           });
           matchId = newMatchRef.id;
       }
@@ -144,71 +145,76 @@ export default function HomePageClient() {
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
 
-    // --- Start Non-blocking Firestore operations ---
-    const recordLike = async () => {
-        if (!currentUser) return;
+    // --- Non-blocking Firestore operations ---
+    const recordLike = async (userId: string, targetUserId: string) => {
         const batch = writeBatch(firestore);
-
-        // 1. Record the like/dislike in the current user's subcollection
-        const likeRef = doc(collection(firestore, 'users', currentUser.id, 'likes'));
-        batch.set(likeRef, {
-            id: likeRef.id,
-            likerId: currentUser.id,
-            likeeId: targetUser.id,
+        
+        const likeData = {
+            id: '', // Will be overridden by doc ref id
+            likerId: userId,
+            likeeId: targetUserId,
             isLike: action === 'like',
             timestamp: serverTimestamp(),
-        });
+        };
+
+        const likeRef = doc(collection(firestore, 'users', userId, 'likes'));
+        likeData.id = likeRef.id;
+        batch.set(likeRef, likeData);
     
         if (action === 'like') {
-            // 2. Increment the likeCount on the target user
-            const targetUserRef = doc(firestore, 'users', targetUser.id);
+            const targetUserRef = doc(firestore, 'users', targetUserId);
             batch.update(targetUserRef, { likeCount: increment(1) });
             
-            // Record who liked the user in a subcollection
-            const likedByRef = doc(collection(firestore, 'users', targetUser.id, 'likedBy'));
+            const likedByRef = doc(collection(firestore, 'users', targetUserId, 'likedBy'));
             batch.set(likedByRef, {
-                likerId: currentUser.id,
+                likerId: userId,
                 timestamp: serverTimestamp(),
             });
 
-
-            // 3. Check if the other user has liked us back (check their 'likes' subcollection)
              const theirLikeQuery = query(
-                 collection(firestore, 'users', targetUser.id, 'likes'),
-                 where('likeeId', '==', currentUser.id),
+                 collection(firestore, 'users', targetUserId, 'likes'),
+                 where('likeeId', '==', userId),
                  where('isLike', '==', true)
              );
-             // This can be done in the background, but for showing an immediate match, we do it here.
              const theirLikeSnapshot = await getDocs(theirLikeQuery);
 
-
             if (!theirLikeSnapshot.empty) {
-                // It's a match!
-                // 4. Create a new match document
                 const newMatchRef = doc(collection(firestore, 'matches'));
+                const targetUser = activeUser;
                 batch.set(newMatchRef, {
                     id: newMatchRef.id,
-                    users: [currentUser.id, targetUser.id],
+                    users: [userId, targetUserId],
                     participants: [
-                        { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-                        { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
+                        { id: userId, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
+                        { id: targetUserId, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
                     ],
                     matchDate: serverTimestamp(),
                     lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
                     lastMessageTimestamp: serverTimestamp(),
-                    unreadCounts: { [currentUser.id]: 0, [targetUser.id]: 0 },
+                    unreadCounts: { [userId]: 0, [targetUserId]: 0 },
                     callStatus: 'idle',
                     callerId: null
                 });
             }
         }
         
-        // Commit all operations as a single batch
         await batch.commit();
     };
 
-    // We don't await this promise. Let it run in the background.
-    recordLike().catch(error => console.error("Failed to record like/dislike:", error));
+    recordLike(currentUser.id, targetUserId).catch(error => {
+      const isPermissionError = error.code === 'permission-denied';
+
+      if (isPermissionError) {
+          const contextualError = new FirestorePermissionError({
+              operation: 'write',
+              path: `users/${currentUser.id}/likes`,
+              requestResourceData: { likeeId: targetUserId, isLike: action === 'like' }
+          });
+          errorEmitter.emit('permission-error', contextualError);
+      } else {
+          console.error("Failed to record like/dislike:", error);
+      }
+    });
     // --- End Non-blocking Firestore operations ---
 
     // Move to next card immediately
@@ -251,23 +257,22 @@ export default function HomePageClient() {
           ) : (
             users.map((user, index) => {
               const isActive = index === currentIndex;
-              if (index < currentIndex || index > currentIndex + 2) return null; // Render current and next few cards for smoother transitions
+              if (index < currentIndex || index > currentIndex + 2) return null;
               
               return (
-                <div key={user.id} className="absolute w-full h-full" style={{ zIndex: users.length - index }}>
                   <ProfileCard
+                    key={user.id}
                     currentUser={currentUser}
                     potentialMatch={user}
                     isActive={isActive}
                     swipeState={isActive ? swipeState : null}
                   />
-                </div>
               );
             })
           )}
         </div>
         
-        {currentIndex < users.length && (
+        {activeUser && (
           <div className="absolute bottom-24 z-20">
             <ActionButtons
               onDislike={() => handleAction('dislike')}
