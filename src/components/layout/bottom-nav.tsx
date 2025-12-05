@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useUser } from '@/contexts/user-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
+import type { Match } from '@/lib/types';
 
 const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -49,9 +50,12 @@ export default function BottomNav() {
     return query(collection(firestore, 'matches'), where('users', 'array-contains', user.id));
   }, [firestore, user]);
 
-  const { data: matches } = useCollection(matchesQuery);
+  const { data: matches } = useCollection<Match>(matchesQuery);
 
-  const unreadCount = (matches || []).reduce((acc, match) => acc + (match.unreadCount || 0), 0);
+  const totalUnreadCount = (matches || []).reduce((acc, match) => {
+    return acc + (match.unreadCounts?.[user!.id] || 0);
+  }, 0);
+
 
   const noNavPaths = ['/signup', '/chat/', '/profile/edit', '/users/'];
 
@@ -84,9 +88,9 @@ export default function BottomNav() {
                 isActive && "font-bold"
               )}>{item.label}</span>
 
-              {isMatchesLink && unreadCount > 0 && (
+              {isMatchesLink && totalUnreadCount > 0 && (
                 <div className="absolute top-2 right-1/2 translate-x-[24px] flex items-center justify-center h-4 min-w-[16px] rounded-full bg-red-500 text-white text-[10px] px-1 font-bold">
-                  {unreadCount}
+                  {totalUnreadCount}
                 </div>
               )}
             </Link>

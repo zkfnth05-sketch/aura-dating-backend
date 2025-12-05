@@ -119,6 +119,7 @@ export default function HomePageClient() {
               matchDate: serverTimestamp(),
               lastMessage: '새로운 대화를 시작해보세요!',
               lastMessageTimestamp: serverTimestamp(),
+              unreadCounts: { [currentUser.id]: 0, [targetUser.id]: 0 },
           });
           matchId = newMatchRef.id;
       }
@@ -181,7 +182,7 @@ export default function HomePageClient() {
                     matchDate: serverTimestamp(),
                     lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
                     lastMessageTimestamp: serverTimestamp(),
-                    unreadCount: 0,
+                    unreadCounts: { [currentUser.id]: 0, [targetUser.id]: 0 },
                     callStatus: 'idle',
                     callerId: null
                 });

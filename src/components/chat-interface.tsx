@@ -15,7 +15,7 @@ import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment } from 'firebase/firestore';
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -61,7 +61,18 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
   const [isCallActive, setIsCallActive] = useState(false);
 
   useEffect(() => {
+    if (!currentUser?.id || !firestore) return;
+
     const matchRef = doc(firestore, 'matches', match.id);
+    // Reset unread count when entering the chat
+    const newUnreadCounts = {
+        ...match.unreadCounts,
+        [currentUser.id]: 0,
+    };
+    if (match.unreadCounts[currentUser.id] > 0) {
+        updateDoc(matchRef, { unreadCounts: newUnreadCounts });
+    }
+
     const unsubscribe = onSnapshot(matchRef, (doc) => {
         const updatedMatch = doc.data() as Match;
         setMatch(updatedMatch);
@@ -76,7 +87,8 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
         }
     });
     return () => unsubscribe();
-  }, [firestore, match.id, currentUser?.id, isCallActive]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firestore, match.id, currentUser?.id]);
 
   const messagesQuery = useMemoFirebase(() => {
     return query(messagesColRef, orderBy('timestamp', 'asc'));
@@ -90,28 +102,28 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
   const [lastSeenText, setLastSeenText] = useState(formatLastSeen(otherUser.lastSeen));
 
 
-  const handleSendMessage = async (e: React.FormEvent, text?: string) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    const messageText = text || newMessage;
-    if (messageText.trim() === '') return;
+    if (newMessage.trim() === '') return;
 
     const batch = writeBatch(firestore);
+    const otherUserId = otherUser.id!;
 
     // 1. Add new message to the messages subcollection
     const messageRef = doc(collection(messagesColRef));
     const messageData: Omit<Message, 'id'> = {
       senderId: currentUser.id,
-      text: messageText,
+      text: newMessage,
       timestamp: serverTimestamp(),
     };
     batch.set(messageRef, messageData);
 
-    // 2. Update the last message on the parent match document
+    // 2. Update the last message and unread count on the parent match document
     const matchRef = doc(firestore, 'matches', match.id);
     batch.update(matchRef, {
-      lastMessage: messageText,
+      lastMessage: newMessage,
       lastMessageTimestamp: serverTimestamp(),
-      unreadCount: increment(1) // Increment unread count for the other user
+      [`unreadCounts.${otherUserId}`]: increment(1)
     });
 
     await batch.commit();
@@ -121,6 +133,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
 
   const handleSendAudio = async (audioUrl: string) => {
     const batch = writeBatch(firestore);
+    const otherUserId = otherUser.id!;
 
     // 1. Add new audio message
     const messageRef = doc(collection(messagesColRef));
@@ -136,7 +149,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     batch.update(matchRef, {
         lastMessage: '음성 메시지',
         lastMessageTimestamp: serverTimestamp(),
-        unreadCount: increment(1)
+        [`unreadCounts.${otherUserId}`]: increment(1)
     });
 
     await batch.commit();

@@ -28,7 +28,7 @@ export type Match = {
   participants: Partial<User>[]; // Store a subset of user data for quick access
   lastMessage: string;
   lastMessageTimestamp: Timestamp;
-  unreadCount?: number;
+  unreadCounts: { [key: string]: number };
   matchDate: Timestamp;
   callStatus?: 'idle' | 'ringing' | 'active';
   callerId?: string | null;

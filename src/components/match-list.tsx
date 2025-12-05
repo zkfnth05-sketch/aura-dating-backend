@@ -33,6 +33,8 @@ export default function MatchList({ matches }: { matches: Match[] }) {
             hour: '2-digit',
             minute: '2-digit',
         }) : '...';
+        
+        const unreadCount = match.unreadCounts?.[currentUser.id] || 0;
 
         return (
             <div key={match.id} className="flex items-center gap-4 p-2 rounded-lg transition-colors hover:bg-accent">
@@ -45,15 +47,15 @@ export default function MatchList({ matches }: { matches: Match[] }) {
             <Link href={`/chat/${match.id}`} className="flex-1">
                 <div className="flex-1">
                     <div className="flex justify-between items-center">
-                        <p className={cn("font-semibold", match.unreadCount ? "text-foreground" : "text-muted-foreground")}>{otherUser.name}</p>
+                        <p className={cn("font-semibold", unreadCount > 0 ? "text-foreground" : "text-muted-foreground")}>{otherUser.name}</p>
                         <p className="text-xs text-muted-foreground">{lastMessageTime}</p>
                     </div>
-                    <p className={cn("text-sm truncate", match.unreadCount ? "text-foreground" : "text-muted-foreground")}>{match.lastMessage}</p>
+                    <p className={cn("text-sm truncate", unreadCount > 0 ? "text-foreground" : "text-muted-foreground")}>{match.lastMessage}</p>
                 </div>
             </Link>
-            {match.unreadCount && match.unreadCount > 0 && (
+            {unreadCount > 0 && (
                 <div className="flex items-center justify-center h-5 min-w-[20px] rounded-full bg-primary text-primary-foreground text-xs font-bold px-1.5">
-                    {match.unreadCount}
+                    {unreadCount}
                 </div>
             )}
             </div>
