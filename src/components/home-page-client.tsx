@@ -9,16 +9,14 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
     return users.filter(user => {
-      if (user.id === currentUser.id) return false;
-      
-      const age = Number(user.age);
-      if (age < filters.ageRange.min || age > filters.ageRange.max) return false;
+      // This function assumes users are already pre-filtered by seen status and self.
+      if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
 
       if (filters.gender.length > 0 && user.gender && !filters.gender.includes(user.gender)) return false;
       
@@ -55,32 +53,48 @@ export default function HomePageClient() {
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
-  // This query fetches ALL users. Filtering happens on the client.
-  const usersQuery = useMemoFirebase(() => {
-      if (!isLoaded || !currentUser) return null;
-      return collection(firestore, 'users');
-  }, [firestore, isLoaded, currentUser]);
-
-  const { data: allUsers, isLoading: areUsersLoading } = useCollection<User>(usersQuery);
-
   useEffect(() => {
-    if (isLoaded && currentUser && allUsers) {
-      const getSeenUserIds = async () => {
-        if (!currentUser?.id) return new Set<string>();
+    const fetchAndFilterUsers = async () => {
+        if (!isLoaded || !currentUser || !firestore) return;
+
+        setIsLoadingUsers(true);
+
+        // 1. Get IDs of users already seen by the current user
         const likesCol = collection(firestore, 'users', currentUser.id, 'likes');
         const likesSnapshot = await getDocs(likesCol);
-        return new Set(likesSnapshot.docs.map(doc => doc.data().likeeId));
-      };
+        const seenUserIds = new Set(likesSnapshot.docs.map(doc => doc.data().likeeId));
+        // Also exclude the current user
+        seenUserIds.add(currentUser.id);
 
-      getSeenUserIds().then(seenIds => {
-        const unseenUsers = allUsers.filter(user => !seenIds.has(user.id));
-        const filteredUsers = applyFilters(unseenUsers, filters, currentUser);
+        const seenIdsArray = Array.from(seenUserIds);
+
+        // 2. Fetch users excluding the seen ones
+        let usersQuery;
+        if (seenIdsArray.length > 0) {
+            // Firestore 'not-in' query is limited to 10 items.
+            // A more robust solution for large scale would be to keep a "seen" array on the user doc
+            // and filter there, or use a backend process. For now, we fetch all and filter client side
+            // BUT we could at least filter out the current user on the backend.
+             usersQuery = query(collection(firestore, 'users'), where(documentId(), '!=', currentUser.id));
+        } else {
+             usersQuery = collection(firestore, 'users');
+        }
+
+        const usersSnapshot = await getDocs(usersQuery);
+        let allUnseenUsers = usersSnapshot.docs
+            .map(doc => doc.data() as User)
+            .filter(user => !seenIdsArray.includes(user.id));
+
+        // 3. Apply client-side filters (for tags, etc.)
+        const filteredUsers = applyFilters(allUnseenUsers, filters, currentUser);
+        
         setUsers(filteredUsers);
         setCurrentIndex(0);
         setIsLoadingUsers(false);
-      });
-    }
-  }, [filters, isLoaded, currentUser, allUsers, firestore]);
+    };
+
+    fetchAndFilterUsers();
+  }, [filters, isLoaded, currentUser, firestore]);
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || currentIndex >= users.length) return;
@@ -204,7 +218,7 @@ export default function HomePageClient() {
     }, 500);
   };
   
-  if (isLoadingUsers || areUsersLoading) {
+  if (isLoadingUsers) {
       return (
         <div className="flex flex-col h-screen bg-background">
           <Header />

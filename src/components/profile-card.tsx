@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { calculateCompatibility } from '@/lib/utils';
 import { Heart } from 'lucide-react';
+import React from 'react';
 
 type ProfileCardProps = {
   currentUser: User;
@@ -13,7 +14,7 @@ type ProfileCardProps = {
   swipeState: 'left' | 'right' | null;
 };
 
-export default function ProfileCard({ currentUser, potentialMatch, isActive, swipeState }: ProfileCardProps) {
+const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState }: ProfileCardProps) => {
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
 
   const cardStyle = {
@@ -89,4 +90,8 @@ export default function ProfileCard({ currentUser, potentialMatch, isActive, swi
       </Link>
     </div>
   );
-}
+});
+
+ProfileCard.displayName = 'ProfileCard';
+
+export default ProfileCard;

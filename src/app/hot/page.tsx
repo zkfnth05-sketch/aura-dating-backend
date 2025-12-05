@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { useState, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, where, getDocs, limit, documentId } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
 const UserCard = ({ user }: { user: User }) => (
@@ -45,24 +45,30 @@ export default function HotPage() {
       setIsLoading(true);
       
       try {
-        // Fetch NEW Users
+        // Fetch NEW Users - ensuring createdAt exists
         const newUsersQuery = query(
           collection(firestore, 'users'),
+          where('createdAt', '!=', null),
           orderBy('createdAt', 'desc'),
           limit(12)
         );
         const newUsersSnapshot = await getDocs(newUsersQuery);
-        const newUsersData = newUsersSnapshot.docs.map(doc => doc.data() as User).filter(user => user.id !== currentUser.id);
+        const newUsersData = newUsersSnapshot.docs
+          .map(doc => doc.data() as User)
+          .filter(user => user.id !== currentUser.id);
         setNewUsers(newUsersData);
 
-        // Fetch HOT Users
+        // Fetch HOT Users - ensuring likeCount exists
         const hotUsersQuery = query(
           collection(firestore, 'users'),
+          where('likeCount', '>=', 0),
           orderBy('likeCount', 'desc'),
           limit(12)
         );
         const hotUsersSnapshot = await getDocs(hotUsersQuery);
-        const hotUsersData = hotUsersSnapshot.docs.map(doc => doc.data() as User).filter(user => user.id !== currentUser.id);
+        const hotUsersData = hotUsersSnapshot.docs
+          .map(doc => doc.data() as User)
+          .filter(user => user.id !== currentUser.id);
         setHotUsers(hotUsersData);
 
       } catch (error) {
