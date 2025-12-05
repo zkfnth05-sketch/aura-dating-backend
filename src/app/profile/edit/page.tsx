@@ -14,7 +14,9 @@ import { cn, compressImage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, deleteUser } from 'firebase/auth';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,7 +68,8 @@ const allValues = {
 export default function ProfileEditPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user: currentUser, updateUser, isLoaded } = useUser();
+  const { user: currentUser, updateUser, isLoaded, authUser } = useUser();
+  const firestore = useFirestore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState({
@@ -207,22 +210,33 @@ export default function ProfileEditPage() {
     setPhotos(prev => prev.filter(p => p.id !== id));
   }
 
-  const handleSignOut = async () => {
-    const auth = getAuth();
+  const handleDeleteAccount = async () => {
+    if (!authUser || !firestore) return;
+  
     try {
-        await signOut(auth);
-        toast({
-            title: "로그아웃되었습니다.",
-            description: "성공적으로 로그아웃되었습니다.",
-        });
-        router.push('/signup');
-    } catch(e) {
-        console.error("Failed to sign out:", e);
-        toast({
-            variant: "destructive",
-            title: "오류",
-            description: "로그아웃 중 오류가 발생했습니다.",
-        });
+      // 1. Delete user document from Firestore
+      const userDocRef = doc(firestore, 'users', authUser.uid);
+      await deleteDoc(userDocRef);
+  
+      // 2. Delete user from Firebase Authentication
+      await deleteUser(authUser);
+  
+      toast({
+        title: "계정이 삭제되었습니다.",
+        description: "이용해주셔서 감사합니다.",
+      });
+      router.push('/signup');
+    } catch (error: any) {
+      console.error("Failed to delete account:", error);
+      let description = "계정 삭제 중 오류가 발생했습니다. 다시 시도해주세요.";
+      if (error.code === 'auth/requires-recent-login') {
+        description = "보안을 위해 재로그인 후 다시 시도해주세요.";
+      }
+      toast({
+        variant: "destructive",
+        title: "오류",
+        description: description,
+      });
     }
   };
 
@@ -387,19 +401,19 @@ export default function ProfileEditPage() {
         <div className="text-center mt-4">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="link" className="text-xs text-zinc-500">로그아웃</Button>
+                <Button variant="link" className="text-xs text-zinc-500">회원 탈퇴</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>로그아웃 하시겠습니까?</AlertDialogTitle>
+                  <AlertDialogTitle>정말로 탈퇴하시겠습니까?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    언제든지 다시 로그인할 수 있습니다.
+                    이 작업은 되돌릴 수 없습니다. 모든 프로필 정보와 매칭 데이터가 영구적으로 삭제됩니다.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>취소</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleSignOut} className={cn(buttonVariants({ variant: "destructive" }))}>
-                    로그아웃
+                  <AlertDialogAction onClick={handleDeleteAccount} className={cn(buttonVariants({ variant: "destructive" }))}>
+                    회원 탈퇴
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
