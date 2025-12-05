@@ -107,7 +107,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     const userRef = doc(firestore, 'users', authUser.uid);
   
-    const dataToSave: any = { ...newUserData };
+    // Ensure the ID is always included when saving to Firestore
+    const dataToSave: any = { ...newUserData, id: authUser.uid };
+    
     if (newUserData.createdAt === 'serverTimestamp') {
         dataToSave.createdAt = serverTimestamp();
     }
