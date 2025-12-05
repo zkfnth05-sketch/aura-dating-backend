@@ -59,7 +59,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased mx-auto max-w-screen-sm">
         <FirebaseClientProvider>
           <UserProvider>
             <AppLayout>
