@@ -11,23 +11,35 @@ import { useState, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, where, getDocs, limit, documentId } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-const UserCard = ({ user }: { user: User }) => (
-  <Link href={`/users/${user.id}`}>
-    <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
-      <Image
-        src={user.photoUrls[0]}
-        alt={`Profile of ${user.name}`}
-        fill
-        className="object-cover transition-transform duration-300 group-hover:scale-105"
-        data-ai-hint="person portrait"
-      />
-      <div className="absolute bottom-0 left-0 right-0 p-3 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)]">
-        <p className="font-semibold truncate">{user.name}, {user.age}</p>
-      </div>
-    </Card>
-  </Link>
-);
+const UserCard = ({ user }: { user: User }) => {
+  const router = useRouter();
+  const prefetchUser = () => {
+    router.prefetch(`/users/${user.id}`);
+  };
+
+  return (
+    <Link
+      href={`/users/${user.id}`}
+      onMouseEnter={prefetchUser}
+      onTouchStart={prefetchUser}
+    >
+      <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
+        <Image
+          src={user.photoUrls[0]}
+          alt={`Profile of ${user.name}`}
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          data-ai-hint="person portrait"
+        />
+        <div className="absolute bottom-0 left-0 right-0 p-3 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)]">
+          <p className="font-semibold truncate">{user.name}, {user.age}</p>
+        </div>
+      </Card>
+    </Link>
+  );
+};
 
 
 export default function HotPage() {

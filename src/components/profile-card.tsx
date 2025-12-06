@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { calculateCompatibility } from '@/lib/utils';
 import { Heart } from 'lucide-react';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 
 type ProfileCardProps = {
   currentUser: User;
@@ -16,7 +17,12 @@ type ProfileCardProps = {
 };
 
 const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex }: ProfileCardProps) => {
+  const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
+  
+  const prefetchUser = () => {
+    router.prefetch(`/users/${potentialMatch.id}`);
+  };
 
   const cardStyle = {
     transform: `
@@ -43,6 +49,8 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
         'absolute w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 bg-card border-none'
       )}
       style={cardStyle}
+      onMouseEnter={prefetchUser}
+      onTouchStart={prefetchUser}
     >
       <Link href={`/users/${potentialMatch.id}`} className="block w-full h-full">
         <Image

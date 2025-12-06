@@ -18,10 +18,18 @@ interface AiPageClientProps {
 }
 
 const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: User }) => {
+  const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, user);
+  const prefetchUser = () => {
+    router.prefetch(`/users/${user.id}?from=ai`);
+  };
 
   return (
-    <Link href={`/users/${user.id}?from=ai`}>
+    <Link 
+      href={`/users/${user.id}?from=ai`}
+      onMouseEnter={prefetchUser}
+      onTouchStart={prefetchUser}
+    >
       <Card className="overflow-hidden relative group cursor-pointer border-none">
         <div className="relative aspect-[3/4]">
           <Image
