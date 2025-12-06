@@ -136,7 +136,7 @@ export default function UserProfilePage() {
     notFound();
   }
 
-  const allPhotos = user.photoUrls && user.photoUrls.length > 0 ? user.photoUrls : (user.photoUrl ? [user.photoUrl] : []);
+  const allPhotos = user.photoUrls && user.photoUrls.length > 0 ? user.photoUrls : [];
 
   const handleImageClick = (index: number) => {
     setSelectedImageIndex(index);
@@ -277,3 +277,5 @@ export default function UserProfilePage() {
     </>
   );
 }
+
+    
