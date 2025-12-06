@@ -49,10 +49,13 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
         'absolute w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 bg-card border-none'
       )}
       style={cardStyle}
-      onMouseEnter={prefetchUser}
-      onTouchStart={prefetchUser}
     >
-      <Link href={`/users/${potentialMatch.id}`} className="block w-full h-full">
+      <Link 
+        href={`/users/${potentialMatch.id}`} 
+        className="block w-full h-full"
+        onMouseEnter={prefetchUser}
+        onTouchStart={prefetchUser}
+      >
         <Image
           src={potentialMatch.photoUrls[0]}
           alt={`Profile of ${potentialMatch.name}`}

@@ -20,6 +20,7 @@ interface AiPageClientProps {
 const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: User }) => {
   const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, user);
+  
   const prefetchUser = () => {
     router.prefetch(`/users/${user.id}?from=ai`);
   };
