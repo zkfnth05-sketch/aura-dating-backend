@@ -29,7 +29,7 @@ const formSchema = z.object({
   destination: z.string().min(1, '여행지를 입력해주세요.'),
   partySize: z.string(),
   duration: z.string().min(1, '데이트 기간을 입력해주세요.'),
-  date: z.string().min(1, '데이트 날짜를 입력해주세요.'),
+  date: z.string().min(1, '데이트 날짜를 입력해주세요. (YYYY-MM-DD)'),
   transportation: z.string(),
   cost: z.string(),
   dateType: z.string(),
