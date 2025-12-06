@@ -71,12 +71,12 @@ export default function UploadPhotoPage() {
         }
       };
       reader.readAsDataURL(file);
+      event.target.value = ''; // Reset file input
     }
   };
   
   const handlePhotoTaken = (dataUri: string) => {
     setIsCameraDialogOpen(false);
-    setIsPhotoSourceDialogOpen(false);
     processAndAddImage(dataUri);
   };
 
@@ -134,7 +134,7 @@ export default function UploadPhotoPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); }}>
+              <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
                 <Camera className="mr-2 h-4 w-4" />
                 사진 촬영
               </Button>
