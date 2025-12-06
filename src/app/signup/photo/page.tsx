@@ -14,15 +14,18 @@ import { compressImage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
 
+type PhotoState = {
+  uri: string | null;
+  isEnhancing: boolean;
+};
 
 export default function UploadPhotoPage() {
   const router = useRouter();
   const { user, updateUser, isLoaded, authUser } = useUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<PhotoState>({ uri: null, isEnhancing: false });
   const [aiEnhancement, setAiEnhancement] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
 
@@ -34,15 +37,14 @@ export default function UploadPhotoPage() {
   }, [isLoaded, authUser, router]);
 
   const processAndAddImage = async (dataUri: string) => {
-    setIsLoading(true);
-    setPhoto(null); // Clear previous photo while processing
     const compressedUri = await compressImage(dataUri);
-    
+
     if (aiEnhancement) {
+      setPhoto({ uri: compressedUri, isEnhancing: true });
       try {
         const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: user?.gender || '기타' });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri, 0.8, 800, 800);
-        setPhoto(finalCompressedUri);
+        setPhoto({ uri: finalCompressedUri, isEnhancing: false });
       } catch (error) {
         console.error("AI enhancement failed:", error);
         toast({
@@ -50,13 +52,10 @@ export default function UploadPhotoPage() {
           title: "AI 보정 실패",
           description: "사진 보정에 실패했습니다. 원본 사진으로 등록됩니다.",
         });
-        setPhoto(compressedUri);
-      } finally {
-        setIsLoading(false);
+        setPhoto({ uri: compressedUri, isEnhancing: false });
       }
     } else {
-      setPhoto(compressedUri);
-      setIsLoading(false);
+      setPhoto({ uri: compressedUri, isEnhancing: false });
     }
   };
 
@@ -81,7 +80,7 @@ export default function UploadPhotoPage() {
   };
 
   const handleComplete = async () => {
-    if (!photo) {
+    if (!photo.uri) {
       toast({
         variant: "destructive",
         title: "사진 필요",
@@ -91,7 +90,7 @@ export default function UploadPhotoPage() {
     }
 
     await updateUser({
-      photoUrls: [photo],
+      photoUrls: [photo.uri],
     });
 
     router.push('/profile');
@@ -117,12 +116,15 @@ export default function UploadPhotoPage() {
             <div
               className="relative w-48 h-48 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
             >
-              {isLoading ? (
-                <Loader2 className="w-10 h-10 animate-spin text-primary" />
-              ) : photo ? (
-                <Image src={photo} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
+              {photo.uri ? (
+                <Image src={photo.uri} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
               ) : (
                 <Plus className="w-10 h-10 text-zinc-500" />
+              )}
+               {photo.isEnhancing && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                </div>
               )}
             </div>
           </DialogTrigger>
@@ -175,9 +177,10 @@ export default function UploadPhotoPage() {
         </Button>
         <Button
           onClick={handleComplete}
-          disabled={!photo || isLoading}
+          disabled={!photo.uri || photo.isEnhancing}
           className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-full text-lg hover:bg-primary/90 disabled:bg-zinc-800 disabled:text-zinc-500"
         >
+          {photo.isEnhancing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           완료
         </Button>
       </footer>

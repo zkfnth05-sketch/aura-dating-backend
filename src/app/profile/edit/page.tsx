@@ -165,12 +165,11 @@ export default function ProfileEditPage() {
 
   const processAndAddImage = async (dataUri: string) => {
     const newPhotoId = `new-photo-${Date.now()}`;
-    // Show placeholder with loader immediately
-    setPhotos(prev => [...prev, { id: newPhotoId, dataUri: '', isEnhancing: true }]);
-
     const compressedUri = await compressImage(dataUri);
 
     if (aiEnhancement) {
+      // Show original compressed image with loading state
+      setPhotos(prev => [...prev, { id: newPhotoId, dataUri: compressedUri, isEnhancing: true }]);
       try {
         const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: profile.gender });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
@@ -182,10 +181,10 @@ export default function ProfileEditPage() {
           title: "AI 보정 실패",
           description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
         });
-        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: compressedUri, isEnhancing: false } : p));
+        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, isEnhancing: false } : p)); // Keep original, stop loading
       }
     } else {
-        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: compressedUri, isEnhancing: false } : p));
+        setPhotos(prev => [...prev, { id: newPhotoId, dataUri: compressedUri, isEnhancing: false }]);
     }
   };
   
@@ -258,17 +257,19 @@ export default function ProfileEditPage() {
           <div className="grid grid-cols-3 gap-2">
             {photos.map((photo) => (
               <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
+                {photo.dataUri && <Image src={photo.dataUri} alt={`My profile photo`} fill className="object-cover"/>}
                 {photo.isEnhancing && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
                     <Loader2 className="h-8 w-8 animate-spin text-white" />
                   </div>
                 )}
-                {photo.dataUri && <Image src={photo.dataUri} alt={`My profile photo`} fill className="object-cover"/>}
-                <div className="absolute top-1 right-1 z-20">
-                  <Button variant="destructive" size="icon" onClick={() => removeImage(photo.id)} className="w-6 h-6 rounded-full bg-black/50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
+                {!photo.isEnhancing && (
+                  <div className="absolute top-1 right-1 z-20">
+                    <Button variant="destructive" size="icon" onClick={() => removeImage(photo.id)} className="w-6 h-6 rounded-full bg-black/50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
             
