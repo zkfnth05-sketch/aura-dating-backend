@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser } from 'firebase/auth';
-import { useUser as useAuthUser, useFirestore } from '@/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import type { User } from '@/lib/types';
+import { useUser as useAuthUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where } from 'firebase/firestore';
+import type { User, Match } from '@/lib/types';
 
 interface NotificationSettings {
   all: boolean;
@@ -35,6 +35,7 @@ interface UserContextType {
   updateFilters: (newFilters: Partial<FilterSettings>) => void;
   resetFilters: () => void;
   isLoaded: boolean;
+  totalUnreadCount: number;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -109,6 +110,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
   }, [isUserLoading]);
 
+  // --- Unread count logic ---
+  const matchesQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !user.id) return null;
+    return query(collection(firestore, 'matches'), where('users', 'array-contains', user.id));
+  }, [firestore, user]);
+
+  const { data: matches } = useCollection<Match>(matchesQuery);
+
+  const totalUnreadCount = (matches || []).reduce((acc, match) => {
+    if (user && user.id && match.unreadCounts) {
+      return acc + (match.unreadCounts[user.id] || 0);
+    }
+    return acc;
+  }, 0);
+  // --- End unread count logic ---
+
   const updateUser = async (newUserData: Partial<User>) => {
     if (!authUser || !firestore) return;
   
@@ -174,6 +191,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     updateFilters,
     resetFilters,
     isLoaded: isContextLoaded,
+    totalUnreadCount,
   };
 
   return (

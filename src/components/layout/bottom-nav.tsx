@@ -1,14 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Map, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import type { Match } from '@/lib/types';
 
 const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -39,26 +34,8 @@ const navItems = [
   { href: '/profile', label: '내프로필', icon: User },
 ];
 
-export default function BottomNav() {
+export default function BottomNav({ totalUnreadCount }: { totalUnreadCount: number }) {
   const pathname = usePathname();
-  const { user } = useUser();
-  const firestore = useFirestore();
-
-  const matchesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !user.id) return null;
-    return query(collection(firestore, 'matches'), where('users', 'array-contains', user.id));
-  }, [firestore, user]);
-
-  const { data: matches } = useCollection<Match>(matchesQuery);
-
-  const totalUnreadCount = (matches || []).reduce((acc, match) => {
-    // Ensure currentUser's ID exists before accessing unreadCounts
-    if (user && user.id && match.unreadCounts) {
-      return acc + (match.unreadCounts[user.id] || 0);
-    }
-    return acc;
-  }, 0);
-
 
   const noNavPaths = ['/signup', '/chat/', '/profile/edit', '/users/'];
 

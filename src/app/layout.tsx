@@ -15,7 +15,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isLoaded, authUser, user } = useUser();
+  const { isLoaded, authUser, user, totalUnreadCount } = useUser();
   const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
   const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
 
@@ -29,7 +29,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
       </main>
       <Toaster />
-      {showBottomNav && <BottomNav />}
+      {showBottomNav && <BottomNav totalUnreadCount={totalUnreadCount} />}
     </div>
   );
 }
