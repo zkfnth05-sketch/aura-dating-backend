@@ -9,6 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import {googleAI} from '@genkit-ai/google-genai';
 
 const EnhancePhotoInputSchema = z.object({
   photoDataUri: z
@@ -54,7 +55,7 @@ const enhancePhotoFlow = ai.defineFlow(
   async (input) => {
     const enhancementPrompt = generateEnhancementPrompt(input.gender);
     const { media } = await ai.generate({
-        model: 'googleai/gemini-2.5-flash-image-preview',
+        model: googleAI('gemini-2.5-flash-image-preview'),
         prompt: [
             { media: { url: input.photoDataUri } },
             { text: enhancementPrompt },
