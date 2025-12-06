@@ -13,13 +13,13 @@ export default function ChatPage() {
   const firestore = useFirestore();
 
   const matchRef = useMemoFirebase(() => {
-    if (!matchId) return null;
+    if (!matchId || !firestore) return null;
     return doc(firestore, 'matches', matchId);
   }, [firestore, matchId]);
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
   const messagesColRef = useMemoFirebase(() => {
-    if (!matchId) return null;
+    if (!matchId || !firestore) return null;
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
   }, [firestore, matchId]);
 
@@ -28,7 +28,7 @@ export default function ChatPage() {
   }
 
   if (!match) {
-    return notFound();
+    notFound();
   }
 
   return <ChatInterface match={match} messagesColRef={messagesColRef!} />;
