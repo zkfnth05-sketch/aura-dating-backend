@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -114,11 +114,10 @@ export default function HomePageClient() {
         return;
     }
     
-    // For messaging, we assume a match is required.
     if (action === 'message') {
-      const matchQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
-      const matchSnapshot = await getDocs(matchQuery);
-      
+      const allMatchesQuery = query(collectionGroup(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
+      const matchSnapshot = await getDocs(allMatchesQuery);
+
       let existingMatch: {id: string} | null = null;
       matchSnapshot.forEach(doc => {
           const match = doc.data();
@@ -132,8 +131,6 @@ export default function HomePageClient() {
       if (existingMatch) {
           matchId = existingMatch.id;
       } else {
-          // You might want to prevent messaging if there is no match.
-          // For now, let's create a match document.
           const newMatchRef = doc(collection(firestore, 'matches'));
           const targetUser = activeUser;
           await setDoc(newMatchRef, {
@@ -144,12 +141,21 @@ export default function HomePageClient() {
                 { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
               ],
               matchDate: serverTimestamp(),
-              lastMessage: '새로운 대화를 시작해보세요!',
+              lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
               lastMessageTimestamp: serverTimestamp(),
-              unreadCounts: { [currentUser.id]: 0, [targetUserId]: 0 },
+              unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
               callStatus: 'idle',
               callerId: null
           });
+          
+          // Add initial message
+          const messagesColRef = collection(newMatchRef, 'messages');
+          await addDoc(messagesColRef, {
+            senderId: 'system',
+            text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+            timestamp: serverTimestamp(),
+          });
+
           matchId = newMatchRef.id;
       }
       router.push(`/chat/${matchId}`);

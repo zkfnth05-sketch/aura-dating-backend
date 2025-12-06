@@ -7,12 +7,12 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Sparkles, Loader2, UserX } from 'lucide-react';
-import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
 import { getAIRecommendationReason } from '@/app/actions/ai-actions';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc } from 'firebase/firestore';
 
 
 // Helper components for page structure
@@ -109,19 +109,56 @@ export default function UserProfilePage() {
   }, [user, currentUser, source, aiReason]);
 
 
-  const handleAction = (action: 'like' | 'dislike' | 'message') => {
-    if (!user) return;
+  const handleAction = async (action: 'like' | 'dislike' | 'message') => {
+    if (!user || !currentUser) return;
     
-    // This part should be handled by home-page-client's swipe logic
-    // But if we want a user to be able to like from here, we need to implement it.
-    // For now, we just go back.
     if (action === 'like' || action === 'dislike') {
       router.back();
       return;
     }
 
     if (action === 'message') {
-        const matchId = `match-${user.id.split('-')[1]}`; // This logic might need to be more robust
+        const matchQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
+        const matchSnapshot = await getDocs(matchQuery);
+        
+        let existingMatch: {id: string} | null = null;
+        matchSnapshot.forEach(doc => {
+            const match = doc.data();
+            if (match.users.includes(user.id)) {
+                existingMatch = { id: doc.id, ...match };
+            }
+        });
+    
+        let matchId: string;
+  
+        if (existingMatch) {
+            matchId = existingMatch.id;
+        } else {
+            const newMatchRef = doc(collection(firestore, 'matches'));
+            await setDoc(newMatchRef, {
+                id: newMatchRef.id,
+                users: [currentUser.id, user.id],
+                participants: [
+                  { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
+                  { id: user.id, name: user.name, photoUrls: user.photoUrls, lastSeen: user.lastSeen },
+                ],
+                matchDate: serverTimestamp(),
+                lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+                lastMessageTimestamp: serverTimestamp(),
+                unreadCounts: { [currentUser.id]: 0, [user.id]: 1 },
+                callStatus: 'idle',
+                callerId: null
+            });
+            
+            const messagesColRef = collection(newMatchRef, 'messages');
+            await addDoc(messagesColRef, {
+              senderId: 'system',
+              text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+              timestamp: serverTimestamp(),
+            });
+
+            matchId = newMatchRef.id;
+        }
         router.push(`/chat/${matchId}`);
         return;
     }

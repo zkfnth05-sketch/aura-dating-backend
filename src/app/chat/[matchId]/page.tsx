@@ -5,6 +5,7 @@ import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import type { Match } from '@/lib/types';
 import { notFound, useParams } from 'next/navigation';
 import { doc, collection, CollectionReference } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
 
 
 export default function ChatPage() {
@@ -24,7 +25,11 @@ export default function ChatPage() {
   }, [firestore, matchId]);
 
   if (isMatchLoading) {
-    return <div>Loading...</div>; // Or a spinner
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
   }
 
   if (!match) {
