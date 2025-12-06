@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser } from 'firebase/auth';
 import { useUser as useAuthUser, useFirestore } from '@/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -65,49 +65,55 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isContextLoaded, setIsContextLoaded] = useState(false);
 
-
+  // Load user data from Firestore
   useEffect(() => {
-    const loadInitialData = async () => {
-        if (authUser) {
-            const userRef = doc(firestore, 'users', authUser.uid);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                setUser(userSnap.data() as User);
-            }
+    const loadUser = async () => {
+      if (authUser && firestore) {
+        const userRef = doc(firestore, 'users', authUser.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUser(userSnap.data() as User);
         } else {
-            setUser(null);
+          setUser(null); // User exists in Auth but not in Firestore (mid-signup)
         }
-
-        try {
-          const storedSettings = localStorage.getItem('notificationSettings');
-          if(storedSettings) {
-            setNotificationSettings(JSON.parse(storedSettings));
-          }
-
-          const storedFilters = localStorage.getItem('userFilters');
-          if (storedFilters) {
-            setFilters(JSON.parse(storedFilters));
-          }
-
-        } catch (error) {
-          console.error("Failed to parse data from localStorage", error);
-        } finally {
-            setIsLoaded(!isUserLoading);
-        }
+      } else {
+        setUser(null); // No authenticated user
+      }
     };
-    
-    loadInitialData();
 
-  }, [authUser, isUserLoading, firestore]);
+    loadUser();
+  }, [authUser, firestore]);
+
+  // Load settings from localStorage once on mount
+  useEffect(() => {
+    try {
+      const storedSettings = localStorage.getItem('notificationSettings');
+      if (storedSettings) {
+        setNotificationSettings(JSON.parse(storedSettings));
+      }
+      const storedFilters = localStorage.getItem('userFilters');
+      if (storedFilters) {
+        setFilters(JSON.parse(storedFilters));
+      }
+    } catch (error) {
+      console.error("Failed to parse data from localStorage", error);
+    }
+  }, []);
+
+  // Determine overall loading state
+  useEffect(() => {
+      if (!isUserLoading) {
+          setIsContextLoaded(true);
+      }
+  }, [isUserLoading]);
 
   const updateUser = async (newUserData: Partial<User>) => {
-    if (!authUser) return;
+    if (!authUser || !firestore) return;
   
     const userRef = doc(firestore, 'users', authUser.uid);
   
-    // Ensure the ID is always included and correct when saving to Firestore
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     
     if (newUserData.createdAt === 'serverTimestamp') {
@@ -118,17 +124,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     setUser(prevUser => {
       const updatedUser = { ...(prevUser || {}), ...dataToSave } as User;
-      
-      // Prevent storing the string 'serverTimestamp' in the local state
       if (newUserData.createdAt === 'serverTimestamp') {
         delete (updatedUser as Partial<User>).createdAt;
       }
-
       return updatedUser;
     });
   };
 
-  const updateNotificationSettings = (newSettings: Partial<NotificationSettings>) => {
+  const updateNotificationSettings = useCallback((newSettings: Partial<NotificationSettings>) => {
     setNotificationSettings(prevSettings => {
         const updatedSettings = { ...prevSettings, ...newSettings };
         try {
@@ -138,9 +141,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
         return updatedSettings;
     });
-  };
+  }, []);
 
-  const updateFilters = (newFilters: Partial<FilterSettings>) => {
+  const updateFilters = useCallback((newFilters: Partial<FilterSettings>) => {
     setFilters(prevFilters => {
         const updatedFilters = { ...prevFilters, ...newFilters };
         try {
@@ -150,16 +153,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
         return updatedFilters;
     });
-  };
+  }, []);
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setFilters(initialFilters);
     try {
         localStorage.setItem('userFilters', JSON.stringify(initialFilters));
     } catch (error) {
         console.error("Failed to save reset filters to localStorage", error);
     }
-  };
+  }, []);
 
   const value = {
     user,
@@ -170,7 +173,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     filters,
     updateFilters,
     resetFilters,
-    isLoaded,
+    isLoaded: isContextLoaded,
   };
 
   return (
