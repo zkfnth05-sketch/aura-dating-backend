@@ -12,7 +12,9 @@ import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
 import { getAIRecommendationReason } from '@/app/actions/ai-actions';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc, writeBatch, increment } from 'firebase/firestore';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 
 // Helper components for page structure
@@ -53,9 +55,10 @@ export default function UserProfilePage() {
   const { user: currentUser, isLoaded } = useUser();
   
   const userRef = useMemoFirebase(() => {
-    if (!userId) return null;
+    if (!userId || !firestore) return null;
     return doc(firestore, 'users', userId);
   }, [firestore, userId]);
+
   const { data: user, isLoading: isUserLoading } = useDoc<User>(userRef);
   
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
@@ -86,8 +89,6 @@ export default function UserProfilePage() {
             lifestyle: currentUser.lifestyle || [],
           };
           
-          // The AI flow doesn't need the `createdAt` field, which is a non-serializable Timestamp.
-          // We remove it before passing it to the server action.
           delete (potentialMatchWithDefaults as Partial<User>).createdAt;
           delete (currentUserWithDefaults as Partial<User>).createdAt;
 
@@ -111,12 +112,51 @@ export default function UserProfilePage() {
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!user || !currentUser) return;
-    
+
+    // Like or Dislike Action
     if (action === 'like' || action === 'dislike') {
+      const batch = writeBatch(firestore);
+      const likeData = {
+          likerId: currentUser.id,
+          likeeId: user.id,
+          isLike: action === 'like',
+          timestamp: serverTimestamp(),
+      };
+
+      const likeRef = doc(collection(firestore, 'users', currentUser.id, 'likes'));
+      batch.set(likeRef, likeData);
+
+      if (action === 'like') {
+          const targetUserRef = doc(firestore, 'users', user.id);
+          batch.update(targetUserRef, { likeCount: increment(1) });
+          
+          const likedByRef = doc(collection(firestore, 'users', user.id, 'likedBy'));
+          batch.set(likedByRef, {
+              likerId: currentUser.id,
+              timestamp: serverTimestamp(),
+          });
+      }
+
+      try {
+        await batch.commit();
+      } catch (e: any) {
+        if (e.code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'write',
+            path: `users/${currentUser.id}/likes`,
+            requestResourceData: likeData,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        } else {
+          console.error("Failed to record like/dislike:", e);
+        }
+      }
+
       router.back();
       return;
     }
 
+    // Message Action
     if (action === 'message') {
         const matchQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
         const matchSnapshot = await getDocs(matchQuery);
@@ -133,9 +173,10 @@ export default function UserProfilePage() {
   
         if (existingMatch) {
             matchId = existingMatch.id;
+            router.push(`/chat/${matchId}`);
         } else {
             const newMatchRef = doc(collection(firestore, 'matches'));
-            await setDoc(newMatchRef, {
+            const matchData = {
                 id: newMatchRef.id,
                 users: [currentUser.id, user.id],
                 participants: [
@@ -148,23 +189,31 @@ export default function UserProfilePage() {
                 unreadCounts: { [currentUser.id]: 0, [user.id]: 1 },
                 callStatus: 'idle',
                 callerId: null
-            });
-            
-            const messagesColRef = collection(newMatchRef, 'messages');
-            await addDoc(messagesColRef, {
-              senderId: 'system',
-              text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-              timestamp: serverTimestamp(),
-            });
+            };
 
-            matchId = newMatchRef.id;
+            setDoc(newMatchRef, matchData).then(() => {
+                const messagesColRef = collection(newMatchRef, 'messages');
+                addDoc(messagesColRef, {
+                  senderId: 'system',
+                  text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+                  timestamp: serverTimestamp(),
+                });
+                router.push(`/chat/${newMatchRef.id}`);
+            }).catch(e => {
+                if (e.code === 'permission-denied') {
+                    const contextualError = new FirestorePermissionError({
+                        operation: 'create',
+                        path: `matches/${newMatchRef.id}`,
+                        requestResourceData: matchData,
+                    });
+                    errorEmitter.emit('permission-error', contextualError);
+                } else {
+                    console.error("Failed to create match:", e);
+                }
+            });
         }
-        router.push(`/chat/${matchId}`);
         return;
     }
-
-    console.log(action, user.name);
-    router.back();
   };
   
   if (isUserLoading || !isLoaded) {

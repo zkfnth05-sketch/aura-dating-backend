@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -115,7 +115,7 @@ export default function HomePageClient() {
     }
     
     if (action === 'message') {
-      const allMatchesQuery = query(collectionGroup(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
+      const allMatchesQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
       const matchSnapshot = await getDocs(allMatchesQuery);
 
       let existingMatch: {id: string} | null = null;
@@ -130,35 +130,46 @@ export default function HomePageClient() {
 
       if (existingMatch) {
           matchId = existingMatch.id;
+          router.push(`/chat/${matchId}`);
       } else {
-          const newMatchRef = doc(collection(firestore, 'matches'));
-          const targetUser = activeUser;
-          await setDoc(newMatchRef, {
-              id: newMatchRef.id,
-              users: [currentUser.id, targetUserId],
-              participants: [
-                { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-                { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
-              ],
-              matchDate: serverTimestamp(),
-              lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-              lastMessageTimestamp: serverTimestamp(),
-              unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
-              callStatus: 'idle',
-              callerId: null
-          });
-          
-          // Add initial message
+        const newMatchRef = doc(collection(firestore, 'matches'));
+        const targetUser = activeUser;
+        const matchData = {
+            id: newMatchRef.id,
+            users: [currentUser.id, targetUserId],
+            participants: [
+              { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
+              { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
+            ],
+            matchDate: serverTimestamp(),
+            lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+            lastMessageTimestamp: serverTimestamp(),
+            unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
+            callStatus: 'idle',
+            callerId: null
+        };
+        
+        setDoc(newMatchRef, matchData).then(() => {
           const messagesColRef = collection(newMatchRef, 'messages');
-          await addDoc(messagesColRef, {
+          addDoc(messagesColRef, {
             senderId: 'system',
             text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
             timestamp: serverTimestamp(),
           });
-
-          matchId = newMatchRef.id;
+          router.push(`/chat/${newMatchRef.id}`);
+        }).catch(e => {
+            if (e.code === 'permission-denied') {
+              const contextualError = new FirestorePermissionError({
+                  operation: 'create',
+                  path: `matches/${newMatchRef.id}`,
+                  requestResourceData: matchData
+              });
+              errorEmitter.emit('permission-error', contextualError);
+            } else {
+              console.error("Failed to create match:", e);
+            }
+        });
       }
-      router.push(`/chat/${matchId}`);
       return;
     }
 
@@ -170,7 +181,7 @@ export default function HomePageClient() {
         const batch = writeBatch(firestore);
         
         const likeData = {
-            id: '', // Will be overridden by doc ref id
+            id: '', // This will be set later, but initialize for the error payload
             likerId: userId,
             likeeId: likeeId,
             isLike: action === 'like',
@@ -221,13 +232,11 @@ export default function HomePageClient() {
         try {
           await batch.commit();
         } catch(e: any) {
-          const isPermissionError = e.code === 'permission-denied';
-
-          if (isPermissionError) {
+          if (e.code === 'permission-denied') {
               const contextualError = new FirestorePermissionError({
                   operation: 'write',
-                  path: `users/${userId}/likes`,
-                  requestResourceData: { likeeId: likeeId, isLike: action === 'like' }
+                  path: `users/${userId}/likes... (batch)`,
+                  requestResourceData: { likeData, likeCountIncrement: action === 'like' }
               });
               errorEmitter.emit('permission-error', contextualError);
           } else {
