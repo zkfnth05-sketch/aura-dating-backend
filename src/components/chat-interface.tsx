@@ -15,7 +15,7 @@ import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment } from 'firebase/firestore';
+import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection } from 'firebase/firestore';
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -110,7 +110,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     const otherUserId = otherUser.id!;
 
     // 1. Add new message to the messages subcollection
-    const messageRef = doc(collection(messagesColRef));
+    const messageRef = doc(messagesColRef);
     const messageData: Omit<Message, 'id'> = {
       senderId: currentUser.id,
       text: newMessage,
@@ -136,7 +136,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     const otherUserId = otherUser.id!;
 
     // 1. Add new audio message
-    const messageRef = doc(collection(messagesColRef));
+    const messageRef = doc(messagesColRef);
     const messageData: Omit<Message, 'id'> = {
       senderId: currentUser.id,
       audioUrl: audioUrl,
