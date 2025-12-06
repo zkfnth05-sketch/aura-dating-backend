@@ -125,11 +125,7 @@ export default function UserProfilePage() {
   };
   
   if (isLoading || !isLoaded) {
-      return (
-        <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      )
+      return null;
   }
 
   if (!user) {
