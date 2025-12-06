@@ -85,6 +85,12 @@ export default function UserProfilePage() {
             communication: currentUser.communication || [],
             lifestyle: currentUser.lifestyle || [],
           };
+          
+          // The AI flow doesn't need the `createdAt` field, which is a non-serializable Timestamp.
+          // We remove it before passing it to the server action.
+          delete (potentialMatchWithDefaults as Partial<User>).createdAt;
+          delete (currentUserWithDefaults as Partial<User>).createdAt;
+
 
           const result = await getAIRecommendationReason({ 
               currentUser: currentUserWithDefaults, 
