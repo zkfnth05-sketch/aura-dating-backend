@@ -6,7 +6,7 @@ import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Loader2, UserX } from 'lucide-react';
 import { notFound, useRouter, useParams, useSearchParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
@@ -133,7 +133,17 @@ export default function UserProfilePage() {
   }
 
   if (!user) {
-    notFound();
+    return (
+        <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
+            <UserX className="h-16 w-16 text-muted-foreground mb-4" />
+            <h1 className="text-2xl font-bold">사용자를 찾을 수 없습니다.</h1>
+            <p className="text-muted-foreground mt-2">삭제되었거나 존재하지 않는 프로필입니다.</p>
+            <Button onClick={() => router.back()} className="mt-8">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                뒤로 가기
+            </Button>
+        </div>
+    );
   }
 
   const allPhotos = user.photoUrls && user.photoUrls.length > 0 ? user.photoUrls : [];
