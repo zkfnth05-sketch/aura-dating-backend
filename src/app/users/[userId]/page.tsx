@@ -56,7 +56,7 @@ export default function UserProfilePage() {
     if (!userId) return null;
     return doc(firestore, 'users', userId);
   }, [firestore, userId]);
-  const { data: user, isLoading } = useDoc<User>(userRef);
+  const { data: user, isLoading: isUserLoading } = useDoc<User>(userRef);
   
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -124,8 +124,8 @@ export default function UserProfilePage() {
     router.back();
   };
   
-  if (isLoading || !isLoaded) {
-      return null;
+  if (isUserLoading || !isLoaded) {
+    return null;
   }
 
   if (!user) {
