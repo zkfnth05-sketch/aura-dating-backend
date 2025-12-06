@@ -91,6 +91,8 @@ export default function ProfileEditPage() {
   
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
+  const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
+
 
   useEffect(() => {
     if (isLoaded && currentUser) {
@@ -189,6 +191,7 @@ export default function ProfileEditPage() {
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
+      setIsPhotoSourceDialogOpen(false);
       const file = event.target.files[0];
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -269,7 +272,7 @@ export default function ProfileEditPage() {
               </div>
             ))}
             
-            <Dialog>
+            <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
               <DialogTrigger asChild>
                 <button className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700">
                   <Plus className="text-zinc-500" />
@@ -283,7 +286,7 @@ export default function ProfileEditPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <Button variant="outline" onClick={() => setIsCameraDialogOpen(true)}>
+                  <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
                     <Camera className="mr-2 h-4 w-4" />
                     사진 촬영
                   </Button>
@@ -423,3 +426,5 @@ export default function ProfileEditPage() {
     </div>
   );
 }
+
+    

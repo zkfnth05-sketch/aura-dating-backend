@@ -69,6 +69,7 @@ export default function CameraDialog({ isOpen, onClose, onPhotoTaken }: CameraDi
         context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
         const dataUri = canvas.toDataURL('image/png');
         onPhotoTaken(dataUri);
+        onClose(); // Close the dialog after photo is taken
       }
     }
   };
@@ -103,3 +104,5 @@ export default function CameraDialog({ isOpen, onClose, onPhotoTaken }: CameraDi
     </Dialog>
   );
 }
+
+    
