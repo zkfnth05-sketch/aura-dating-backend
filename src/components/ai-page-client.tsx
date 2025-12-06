@@ -22,7 +22,7 @@ const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: U
 
   return (
     <Link href={`/users/${user.id}?from=ai`}>
-      <Card className="overflow-hidden relative group cursor-pointer">
+      <Card className="overflow-hidden relative group cursor-pointer border-none">
         <div className="relative aspect-[3/4]">
           <Image
             src={user.photoUrls[0]}

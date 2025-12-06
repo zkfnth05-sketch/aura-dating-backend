@@ -40,7 +40,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
   return (
     <div
       className={cn(
-        'absolute w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 bg-card'
+        'absolute w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 bg-card border-none'
       )}
       style={cardStyle}
     >
