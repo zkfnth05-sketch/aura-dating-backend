@@ -3,13 +3,15 @@
 import ChatInterface from '@/components/chat-interface';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import type { Match } from '@/lib/types';
-import { notFound, useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { doc, collection, CollectionReference } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserX, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 
 export default function ChatPage() {
   const params = useParams();
+  const router = useRouter();
   const matchId = params.matchId as string;
   const firestore = useFirestore();
 
@@ -33,7 +35,17 @@ export default function ChatPage() {
   }
 
   if (!match) {
-    notFound();
+    return (
+        <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
+            <UserX className="h-16 w-16 text-muted-foreground mb-4" />
+            <h1 className="text-2xl font-bold">대화 상대를 찾을 수 없습니다.</h1>
+            <p className="text-muted-foreground mt-2">삭제되었거나 존재하지 않는 대화입니다.</p>
+            <Button onClick={() => router.back()} className="mt-8">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                뒤로 가기
+            </Button>
+        </div>
+    );
   }
 
   return <ChatInterface match={match} messagesColRef={messagesColRef!} />;
