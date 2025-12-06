@@ -4,8 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Loader2, Bus, Car, Plane, Footprints, Wallet } from 'lucide-react';
+import { Loader2, Bus, Car, Plane, Footprints } from 'lucide-react';
 import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
@@ -20,8 +19,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Calendar } from './ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { getDateCourse } from '@/app/actions/ai-actions';
 import { DateCourseOutput } from '@/ai/flows/date-course-flow';
@@ -32,9 +29,7 @@ const formSchema = z.object({
   destination: z.string().min(1, '여행지를 입력해주세요.'),
   partySize: z.string(),
   duration: z.string().min(1, '데이트 기간을 입력해주세요.'),
-  date: z.date({
-    required_error: '데이트 날짜를 선택해주세요.',
-  }),
+  date: z.string().min(1, '데이트 날짜를 입력해주세요.'),
   transportation: z.string(),
   cost: z.string(),
   dateType: z.string(),
@@ -65,6 +60,7 @@ export default function DateCourseForm() {
       destination: '',
       partySize: '2명',
       duration: '',
+      date: '',
       transportation: '상관없음',
       cost: '상관없음',
       dateType: '상관없음',
@@ -79,7 +75,6 @@ export default function DateCourseForm() {
     try {
         const response = await getDateCourse({
             ...values,
-            date: format(values.date, 'yyyy-MM-dd')
         });
         setResult(response);
     } catch (error) {
@@ -226,37 +221,11 @@ export default function DateCourseForm() {
             control={form.control}
             name="date"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
+              <FormItem>
                 <FormLabel>데이트 날짜</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={'outline'}
-                        className={cn(
-                          'w-full pl-3 text-left font-normal',
-                          !field.value && 'text-muted-foreground'
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, 'yyyy-MM-dd')
-                        ) : (
-                          <span>연도-월-일</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date()}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <FormControl>
+                  <Input placeholder="YYYY-MM-DD" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
