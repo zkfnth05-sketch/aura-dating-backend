@@ -101,7 +101,7 @@ export default function HomePageClient() {
   const activeUser = users[currentIndex];
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
-    if (!currentUser || !activeUser) return;
+    if (!currentUser || !activeUser || !firestore) return;
     
     const targetUserId = activeUser.id;
 
@@ -126,11 +126,8 @@ export default function HomePageClient() {
           }
       });
   
-      let matchId: string;
-
       if (existingMatch) {
-          matchId = existingMatch.id;
-          router.push(`/chat/${matchId}`);
+          router.push(`/chat/${existingMatch.id}`);
       } else {
         const newMatchRef = doc(collection(firestore, 'matches'));
         const targetUser = activeUser;

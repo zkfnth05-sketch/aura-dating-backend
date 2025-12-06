@@ -111,7 +111,7 @@ export default function UserProfilePage() {
 
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
-    if (!user || !currentUser) return;
+    if (!user || !currentUser || !firestore) return;
 
     // Like or Dislike Action
     if (action === 'like' || action === 'dislike') {
@@ -169,11 +169,8 @@ export default function UserProfilePage() {
             }
         });
     
-        let matchId: string;
-  
         if (existingMatch) {
-            matchId = existingMatch.id;
-            router.push(`/chat/${matchId}`);
+            router.push(`/chat/${existingMatch.id}`);
         } else {
             const newMatchRef = doc(collection(firestore, 'matches'));
             const matchData = {
