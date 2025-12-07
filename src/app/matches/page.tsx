@@ -79,18 +79,22 @@ export default function MatchesPage() {
       setIsLoadingILiked(true);
       try {
         const iLikedQuery = query(
-            collection(firestore, 'users', currentUser.id, 'likes'), 
-            where('isLike', '==', true),
+            collection(firestore, 'users', currentUser.id, 'likes'),
             orderBy('timestamp', 'desc')
         );
         const iLikedSnapshot = await getDocs(iLikedQuery);
-        const likedUserIds = iLikedSnapshot.docs.map(d => d.data().likeeId);
+        
+        // Filter for likes and extract user IDs in client code
+        const likedUserIds = iLikedSnapshot.docs
+            .map(doc => doc.data() as Like)
+            .filter(like => like.isLike === true)
+            .map(like => like.likeeId);
         
         if (likedUserIds.length === 0) {
           setPeopleILiked([]);
         } else {
           const iLikedUsers = await fetchUsersByIds(firestore, likedUserIds);
-          // Preserve order from the query
+          // Preserve order from the query result
            const orderedUsers = likedUserIds.map(id => iLikedUsers.find(u => u.id === id)).filter(Boolean) as User[];
           setPeopleILiked(orderedUsers);
         }
