@@ -95,7 +95,8 @@ export default function ProfileEditPage() {
 
 
   useEffect(() => {
-    if (isLoaded && currentUser) {
+    // Pre-fill form only if currentUser is available
+    if (currentUser) {
       setProfile({
           name: currentUser.name || '',
           age: currentUser.age?.toString() || '',
@@ -117,9 +118,16 @@ export default function ProfileEditPage() {
         }))
       );
     }
-  }, [currentUser, isLoaded]);
+  }, [currentUser]); // Depend only on currentUser
 
-  if (!isLoaded || !currentUser) {
+  // Show loader only if the context is loading AND we have no user data yet.
+  if (isLoaded && !currentUser) {
+      return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+  }
+
+  // If there's no user data at all after loading, we can't edit.
+  // This might happen if the user navigates here directly without being logged in.
+  if (!currentUser) {
       return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
 

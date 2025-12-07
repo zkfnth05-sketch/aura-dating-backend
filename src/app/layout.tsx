@@ -15,11 +15,12 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isLoaded, authUser, user, totalUnreadCount } = useUser();
+  const { authUser, user, totalUnreadCount } = useUser();
   const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
   const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
 
-  const showBottomNav = isLoaded && authUser && user?.photoUrls && user.photoUrls.length > 0;
+  // Show BottomNav if the user is fully signed in and has a profile with photos.
+  const showBottomNav = !!(authUser && user?.photoUrls && user.photoUrls.length > 0);
 
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">

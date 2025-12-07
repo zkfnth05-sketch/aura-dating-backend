@@ -22,15 +22,16 @@ export default function CreateProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isLoaded) {
-      if (!authUser) {
-        router.replace('/signup');
-      } else {
-        setName(user?.name || authUser.displayName || '');
-        setAge(user?.age?.toString() || '');
-        setCity(user?.location || '');
-        setGender(user?.gender || '여성');
-      }
+    // If loading is done and there's no authenticated user, redirect to signup.
+    if (isLoaded && !authUser) {
+      router.replace('/signup');
+    }
+    // Pre-fill form if authUser or user profile data exists.
+    if (authUser) {
+      setName(prev => prev || user?.name || authUser.displayName || '');
+      setAge(prev => prev || user?.age?.toString() || '');
+      setCity(prev => prev || user?.location || '');
+      setGender(prev => prev || user?.gender || '여성');
     }
   }, [isLoaded, authUser, user, router]);
 
@@ -55,21 +56,26 @@ export default function CreateProfilePage() {
     setIsSubmitting(true);
 
     try {
-      await updateUser({
-        id: authUser.uid,
+      const userData: Partial<User> = {
         name,
         age: parseInt(age, 10),
         location: city,
         gender,
-        // Default values for a new user, will be set on next step or server
-        hobbies: ['독서', '영화 감상'],
-        interests: ['맛집 탐방', '여행'],
-        bio: '새로운 만남을 기다립니다!',
-        lat: 37.5665,
-        lng: 126.9780,
-        createdAt: serverTimestamp() as any, // Use serverTimestamp for accuracy
-        likeCount: 0,
-      });
+      };
+
+      // Only add creation-specific fields if the user profile doesn't exist yet
+      if (!user) {
+        userData.id = authUser.uid;
+        userData.hobbies = ['독서', '영화 감상'];
+        userData.interests = ['맛집 탐방', '여행'];
+        userData.bio = '새로운 만남을 기다립니다!';
+        userData.lat = 37.5665;
+        userData.lng = 126.9780;
+        userData.createdAt = serverTimestamp() as any;
+        userData.likeCount = 0;
+      }
+      
+      await updateUser(userData);
 
       router.push('/signup/photo');
     } catch (error) {
@@ -84,7 +90,9 @@ export default function CreateProfilePage() {
     }
   };
 
-  if (!isLoaded || !authUser) {
+  // Show a global loader only if the auth state is still loading.
+  // Once auth is loaded, we can render the form, even if the user profile is still fetching.
+  if (isLoaded === false) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 

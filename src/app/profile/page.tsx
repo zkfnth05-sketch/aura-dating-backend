@@ -36,8 +36,20 @@ export default function ProfilePage() {
     updateNotificationSettings({ [id]: checked });
   };
   
-  if (!isLoaded || !currentUser) {
+  // Show loader only if context is loading AND we have no user data yet.
+  // If we have stale user data, show it while fresh data loads in the background.
+  if (isLoaded && !currentUser) {
     return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // If currentUser is null even after loading, something is wrong, but for the component render,
+  // we can show a loading or error state, or simply nothing.
+  if (!currentUser) {
+     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>

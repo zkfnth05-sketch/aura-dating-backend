@@ -28,7 +28,7 @@ export interface FilterSettings {
 interface UserContextType {
   user: User | null;
   authUser: AuthUser | null;
-  updateUser: (newUserData: Partial<User>) => void;
+  updateUser: (newUserData: Partial<User>) => Promise<void>;
   notificationSettings: NotificationSettings;
   updateNotificationSettings: (newSettings: Partial<NotificationSettings>) => void;
   filters: FilterSettings;
@@ -79,13 +79,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
         } else {
           setUser(null); // User exists in Auth but not in Firestore (mid-signup)
         }
-      } else {
+      } else if (!isUserLoading) {
         setUser(null); // No authenticated user
       }
     };
 
     loadUser();
-  }, [authUser, firestore]);
+  }, [authUser, firestore, isUserLoading]);
 
   // Load settings from localStorage once on mount
   useEffect(() => {
@@ -105,6 +105,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Determine overall loading state
   useEffect(() => {
+      // The context is "loaded" when the initial authentication check is complete.
       if (!isUserLoading) {
           setIsContextLoaded(true);
       }
@@ -126,12 +127,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, 0);
   // --- End unread count logic ---
 
-  const updateUser = (newUserData: Partial<User>) => {
-    if (!authUser || !firestore) return;
+  const updateUser = useCallback(async (newUserData: Partial<User>) => {
+    if (!authUser || !firestore) {
+      console.error("Auth user or Firestore not available for update.");
+      return Promise.reject(new Error("User not authenticated."));
+    };
   
     const userRef = doc(firestore, 'users', authUser.uid);
   
-    const dataToSave: any = { ...newUserData, id: authUser.uid };
+    const dataToSave: any = { ...newUserData };
+    // Don't overwrite the ID if it's already there from the user object
+    if (!dataToSave.id) {
+      dataToSave.id = authUser.uid;
+    }
     
     // This is specifically for the initial user creation during signup.
     if ((newUserData as any).createdAt === 'serverTimestamp') {
@@ -152,7 +160,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
       return updatedUser;
     });
-  };
+    
+    return Promise.resolve();
+  }, [authUser, firestore]);
 
   const updateNotificationSettings = useCallback((newSettings: Partial<NotificationSettings>) => {
     setNotificationSettings(prevSettings => {
@@ -214,5 +224,3 @@ export function useUser() {
   }
   return context;
 }
-
-    
