@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/firebase';
-import { signInAnonymously } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 // Kakao icon
 const KakaoIcon = () => (
@@ -90,18 +90,11 @@ export default function SignupPage() {
   const auth = useAuth();
   const { toast } = useToast();
 
-  const handleAnonymousLogin = async () => {
-    try {
-      await signInAnonymously(auth);
-      router.push('/signup/profile');
-    } catch (error) {
-      console.error("Anonymous sign-in failed", error);
-      toast({
-        variant: "destructive",
-        title: "로그인 실패",
-        description: "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-      });
-    }
+  const handleAnonymousLogin = () => {
+    // Non-blocking sign-in. The onAuthStateChanged listener in UserProvider
+    // will handle the navigation to the profile creation page.
+    initiateAnonymousSignIn(auth);
+    router.push('/signup/profile');
   };
 
   return (
@@ -217,3 +210,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
+    
