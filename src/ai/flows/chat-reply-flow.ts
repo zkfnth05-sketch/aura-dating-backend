@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 const UserProfileSchema = z.object({
   name: z.string(),
-  bio: z.string(),
+  bio: z.string().optional(),
   hobbies: z.array(z.string()).optional(),
   interests: z.array(z.string()).optional(),
 });
@@ -56,12 +56,12 @@ Your strategy should adapt to the conversation stage:
 3.  **Late Stage (Moving towards a date):** If the vibe is right, suggest a specific, low-pressure date idea that connects to your shared interests. Make it easy for them to say yes.
 
 My Profile (${input.currentUser.name}):
-- Bio: ${input.currentUser.bio}
+- Bio: ${input.currentUser.bio || '소개 없음'}
 - Hobbies: ${(input.currentUser.hobbies || []).join(', ')}
 - Interests: ${(input.currentUser.interests || []).join(', ')}
 
 Their Profile (${input.matchUser.name}):
-- Bio: ${input.matchUser.bio}
+- Bio: ${input.matchUser.bio || '소개 없음'}
 - Hobbies: ${(input.matchUser.hobbies || []).join(', ')}
 - Interests: ${(input.matchUser.interests || []).join(', ')}
 
