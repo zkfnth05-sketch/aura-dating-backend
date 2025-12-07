@@ -69,10 +69,10 @@ export default function HotPage() {
           .filter(user => user.id !== currentUser.id);
         setNewUsers(newUsersData);
 
-        // Fetch HOT Users - ensuring likeCount exists
+        // Fetch HOT Users - ensuring likeCount exists and is not null for ordering
         const hotUsersQuery = query(
           collection(firestore, 'users'),
-          where('likeCount', '>=', 0),
+          where('likeCount', '!=', null),
           orderBy('likeCount', 'desc'),
           limit(12)
         );
