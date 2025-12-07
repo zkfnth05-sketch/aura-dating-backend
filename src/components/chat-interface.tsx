@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import type { Match, Message, User } from '@/lib/types';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Send, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -43,6 +43,7 @@ const VideoIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function ChatInterface({ match: initialMatch, messagesColRef }: { match: Match; messagesColRef: CollectionReference }) {
+  const router = useRouter();
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -176,19 +177,19 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
         const chatReplyInput = {
             currentUser: {
                 name: currentUser.name,
-                bio: currentUser.bio,
+                bio: currentUser.bio || '소개 없음',
                 hobbies: currentUser.hobbies || [],
                 interests: currentUser.interests || [],
             },
             matchUser: {
                 name: otherUser.name,
-                bio: otherUser.bio,
+                bio: otherUser.bio || '소개 없음',
                 hobbies: otherUser.hobbies || [],
                 interests: otherUser.interests || [],
             },
             messages: (messages || []).map(m => ({
                 senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name,
-                text: m.text || '음성 메시지',
+                text: m.text || '[음성 메시지]',
             }))
         };
       const result = await getAIChatReplySuggestions(chatReplyInput);
@@ -335,10 +336,8 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/matches">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-3 flex-1">
           <Avatar>
@@ -350,7 +349,12 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
             <p className="text-xs text-muted-foreground">{lastSeenText}</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={handleInitiateCall} disabled={match.callStatus === 'ringing' || match.callStatus === 'active'}>
+        <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleInitiateCall} 
+            disabled={match.callStatus === 'ringing' || match.callStatus === 'active'}
+        >
           <VideoIcon className="h-6 w-6 text-primary" />
         </Button>
       </header>
