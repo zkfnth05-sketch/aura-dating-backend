@@ -13,8 +13,8 @@ import { z } from 'zod';
 const UserProfileSchema = z.object({
   name: z.string(),
   bio: z.string(),
-  hobbies: z.array(z.string()),
-  interests: z.array(z.string()),
+  hobbies: z.array(z.string()).optional(),
+  interests: z.array(z.string()).optional(),
 });
 
 const MessageSchema = z.object({
@@ -57,13 +57,13 @@ Your strategy should adapt to the conversation stage:
 
 My Profile (${input.currentUser.name}):
 - Bio: ${input.currentUser.bio}
-- Hobbies: ${input.currentUser.hobbies.join(', ')}
-- Interests: ${input.currentUser.interests.join(', ')}
+- Hobbies: ${(input.currentUser.hobbies || []).join(', ')}
+- Interests: ${(input.currentUser.interests || []).join(', ')}
 
 Their Profile (${input.matchUser.name}):
 - Bio: ${input.matchUser.bio}
-- Hobbies: ${input.matchUser.hobbies.join(', ')}
-- Interests: ${input.matchUser.interests.join(', ')}
+- Hobbies: ${(input.matchUser.hobbies || []).join(', ')}
+- Interests: ${(input.matchUser.interests || []).join(', ')}
 
 Conversation History (most recent last):
 ${input.messages.map(m => `${m.senderName}: ${m.text}`).join('\n')}
