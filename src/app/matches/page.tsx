@@ -50,7 +50,7 @@ export default function MatchesPage() {
 
   // --- 2. Get users who liked me (real-time) ---
   const likedMeQuery = useMemoFirebase(() => {
-    if (!currentUser) return null;
+    if (!currentUser || !firestore) return null;
     return query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
   }, [firestore, currentUser]);
   const { data: likedByList, isLoading: areLikedByLoading } = useCollection<LikedBy>(likedMeQuery);
@@ -59,6 +59,10 @@ export default function MatchesPage() {
       if (!likedByList || !firestore) return;
       const fetchLikerProfiles = async () => {
           const likerIds = likedByList.map(like => like.likerId);
+          if (likerIds.length === 0) {
+            setPeopleWhoLikedMe([]);
+            return;
+          }
           const users = await fetchUsersByIds(firestore, likerIds);
           // Preserve order from likedByList
           const orderedUsers = likerIds.map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
@@ -74,12 +78,22 @@ export default function MatchesPage() {
     const fetchILikedData = async () => {
       setIsLoadingILiked(true);
       try {
-        const iLikedQuery = query(collection(firestore, 'users', currentUser.id, 'likes'), where('isLike', '==', true));
+        const iLikedQuery = query(
+            collection(firestore, 'users', currentUser.id, 'likes'), 
+            where('isLike', '==', true),
+            orderBy('timestamp', 'desc')
+        );
         const iLikedSnapshot = await getDocs(iLikedQuery);
         const likedUserIds = iLikedSnapshot.docs.map(d => d.data().likeeId);
-
-        const iLikedUsers = await fetchUsersByIds(firestore, likedUserIds);
-        setPeopleILiked(iLikedUsers);
+        
+        if (likedUserIds.length === 0) {
+          setPeopleILiked([]);
+        } else {
+          const iLikedUsers = await fetchUsersByIds(firestore, likedUserIds);
+          // Preserve order from the query
+           const orderedUsers = likedUserIds.map(id => iLikedUsers.find(u => u.id === id)).filter(Boolean) as User[];
+          setPeopleILiked(orderedUsers);
+        }
 
       } catch (error) {
         console.error("Error fetching 'I liked' data:", error);
