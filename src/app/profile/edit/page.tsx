@@ -139,7 +139,7 @@ export default function ProfileEditPage() {
     setProfile(prev => ({...prev, [field]: value}));
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (isEnhancing) {
         toast({
             variant: "destructive",
@@ -150,17 +150,22 @@ export default function ProfileEditPage() {
     }
     setIsSaving(true);
     const finalImageUris = photos.map(p => p.dataUri);
-    await updateUser({
+    updateUser({
         ...profile,
         age: parseInt(profile.age) || currentUser.age,
         photoUrls: finalImageUris,
     });
-    setIsSaving(false);
+    
+    // Optimistic UI update
     toast({
       title: "프로필 저장됨",
       description: "프로필이 성공적으로 업데이트되었습니다.",
     });
     router.push('/profile');
+    
+    // We don't need to wait for the update to finish before navigating.
+    // The user context will eventually update in the background.
+    // Setting isSaving to false is also not strictly necessary as we are navigating away.
   };
 
   const processAndAddImage = async (dataUri: string) => {
@@ -428,4 +433,5 @@ export default function ProfileEditPage() {
   );
 }
 
+    
     

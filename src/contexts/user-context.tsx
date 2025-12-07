@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser } from 'firebase/auth';
-import { useUser as useAuthUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, collection, query, where } from 'firebase/firestore';
+import { useUser as useAuthUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { doc, getDoc, serverTimestamp, collection, query, where } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
 
 interface NotificationSettings {
@@ -28,7 +28,7 @@ export interface FilterSettings {
 interface UserContextType {
   user: User | null;
   authUser: AuthUser | null;
-  updateUser: (newUserData: Partial<User>) => Promise<void>;
+  updateUser: (newUserData: Partial<User>) => void;
   notificationSettings: NotificationSettings;
   updateNotificationSettings: (newSettings: Partial<NotificationSettings>) => void;
   filters: FilterSettings;
@@ -126,22 +126,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, 0);
   // --- End unread count logic ---
 
-  const updateUser = async (newUserData: Partial<User>) => {
+  const updateUser = (newUserData: Partial<User>) => {
     if (!authUser || !firestore) return;
   
     const userRef = doc(firestore, 'users', authUser.uid);
   
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     
-    if (newUserData.createdAt === 'serverTimestamp') {
+    // This is specifically for the initial user creation during signup.
+    if ((newUserData as any).createdAt === 'serverTimestamp') {
         dataToSave.createdAt = serverTimestamp();
     }
   
-    await setDoc(userRef, dataToSave, { merge: true });
+    // Use the non-blocking update function
+    setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   
+    // Optimistically update the local state
     setUser(prevUser => {
       const updatedUser = { ...(prevUser || {}), ...dataToSave } as User;
-      if (newUserData.createdAt === 'serverTimestamp') {
+      // 'createdAt' is a server value, so we don't want to keep the local 'serverTimestamp' string
+      if ((newUserData as any).createdAt === 'serverTimestamp') {
+        // We can't know the real timestamp yet, so we remove it or set it to null
+        // For now, removing it is fine as it's not critical for the UI immediately after creation.
         delete (updatedUser as Partial<User>).createdAt;
       }
       return updatedUser;
@@ -208,3 +214,5 @@ export function useUser() {
   }
   return context;
 }
+
+    
