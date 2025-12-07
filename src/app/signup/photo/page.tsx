@@ -28,7 +28,7 @@ export default function UploadPhotoPage() {
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isLoaded && !authUser) {
@@ -89,15 +89,26 @@ export default function UploadPhotoPage() {
       return;
     }
 
-    await updateUser({
-      photoUrls: [photo.uri],
-    });
-
-    router.push('/profile');
+    setIsSubmitting(true);
+    try {
+      await updateUser({
+        photoUrls: [photo.uri],
+      });
+      router.push('/profile');
+    } catch (error) {
+        console.error("Failed to complete signup:", error);
+        toast({
+            variant: "destructive",
+            title: "등록 실패",
+            description: "프로필을 완성하는 데 실패했습니다. 다시 시도해주세요."
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   if (!isLoaded || !authUser) {
-    return null; // Or a loading spinner
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
   return (
@@ -172,15 +183,16 @@ export default function UploadPhotoPage() {
         <Button
             onClick={() => router.back()}
             className="w-full h-14 bg-zinc-800 text-zinc-300 font-bold rounded-full text-lg hover:bg-zinc-700"
+            disabled={isSubmitting || photo.isEnhancing}
         >
             이전
         </Button>
         <Button
           onClick={handleComplete}
-          disabled={!photo.uri || photo.isEnhancing}
+          disabled={!photo.uri || photo.isEnhancing || isSubmitting}
           className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-full text-lg hover:bg-primary/90 disabled:bg-zinc-800 disabled:text-zinc-500"
         >
-          {photo.isEnhancing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {(photo.isEnhancing || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           완료
         </Button>
       </footer>

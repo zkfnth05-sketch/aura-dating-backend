@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { serverTimestamp } from 'firebase/firestore';
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -55,18 +56,18 @@ export default function CreateProfilePage() {
 
     try {
       await updateUser({
-        id: authUser.uid, // Explicitly set the ID to match the document ID
+        id: authUser.uid,
         name,
         age: parseInt(age, 10),
         location: city,
         gender,
-        // Default values for a new user
+        // Default values for a new user, will be set on next step or server
         hobbies: ['독서', '영화 감상'],
         interests: ['맛집 탐방', '여행'],
         bio: '새로운 만남을 기다립니다!',
-        lat: 37.5665, // Default to Seoul
+        lat: 37.5665,
         lng: 126.9780,
-        createdAt: 'serverTimestamp' as any, // Use string placeholder
+        createdAt: serverTimestamp() as any, // Use serverTimestamp for accuracy
         likeCount: 0,
       });
 
@@ -84,7 +85,7 @@ export default function CreateProfilePage() {
   };
 
   if (!isLoaded || !authUser) {
-    return null; // Or a loading spinner
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
   return (
