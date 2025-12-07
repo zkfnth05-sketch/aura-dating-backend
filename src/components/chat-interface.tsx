@@ -15,7 +15,7 @@ import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection } from 'firebase/firestore';
+import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc } from 'firebase/firestore';
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -238,18 +238,48 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
   };
 
   const handleInitiateCall = async () => {
-    if(!currentUser) return;
+    if(!currentUser || !firestore) return;
     const matchRef = doc(firestore, 'matches', match.id);
-    await updateDoc(matchRef, {
-        callStatus: 'ringing',
-        callerId: currentUser.id,
-    });
-    // The useEffect listening to match updates will handle setting isCallActive
-    // for the caller if the call is accepted.
-    toast({
-        title: '통화 연결 중...',
-        description: `${otherUser.name}님에게 영상 통화를 요청했습니다.`,
-    });
+
+    try {
+        await updateDoc(matchRef, {
+            callStatus: 'ringing',
+            callerId: currentUser.id,
+        });
+
+        toast({
+            title: '통화 연결 중...',
+            description: `${otherUser.name}님에게 영상 통화를 요청했습니다.`,
+        });
+
+        // Set a timeout to revert the call status if not answered
+        setTimeout(async () => {
+            const currentMatchSnap = await getDoc(matchRef);
+            if (currentMatchSnap.exists()) {
+                const currentMatchData = currentMatchSnap.data() as Match;
+                // If the call is still ringing after 30 seconds, reset it.
+                if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
+                    await updateDoc(matchRef, {
+                        callStatus: 'idle',
+                        callerId: null,
+                    });
+                    toast({
+                        variant: 'destructive',
+                        title: '응답 없음',
+                        description: `${otherUser.name}님이 전화를 받지 않습니다.`,
+                    });
+                }
+            }
+        }, 30000); // 30 seconds timeout
+
+    } catch (error) {
+        console.error("Failed to initiate call:", error);
+        toast({
+            variant: "destructive",
+            title: "통화 실패",
+            description: "영상통화 요청에 실패했습니다. 다시 시도해주세요."
+        });
+    }
   }
 
   const handleEndCall = async () => {
