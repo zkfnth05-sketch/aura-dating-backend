@@ -62,8 +62,21 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
 
   useEffect(() => {
     if (!currentUser?.id || !firestore) return;
-
+  
     const matchRef = doc(firestore, 'matches', match.id);
+    
+    // Check and reset call status on component mount
+    const resetStaleCall = async () => {
+        const matchSnap = await getDoc(matchRef);
+        if (matchSnap.exists()) {
+            const currentMatchData = matchSnap.data() as Match;
+            if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
+                await updateDoc(matchRef, { callStatus: 'idle', callerId: null });
+            }
+        }
+    };
+    resetStaleCall();
+
     // Reset unread count when entering the chat
     const newUnreadCounts = {
         ...match.unreadCounts,
@@ -257,7 +270,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
             const currentMatchSnap = await getDoc(matchRef);
             if (currentMatchSnap.exists()) {
                 const currentMatchData = currentMatchSnap.data() as Match;
-                // If the call is still ringing after 30 seconds, reset it.
+                // If the call is still ringing after 20 seconds, reset it.
                 if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
                     await updateDoc(matchRef, {
                         callStatus: 'idle',
@@ -270,7 +283,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
                     });
                 }
             }
-        }, 30000); // 30 seconds timeout
+        }, 20000); // 20 seconds timeout
 
     } catch (error) {
         console.error("Failed to initiate call:", error);
