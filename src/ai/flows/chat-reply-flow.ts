@@ -19,7 +19,7 @@ const UserProfileSchema = z.object({
 
 const MessageSchema = z.object({
   senderName: z.string(),
-  text: z.string(),
+  text: z.string().optional(),
 });
 
 const ChatReplyInputSchema = z.object({
@@ -66,7 +66,7 @@ Their Profile (${input.matchUser.name}):
 - Interests: ${(input.matchUser.interests || []).join(', ')}
 
 Conversation History (most recent last):
-${input.messages.map(m => `${m.senderName}: ${m.text}`).join('\n')}
+${input.messages.map(m => `${m.senderName}: ${m.text || '[음성 메시지]'}`).join('\n')}
 
 Based on this context, generate three distinct and strategic reply suggestions for ${input.currentUser.name} to send. The suggestions should be short, impactful, and designed to move the relationship forward.
 `,
