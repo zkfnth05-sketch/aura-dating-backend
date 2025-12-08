@@ -102,115 +102,116 @@ export default function HomePageClient() {
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || !activeUser || !firestore) return;
-  
+
     const targetUserId = activeUser.id;
-  
+
     if (action === 'message') {
-      const allMatchesQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
-      const matchSnapshot = await getDocs(allMatchesQuery);
-  
-      let existingMatch: { id: string } | null = null;
-      matchSnapshot.forEach(doc => {
-        const match = doc.data();
-        if (match.users.includes(targetUserId)) {
-          existingMatch = { id: doc.id, ...match };
-        }
-      });
-  
-      if (existingMatch) {
-        router.push(`/chat/${existingMatch.id}`);
-      } else {
-        const newMatchRef = doc(collection(firestore, 'matches'));
-        const matchData = {
-          id: newMatchRef.id,
-          users: [currentUser.id, targetUserId],
-          participants: [
-            { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-            { id: activeUser.id, name: activeUser.name, photoUrls: activeUser.photoUrls, lastSeen: activeUser.lastSeen },
-          ],
-          matchDate: serverTimestamp(),
-          lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-          lastMessageTimestamp: serverTimestamp(),
-          unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
-          callStatus: 'idle',
-          callerId: null
-        };
-  
-        setDoc(newMatchRef, matchData).then(() => {
-          const messagesColRef = collection(newMatchRef, 'messages');
-          addDoc(messagesColRef, {
-            senderId: 'system',
-            text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-            timestamp: serverTimestamp(),
-          });
-          router.push(`/chat/${newMatchRef.id}`);
-        }).catch(e => {
-          if (e.code === 'permission-denied') {
-            const contextualError = new FirestorePermissionError({
-              operation: 'create',
-              path: `matches/${newMatchRef.id}`,
-              requestResourceData: matchData
-            });
-            errorEmitter.emit('permission-error', contextualError);
-          } else {
-            console.error("Failed to create match:", e);
-          }
+        const allMatchesQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
+        const matchSnapshot = await getDocs(allMatchesQuery);
+
+        let existingMatch: { id: string } | null = null;
+        matchSnapshot.forEach(doc => {
+            const match = doc.data();
+            if (match.users.includes(targetUserId)) {
+                existingMatch = { id: doc.id, ...match };
+            }
         });
-      }
-      return;
+
+        if (existingMatch) {
+            router.push(`/chat/${existingMatch.id}`);
+        } else {
+            const newMatchRef = doc(collection(firestore, 'matches'));
+            const matchData = {
+                id: newMatchRef.id,
+                users: [currentUser.id, targetUserId],
+                participants: [
+                  { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
+                  { id: activeUser.id, name: activeUser.name, photoUrls: activeUser.photoUrls, lastSeen: activeUser.lastSeen },
+                ],
+                matchDate: serverTimestamp(),
+                lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+                lastMessageTimestamp: serverTimestamp(),
+                unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
+                callStatus: 'idle',
+                callerId: null
+            };
+
+            setDoc(newMatchRef, matchData).then(() => {
+                const messagesColRef = collection(newMatchRef, 'messages');
+                addDoc(messagesColRef, {
+                    senderId: 'system',
+                    text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+                    timestamp: serverTimestamp(),
+                });
+                router.push(`/chat/${newMatchRef.id}`);
+            }).catch(e => {
+                if (e.code === 'permission-denied') {
+                    const contextualError = new FirestorePermissionError({
+                        operation: 'create',
+                        path: `matches/${newMatchRef.id}`,
+                        requestResourceData: matchData
+                    });
+                    errorEmitter.emit('permission-error', contextualError);
+                } else {
+                    console.error("Failed to create match:", e);
+                }
+            });
+        }
+        return;
     }
-  
+
     // --- Like or Dislike action ---
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
-  
+
     const likeData = {
-      likerId: currentUser.id,
-      likeeId: targetUserId,
-      isLike: action === 'like',
-      timestamp: serverTimestamp(),
+        likerId: currentUser.id,
+        likeeId: targetUserId,
+        isLike: action === 'like',
+        timestamp: serverTimestamp(),
     };
-  
+
     const batch = writeBatch(firestore);
-  
-    // 1. Record the like/dislike in the current user's "likes" subcollection
+
+    // 1. Record the like/dislike in the current user's "likes" subcollection, using the likee's ID as the doc ID.
     const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
     batch.set(likeRef, likeData);
-  
+
     if (action === 'like') {
-      // 2. Increment the like count on the target user's profile
-      const targetUserRef = doc(firestore, 'users', targetUserId);
-      batch.update(targetUserRef, { likeCount: increment(1) });
-  
-      // 3. Add the current user to the target user's "likedBy" subcollection
-      const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
-      batch.set(likedByRef, {
-        likerId: currentUser.id,
-        timestamp: serverTimestamp(),
-      });
+        // 2. Increment the like count on the target user's profile
+        const targetUserRef = doc(firestore, 'users', targetUserId);
+        batch.update(targetUserRef, { likeCount: increment(1) });
+
+        // 3. Add the current user to the target user's "likedBy" subcollection, using the liker's ID as the doc ID.
+        const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
+        batch.set(likedByRef, {
+            likerId: currentUser.id,
+            timestamp: serverTimestamp(),
+        });
     }
-  
+
     // Commit all writes at once
     batch.commit().catch(e => {
-      if (e.code === 'permission-denied') {
-        const contextualError = new FirestorePermissionError({
-          operation: 'write',
-          path: `users/${currentUser.id}/likes... (batch)`,
-          requestResourceData: { likeData, likeCountIncrement: action === 'like' },
-        });
-        errorEmitter.emit('permission-error', contextualError);
-      } else {
-        console.error("Failed to record like/dislike:", e);
-        toast({ variant: 'destructive', title: '오류', description: '작업을 기록하는 데 실패했습니다.' });
-      }
+        if (e.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                operation: 'write',
+                path: `users/${currentUser.id}/likes... (batch)`,
+                requestResourceData: { likeData, likeCountIncrement: action === 'like' },
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        } else {
+            console.error("Failed to record like/dislike:", e);
+            toast({ variant: 'destructive', title: '오류', description: '작업을 기록하는 데 실패했습니다.' });
+        }
     });
-  
+
     // Move to the next card immediately for a smooth UI experience
     setTimeout(() => {
-      setCurrentIndex(prev => prev + 1);
-      setSwipeState(null);
+        setCurrentIndex(prev => prev + 1);
+        setSwipeState(null);
     }, 500);
-  };
+};
+
   
   if (isLoadingUsers) {
       return (

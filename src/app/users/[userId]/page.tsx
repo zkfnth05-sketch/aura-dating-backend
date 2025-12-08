@@ -126,7 +126,7 @@ export default function UserProfilePage() {
   
       const batch = writeBatch(firestore);
   
-      // 1. Record the like/dislike in the current user's "likes" subcollection
+      // 1. Record the like/dislike in the current user's "likes" subcollection, using the likee's ID as the doc ID.
       const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
       batch.set(likeRef, likeData);
   
@@ -135,7 +135,7 @@ export default function UserProfilePage() {
         const targetUserRef = doc(firestore, 'users', targetUserId);
         batch.update(targetUserRef, { likeCount: increment(1) });
   
-        // 3. Add the current user to the target user's "likedBy" subcollection
+        // 3. Add the current user to the target user's "likedBy" subcollection, using the liker's ID as the doc ID.
         const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
         batch.set(likedByRef, {
           likerId: currentUser.id,
