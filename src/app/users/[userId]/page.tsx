@@ -113,26 +113,30 @@ export default function UserProfilePage() {
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!user || !currentUser || !firestore) return;
   
+    const targetUserId = user.id;
+
     // Like or Dislike Action
     if (action === 'like' || action === 'dislike') {
-      const batch = writeBatch(firestore);
       const likeData = {
         likerId: currentUser.id,
-        likeeId: user.id,
+        likeeId: targetUserId,
         isLike: action === 'like',
         timestamp: serverTimestamp(),
       };
   
-      // Explicitly set the document ID to be the ID of the user being liked/disliked
-      const likeRef = doc(firestore, 'users', currentUser.id, 'likes', user.id);
+      const batch = writeBatch(firestore);
+  
+      // 1. Record the like/dislike in the current user's "likes" subcollection
+      const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
       batch.set(likeRef, likeData);
   
       if (action === 'like') {
-        const targetUserRef = doc(firestore, 'users', user.id);
+        // 2. Increment the like count on the target user's profile
+        const targetUserRef = doc(firestore, 'users', targetUserId);
         batch.update(targetUserRef, { likeCount: increment(1) });
   
-        // Explicitly set the document ID to be the ID of the liker
-        const likedByRef = doc(firestore, 'users', user.id, 'likedBy', currentUser.id);
+        // 3. Add the current user to the target user's "likedBy" subcollection
+        const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
         batch.set(likedByRef, {
           likerId: currentUser.id,
           timestamp: serverTimestamp(),
@@ -166,7 +170,7 @@ export default function UserProfilePage() {
         let existingMatch: {id: string} | null = null;
         matchSnapshot.forEach(doc => {
             const match = doc.data();
-            if (match.users.includes(user.id)) {
+            if (match.users.includes(targetUserId)) {
                 existingMatch = { id: doc.id, ...match };
             }
         });
@@ -177,7 +181,7 @@ export default function UserProfilePage() {
             const newMatchRef = doc(collection(firestore, 'matches'));
             const matchData = {
                 id: newMatchRef.id,
-                users: [currentUser.id, user.id],
+                users: [currentUser.id, targetUserId],
                 participants: [
                   { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
                   { id: user.id, name: user.name, photoUrls: user.photoUrls, lastSeen: user.lastSeen },
@@ -185,7 +189,7 @@ export default function UserProfilePage() {
                 matchDate: serverTimestamp(),
                 lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
                 lastMessageTimestamp: serverTimestamp(),
-                unreadCounts: { [currentUser.id]: 0, [user.id]: 1 },
+                unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
                 callStatus: 'idle',
                 callerId: null
             };
