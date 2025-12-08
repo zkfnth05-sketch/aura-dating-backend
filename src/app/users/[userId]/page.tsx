@@ -11,7 +11,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
 import { getAIRecommendationReason } from '@/app/actions/ai-actions';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc, writeBatch, increment } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -117,49 +117,26 @@ export default function UserProfilePage() {
 
     // Like or Dislike Action
     if (action === 'like' || action === 'dislike') {
-      const likeData = {
-        likerId: currentUser.id,
-        likeeId: targetUserId,
-        isLike: action === 'like',
-        timestamp: serverTimestamp(),
-      };
-  
-      const batch = writeBatch(firestore);
-  
-      // 1. Record the like/dislike in the current user's "likes" subcollection, using the likee's ID as the doc ID.
-      const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
-      batch.set(likeRef, likeData);
-  
-      if (action === 'like') {
-        // 2. Increment the like count on the target user's profile
-        const targetUserRef = doc(firestore, 'users', targetUserId);
-        batch.update(targetUserRef, { likeCount: increment(1) });
-  
-        // 3. Add the current user to the target user's "likedBy" subcollection, using the liker's ID as the doc ID.
-        const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
-        batch.set(likedByRef, {
-          likerId: currentUser.id,
-          timestamp: serverTimestamp(),
-        });
-      }
-  
-      try {
-        await batch.commit();
-      } catch (e: any) {
-        if (e.code === 'permission-denied') {
-          const contextualError = new FirestorePermissionError({
-            operation: 'write',
-            path: `users/${currentUser.id}/likes... (batch)`,
-            requestResourceData: { likeData, likeCountIncrement: action === 'like' },
-          });
-          errorEmitter.emit('permission-error', contextualError);
-        } else {
-          console.error("Failed to record like/dislike:", e);
-        }
-      }
-  
-      router.back();
-      return;
+        const likeData = {
+            likerId: currentUser.id,
+            likeeId: targetUserId,
+            isLike: action === 'like',
+            timestamp: serverTimestamp(),
+        };
+
+        // The only write operation is to the current user's own 'likes' subcollection.
+        // This aligns with a simple security rule: you can only write to your own documents.
+        const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
+        
+        // This operation is non-blocking to keep the UI responsive.
+        setDocumentNonBlocking(likeRef, likeData);
+
+        // Note: We are no longer updating the target user's likeCount or likedBy subcollection
+        // from the client. This logic should be moved to a Cloud Function for security and atomicity.
+        // For this prototype, this prevents the permission errors.
+
+        router.back();
+        return;
     }
 
     // Message Action

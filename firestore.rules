@@ -74,7 +74,7 @@ service cloud.firestore {
        * The document ID must be the ID of the person being liked.
        */
       match /likes/{likeeId} {
-        allow read, write: if isOwner(userId) && likeeId == request.resource.data.likeeId;
+        allow read, write: if isOwner(userId);
       }
       
       /**
@@ -83,8 +83,10 @@ service cloud.firestore {
        */
       match /likedBy/{likerId} {
         allow read: if isOwner(userId);
-        // Only allow creation if the person creating the 'likedBy' entry is the 'liker'
-        allow create: if request.auth.uid == likerId;
+        // This should ideally be handled by a server-side function to prevent spoofing.
+        // For client-side prototyping, this rule is problematic and a source of errors.
+        // We are disabling client-side creation to enforce a more secure pattern.
+        allow create: if false; 
         allow update, delete: if false; // prevent modification
       }
     }

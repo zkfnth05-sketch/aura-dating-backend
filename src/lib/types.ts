@@ -42,7 +42,6 @@ export type Message = {
 };
 
 export type Like = {
-    id: string;
     likerId: string;
     likeeId: string;
     isLike: boolean;
