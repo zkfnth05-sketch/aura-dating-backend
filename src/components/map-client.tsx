@@ -117,6 +117,14 @@ export default function MapClient({ users, currentUser }: MapClientProps) {
     }
   }
 
+  const prefetchUser = (userId: string) => {
+    if (userId === currentUser.id) {
+        router.prefetch('/profile');
+    } else {
+        router.prefetch(`/users/${userId}`);
+    }
+  };
+
   return (
     <div className="relative flex-1">
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-full px-4">
@@ -150,10 +158,14 @@ export default function MapClient({ users, currentUser }: MapClientProps) {
               position={{ lat: user.lat, lng: user.lng }}
               onClick={() => handleMarkerClick(user.id)}
             >
-              <div className={cn(
-                  "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
-                  user.id === currentUser.id ? "border-primary" : "border-transparent"
-              )}>
+              <div 
+                className={cn(
+                    "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
+                    user.id === currentUser.id ? "border-primary" : "border-transparent"
+                )}
+                onMouseEnter={() => prefetchUser(user.id)}
+                onTouchStart={() => prefetchUser(user.id)}
+              >
                 <Image
                   src={user.photoUrls[0]}
                   alt={user.name}
