@@ -102,50 +102,40 @@ export default function HomePageClient() {
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || !activeUser || !firestore) return;
-    
+  
     const targetUserId = activeUser.id;
-
-    if (!targetUserId) {
-        toast({
-          variant: "destructive",
-          title: "오류",
-          description: "사용자 정보를 찾을 수 없습니다."
-        });
-        return;
-    }
-    
+  
     if (action === 'message') {
       const allMatchesQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
       const matchSnapshot = await getDocs(allMatchesQuery);
-
-      let existingMatch: {id: string} | null = null;
+  
+      let existingMatch: { id: string } | null = null;
       matchSnapshot.forEach(doc => {
-          const match = doc.data();
-          if (match.users.includes(targetUserId)) {
-              existingMatch = { id: doc.id, ...match };
-          }
+        const match = doc.data();
+        if (match.users.includes(targetUserId)) {
+          existingMatch = { id: doc.id, ...match };
+        }
       });
   
       if (existingMatch) {
-          router.push(`/chat/${existingMatch.id}`);
+        router.push(`/chat/${existingMatch.id}`);
       } else {
         const newMatchRef = doc(collection(firestore, 'matches'));
-        const targetUser = activeUser;
         const matchData = {
-            id: newMatchRef.id,
-            users: [currentUser.id, targetUserId],
-            participants: [
-              { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-              { id: targetUser.id, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
-            ],
-            matchDate: serverTimestamp(),
-            lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-            lastMessageTimestamp: serverTimestamp(),
-            unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
-            callStatus: 'idle',
-            callerId: null
+          id: newMatchRef.id,
+          users: [currentUser.id, targetUserId],
+          participants: [
+            { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
+            { id: activeUser.id, name: activeUser.name, photoUrls: activeUser.photoUrls, lastSeen: activeUser.lastSeen },
+          ],
+          matchDate: serverTimestamp(),
+          lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+          lastMessageTimestamp: serverTimestamp(),
+          unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
+          callStatus: 'idle',
+          callerId: null
         };
-        
+  
         setDoc(newMatchRef, matchData).then(() => {
           const messagesColRef = collection(newMatchRef, 'messages');
           addDoc(messagesColRef, {
@@ -155,58 +145,67 @@ export default function HomePageClient() {
           });
           router.push(`/chat/${newMatchRef.id}`);
         }).catch(e => {
-            if (e.code === 'permission-denied') {
-              const contextualError = new FirestorePermissionError({
-                  operation: 'create',
-                  path: `matches/${newMatchRef.id}`,
-                  requestResourceData: matchData
-              });
-              errorEmitter.emit('permission-error', contextualError);
-            } else {
-              console.error("Failed to create match:", e);
-            }
+          if (e.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+              operation: 'create',
+              path: `matches/${newMatchRef.id}`,
+              requestResourceData: matchData
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          } else {
+            console.error("Failed to create match:", e);
+          }
         });
       }
       return;
     }
-
+  
+    // --- Like or Dislike action ---
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
-
-    // --- Non-blocking Firestore operations ---
-    const recordLike = (userId: string, likeeId: string) => {
-        const likeData = {
-            likerId: userId,
-            likeeId: likeeId,
-            isLike: action === 'like',
-            timestamp: serverTimestamp(),
-        };
-
-        const likeRef = doc(collection(firestore, 'users', userId, 'likes'));
-        
-        // This is the only write operation from the client for a like action.
-        // It writes to the current user's own subcollection.
-        setDoc(likeRef, likeData).catch(e => {
-          if (e.code === 'permission-denied') {
-              const contextualError = new FirestorePermissionError({
-                  operation: 'create',
-                  path: likeRef.path,
-                  requestResourceData: likeData
-              });
-              errorEmitter.emit('permission-error', contextualError);
-          } else {
-              console.error("Failed to record like/dislike:", e);
-          }
-        });
-
-        // For simplicity, we are removing the optimistic match check and other writes.
-        // These can be handled by a backend function triggered by the `likes` collection write.
+  
+    const likeData = {
+      likerId: currentUser.id,
+      likeeId: targetUserId,
+      isLike: action === 'like',
+      timestamp: serverTimestamp(),
     };
-
-    recordLike(currentUser.id, targetUserId);
-    // --- End Non-blocking Firestore operations ---
-
-    // Move to next card immediately
+  
+    const batch = writeBatch(firestore);
+  
+    // 1. Record the like/dislike in the current user's "likes" subcollection
+    const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
+    batch.set(likeRef, likeData);
+  
+    if (action === 'like') {
+      // 2. Increment the like count on the target user's profile
+      const targetUserRef = doc(firestore, 'users', targetUserId);
+      batch.update(targetUserRef, { likeCount: increment(1) });
+  
+      // 3. Add the current user to the target user's "likedBy" subcollection
+      const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
+      batch.set(likedByRef, {
+        likerId: currentUser.id,
+        timestamp: serverTimestamp(),
+      });
+    }
+  
+    // Commit all writes at once
+    batch.commit().catch(e => {
+      if (e.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+          operation: 'write',
+          path: `users/${currentUser.id}/likes... (batch)`,
+          requestResourceData: { likeData, likeCountIncrement: action === 'like' },
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      } else {
+        console.error("Failed to record like/dislike:", e);
+        toast({ variant: 'destructive', title: '오류', description: '작업을 기록하는 데 실패했습니다.' });
+      }
+    });
+  
+    // Move to the next card immediately for a smooth UI experience
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
