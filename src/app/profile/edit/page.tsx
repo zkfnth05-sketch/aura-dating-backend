@@ -158,22 +158,29 @@ export default function ProfileEditPage() {
     }
     setIsSaving(true);
     const finalImageUris = photos.map(p => p.dataUri);
+    
+    // Non-blocking update
     updateUser({
         ...profile,
         age: parseInt(profile.age) || currentUser.age,
         photoUrls: finalImageUris,
+    }).catch((error) => {
+        // Still handle errors in the background
+        console.error("Failed to update profile:", error);
+        toast({
+          variant: "destructive",
+          title: "업데이트 실패",
+          description: "프로필을 업데이트하는 데 실패했습니다. 다시 시도해주세요."
+        });
+        setIsSaving(false); // Re-enable button on error
     });
     
-    // Optimistic UI update
+    // Optimistic UI update and navigation
     toast({
       title: "프로필 저장됨",
       description: "프로필이 성공적으로 업데이트되었습니다.",
     });
     router.push('/profile');
-    
-    // We don't need to wait for the update to finish before navigating.
-    // The user context will eventually update in the background.
-    // Setting isSaving to false is also not strictly necessary as we are navigating away.
   };
 
   const processAndAddImage = async (dataUri: string) => {
@@ -441,5 +448,6 @@ export default function ProfileEditPage() {
   );
 }
 
+    
     
     
