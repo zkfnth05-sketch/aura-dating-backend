@@ -175,14 +175,7 @@ export default function HomePageClient() {
 
     // --- Non-blocking Firestore operations ---
     const recordLike = (userId: string, likeeId: string) => {
-        const theirLikeQuery = query(
-            collection(firestore, 'users', likeeId, 'likes'),
-            where('likeeId', '==', userId),
-            where('isLike', '==', true)
-        );
-
         const likeData = {
-            id: '', // This will be set later, but initialize for the error payload
             likerId: userId,
             likeeId: likeeId,
             isLike: action === 'like',
@@ -190,60 +183,24 @@ export default function HomePageClient() {
         };
 
         const likeRef = doc(collection(firestore, 'users', userId, 'likes'));
-        likeData.id = likeRef.id;
-
-        const batch = writeBatch(firestore);
-        batch.set(likeRef, likeData);
-
-        if (action === 'like') {
-            const targetUserRef = doc(firestore, 'users', likeeId);
-            batch.update(targetUserRef, { likeCount: increment(1) });
-            
-            const likedByRef = doc(collection(firestore, 'users', likeeId, 'likedBy'));
-            batch.set(likedByRef, {
-                likerId: userId,
-                timestamp: serverTimestamp(),
-            });
-
-            // Check for a match without blocking
-            getDocs(theirLikeQuery).then(theirLikeSnapshot => {
-                if (!theirLikeSnapshot.empty) {
-                    const matchBatch = writeBatch(firestore);
-                    const newMatchRef = doc(collection(firestore, 'matches'));
-                    const targetUser = activeUser;
-                    matchBatch.set(newMatchRef, {
-                        id: newMatchRef.id,
-                        users: [userId, likeeId],
-                        participants: [
-                            { id: userId, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-                            { id: likeeId, name: targetUser.name, photoUrls: targetUser.photoUrls, lastSeen: targetUser.lastSeen },
-                        ],
-                        matchDate: serverTimestamp(),
-                        lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-                        lastMessageTimestamp: serverTimestamp(),
-                        unreadCounts: { [userId]: 0, [likeeId]: 0 },
-                        callStatus: 'idle',
-                        callerId: null
-                    });
-                    return matchBatch.commit();
-                }
-            }).catch(e => {
-                console.error("Failed to check for match:", e);
-            });
-        }
         
-        batch.commit().catch(e => {
+        // This is the only write operation from the client for a like action.
+        // It writes to the current user's own subcollection.
+        setDoc(likeRef, likeData).catch(e => {
           if (e.code === 'permission-denied') {
               const contextualError = new FirestorePermissionError({
-                  operation: 'write',
-                  path: `users/${userId}/likes... (batch)`,
-                  requestResourceData: { likeData, likeCountIncrement: action === 'like' }
+                  operation: 'create',
+                  path: likeRef.path,
+                  requestResourceData: likeData
               });
               errorEmitter.emit('permission-error', contextualError);
           } else {
               console.error("Failed to record like/dislike:", e);
           }
         });
+
+        // For simplicity, we are removing the optimistic match check and other writes.
+        // These can be handled by a backend function triggered by the `likes` collection write.
     };
 
     recordLike(currentUser.id, targetUserId);

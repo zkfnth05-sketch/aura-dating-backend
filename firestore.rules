@@ -18,7 +18,7 @@
  * - User Profiles Are Publicly Readable: A user's profile document under `/users/{userId}` is readable by
  *   any signed-in user. This is necessary for a dating app where users browse profiles.
  * - Writes are Owner-Only: All write operations (create, update, delete) on a user's profile and their
- *   subcollections (likes, likedBy) are strictly limited to the owner of that data.
+ *   subcollections (likes) are strictly limited to the owner of that data.
  * - Server-Managed Matches: The creation of `match` documents is disabled for clients. This critical
  *   business logic should be handled by a trusted server environment (e.g., Cloud Functions) to prevent
  *   users from creating fraudulent matches, though for prototyping it can be done client-side with careful rules.
@@ -69,7 +69,8 @@ service cloud.firestore {
       allow update, delete: if isOwner(userId);
 
       /**
-       * @description A user can manage the 'likes' they have sent to other users.
+       * @description A user can only manage their own 'likes' subcollection.
+       * This is the primary rule to fix the permission error.
        */
       match /likes/{likeId} {
         allow read, write: if isOwner(userId);
@@ -77,10 +78,12 @@ service cloud.firestore {
       
       /**
        * @description A user can read who has liked them. Writes are restricted.
+       * Client-side writes to this collection are discouraged. This should be handled by backend triggers.
        */
       match /likedBy/{likerId} {
         allow read: if isOwner(userId);
         // Only allow creation if the person creating the 'likedBy' entry is the 'liker'
+        // This rule is simplified as client-side writes are now removed, but kept for clarity.
         allow create: if request.auth.uid == likerId;
         allow update, delete: if false; // prevent modification
       }

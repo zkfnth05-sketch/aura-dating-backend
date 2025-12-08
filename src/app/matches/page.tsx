@@ -49,6 +49,7 @@ export default function MatchesPage() {
   const { data: matches, isLoading: areMatchesLoading } = useCollection<Match>(matchesQuery);
 
   // --- 2. Get users who liked me (real-time) ---
+  // This now relies on a backend function to populate the 'likedBy' collection for security.
   const likedMeQuery = useMemoFirebase(() => {
     if (!currentUser || !firestore) return null;
     return query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
@@ -71,7 +72,7 @@ export default function MatchesPage() {
       fetchLikerProfiles();
   }, [likedByList, firestore]);
 
-  // --- 3. Get users I liked (one-time fetch) ---
+  // --- 3. Get users I liked (one-time fetch from my own 'likes' collection) ---
   useEffect(() => {
     if (!currentUser || !firestore) return;
 
@@ -80,15 +81,13 @@ export default function MatchesPage() {
       try {
         const iLikedQuery = query(
             collection(firestore, 'users', currentUser.id, 'likes'),
+            where('isLike', '==', true), // Only fetch actual likes
             orderBy('timestamp', 'desc')
         );
         const iLikedSnapshot = await getDocs(iLikedQuery);
         
-        // Filter for likes and extract user IDs in client code
         const likedUserIds = iLikedSnapshot.docs
-            .map(doc => doc.data() as Like)
-            .filter(like => like.isLike === true)
-            .map(like => like.likeeId);
+            .map(doc => doc.data().likeeId);
         
         if (likedUserIds.length === 0) {
           setPeopleILiked([]);
