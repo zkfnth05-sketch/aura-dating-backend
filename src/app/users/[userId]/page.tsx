@@ -115,94 +115,79 @@ export default function UserProfilePage() {
   
     const targetUserId = user.id;
   
-    if (action === 'like' || action === 'dislike') {
-      const isLike = action === 'like';
-      const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
-      const likeData = {
-        likerId: currentUser.id,
-        likeeId: targetUserId,
-        isLike,
-        timestamp: serverTimestamp(),
-      };
-      
-      setDocumentNonBlocking(likeRef, likeData);
-      
-      if(isLike) {
-        // This part is for creating a notification for the other user.
-        // It's a "fire and forget" operation from the client.
-        // In a production app, this would be handled by a Cloud Function
-        // triggered by the write to the 'likes' collection above.
-        const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
-        const likedByData = {
-            likerId: currentUser.id,
-            timestamp: serverTimestamp(),
+    if (action === 'message') {
+      const matchQuery = query(
+        collection(firestore, 'matches'),
+        where('users', 'array-contains', currentUser.id)
+      );
+      const matchSnapshot = await getDocs(matchQuery);
+  
+      let existingMatch: { id: string } | null = null;
+      matchSnapshot.forEach(doc => {
+        const match = doc.data();
+        if (match.users.includes(targetUserId)) {
+          existingMatch = { id: doc.id, ...match };
+        }
+      });
+  
+      if (existingMatch) {
+        router.push(`/chat/${existingMatch.id}`);
+      } else {
+        const newMatchRef = doc(collection(firestore, 'matches'));
+        const matchData = {
+          id: newMatchRef.id,
+          users: [currentUser.id, targetUserId],
+          participants: [
+            { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen || null },
+            { id: user.id, name: user.name, photoUrls: user.photoUrls, lastSeen: user.lastSeen || null },
+          ],
+          matchDate: serverTimestamp(),
+          lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+          lastMessageTimestamp: serverTimestamp(),
+          unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
+          callStatus: 'idle',
+          callerId: null,
         };
-        setDocumentNonBlocking(likedByRef, likedByData);
-
-        // Also increment the likeCount (best effort, again, should be a function)
-        const targetUserRef = doc(firestore, 'users', targetUserId);
-        setDocumentNonBlocking(targetUserRef, { likeCount: increment(1) }, { merge: true });
+  
+        setDoc(newMatchRef, matchData)
+          .then(() => {
+            const messagesColRef = collection(newMatchRef, 'messages');
+            addDoc(messagesColRef, {
+              senderId: 'system',
+              text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+              timestamp: serverTimestamp(),
+            });
+            router.push(`/chat/${newMatchRef.id}`);
+          })
+          .catch(e => {
+            if (e.code === 'permission-denied') {
+              const contextualError = new FirestorePermissionError({
+                operation: 'create',
+                path: `matches/${newMatchRef.id}`,
+                requestResourceData: matchData,
+              });
+              errorEmitter.emit('permission-error', contextualError);
+            } else {
+              console.error('Failed to create match:', e);
+            }
+          });
       }
-
-      router.back();
       return;
     }
   
-    // Message Action
-    if (action === 'message') {
-        const matchQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
-        const matchSnapshot = await getDocs(matchQuery);
-        
-        let existingMatch: {id: string} | null = null;
-        matchSnapshot.forEach(doc => {
-            const match = doc.data();
-            if (match.users.includes(targetUserId)) {
-                existingMatch = { id: doc.id, ...match };
-            }
-        });
-    
-        if (existingMatch) {
-            router.push(`/chat/${existingMatch.id}`);
-        } else {
-            const newMatchRef = doc(collection(firestore, 'matches'));
-            const matchData = {
-                id: newMatchRef.id,
-                users: [currentUser.id, targetUserId],
-                participants: [
-                  { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen || null },
-                  { id: user.id, name: user.name, photoUrls: user.photoUrls, lastSeen: user.lastSeen || null },
-                ],
-                matchDate: serverTimestamp(),
-                lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-                lastMessageTimestamp: serverTimestamp(),
-                unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
-                callStatus: 'idle',
-                callerId: null
-            };
-
-            setDoc(newMatchRef, matchData).then(() => {
-                const messagesColRef = collection(newMatchRef, 'messages');
-                addDoc(messagesColRef, {
-                  senderId: 'system',
-                  text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
-                  timestamp: serverTimestamp(),
-                });
-                router.push(`/chat/${newMatchRef.id}`);
-            }).catch(e => {
-                if (e.code === 'permission-denied') {
-                    const contextualError = new FirestorePermissionError({
-                        operation: 'create',
-                        path: `matches/${newMatchRef.id}`,
-                        requestResourceData: matchData,
-                    });
-                    errorEmitter.emit('permission-error', contextualError);
-                } else {
-                    console.error("Failed to create match:", e);
-                }
-            });
-        }
-        return;
-    }
+    // --- Like or Dislike action ---
+    const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
+    const likeData = {
+      likerId: currentUser.id,
+      likeeId: targetUserId,
+      isLike: action === 'like',
+      timestamp: serverTimestamp(),
+    };
+  
+    // Non-blocking write to own 'likes' subcollection.
+    setDocumentNonBlocking(likeRef, likeData);
+  
+    router.back();
   };
   
   if (isUserLoading || !isLoaded) {
