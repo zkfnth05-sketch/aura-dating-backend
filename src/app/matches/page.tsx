@@ -81,13 +81,19 @@ export default function MatchesPage() {
       try {
         const iLikedQuery = query(
             collection(firestore, 'users', currentUser.id, 'likes'),
-            where('isLike', '==', true), // Only fetch actual likes
-            orderBy('timestamp', 'desc')
+            where('isLike', '==', true) // Only fetch actual likes
+            // orderBy('timestamp', 'desc') // This requires a composite index
         );
         const iLikedSnapshot = await getDocs(iLikedQuery);
         
-        const likedUserIds = iLikedSnapshot.docs
-            .map(doc => doc.data().likeeId);
+        // Sort snapshot by timestamp descending manually
+        const sortedDocs = iLikedSnapshot.docs.sort((a, b) => {
+            const timeA = a.data().timestamp?.seconds || 0;
+            const timeB = b.data().timestamp?.seconds || 0;
+            return timeB - timeA;
+        });
+
+        const likedUserIds = sortedDocs.map(doc => doc.data().likeeId);
         
         if (likedUserIds.length === 0) {
           setPeopleILiked([]);
