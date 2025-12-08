@@ -90,21 +90,22 @@ export default function UploadPhotoPage() {
     }
 
     setIsSubmitting(true);
-    try {
-      await updateUser({
-        photoUrls: [photo.uri],
+    
+    // Non-blocking update. Navigate immediately.
+    updateUser({
+      photoUrls: [photo.uri],
+    }).catch((error) => {
+      // Still handle errors in the background
+      console.error("Failed to complete signup:", error);
+      toast({
+        variant: "destructive",
+        title: "등록 실패",
+        description: "프로필을 완성하는 데 실패했습니다. 다시 시도해주세요."
       });
-      router.push('/profile');
-    } catch (error) {
-        console.error("Failed to complete signup:", error);
-        toast({
-            variant: "destructive",
-            title: "등록 실패",
-            description: "프로필을 완성하는 데 실패했습니다. 다시 시도해주세요."
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
+      setIsSubmitting(false); // Re-enable button on error
+    });
+
+    router.push('/profile');
   };
   
   if (!isLoaded || !authUser) {
