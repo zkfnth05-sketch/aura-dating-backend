@@ -114,31 +114,40 @@ export default function UserProfilePage() {
     if (!user || !currentUser || !firestore) return;
   
     const targetUserId = user.id;
-
-    // Like or Dislike Action
+  
     if (action === 'like' || action === 'dislike') {
-        const likeData = {
+      const isLike = action === 'like';
+      const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
+      const likeData = {
+        likerId: currentUser.id,
+        likeeId: targetUserId,
+        isLike,
+        timestamp: serverTimestamp(),
+      };
+      
+      setDocumentNonBlocking(likeRef, likeData);
+      
+      if(isLike) {
+        // This part is for creating a notification for the other user.
+        // It's a "fire and forget" operation from the client.
+        // In a production app, this would be handled by a Cloud Function
+        // triggered by the write to the 'likes' collection above.
+        const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
+        const likedByData = {
             likerId: currentUser.id,
-            likeeId: targetUserId,
-            isLike: action === 'like',
             timestamp: serverTimestamp(),
         };
+        setDocumentNonBlocking(likedByRef, likedByData);
 
-        // The only write operation is to the current user's own 'likes' subcollection.
-        // This aligns with a simple security rule: you can only write to your own documents.
-        const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
-        
-        // This operation is non-blocking to keep the UI responsive.
-        setDocumentNonBlocking(likeRef, likeData);
+        // Also increment the likeCount (best effort, again, should be a function)
+        const targetUserRef = doc(firestore, 'users', targetUserId);
+        setDocumentNonBlocking(targetUserRef, { likeCount: increment(1) }, { merge: true });
+      }
 
-        // Note: We are no longer updating the target user's likeCount or likedBy subcollection
-        // from the client. This logic should be moved to a Cloud Function for security and atomicity.
-        // For this prototype, this prevents the permission errors.
-
-        router.back();
-        return;
+      router.back();
+      return;
     }
-
+  
     // Message Action
     if (action === 'message') {
         const matchQuery = query(collection(firestore, 'matches'), where('users', 'array-contains', currentUser.id));
@@ -160,8 +169,8 @@ export default function UserProfilePage() {
                 id: newMatchRef.id,
                 users: [currentUser.id, targetUserId],
                 participants: [
-                  { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-                  { id: user.id, name: user.name, photoUrls: user.photoUrls, lastSeen: user.lastSeen },
+                  { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen || null },
+                  { id: user.id, name: user.name, photoUrls: user.photoUrls, lastSeen: user.lastSeen || null },
                 ],
                 matchDate: serverTimestamp(),
                 lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',

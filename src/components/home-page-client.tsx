@@ -125,8 +125,8 @@ export default function HomePageClient() {
                 id: newMatchRef.id,
                 users: [currentUser.id, targetUserId],
                 participants: [
-                  { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen },
-                  { id: activeUser.id, name: activeUser.name, photoUrls: activeUser.photoUrls, lastSeen: activeUser.lastSeen },
+                  { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen || null },
+                  { id: activeUser.id, name: activeUser.name, photoUrls: activeUser.photoUrls, lastSeen: activeUser.lastSeen || null },
                 ],
                 matchDate: serverTimestamp(),
                 lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
@@ -164,21 +164,34 @@ export default function HomePageClient() {
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
 
-    const likeData = {
-        likerId: currentUser.id,
-        likeeId: targetUserId,
-        isLike: action === 'like',
-        timestamp: serverTimestamp(),
-    };
-
-    // The only write operation is to the current user's own 'likes' subcollection.
-    // This aligns with a simple security rule: you can only write to your own documents.
+    const isLike = action === 'like';
     const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
+    const likeData = {
+      likerId: currentUser.id,
+      likeeId: targetUserId,
+      isLike,
+      timestamp: serverTimestamp(),
+    };
+    
+    // Non-blocking write to own 'likes' subcollection
     setDocumentNonBlocking(likeRef, likeData);
+    
+    // If it's a 'like', also create a notification for the other user.
+    if(isLike) {
+      // This part is a "fire and forget" operation from the client.
+      // In a production app, this would be handled by a Cloud Function
+      // triggered by the write to the 'likes' collection above.
+      const likedByRef = doc(firestore, 'users', targetUserId, 'likedBy', currentUser.id);
+      const likedByData = {
+          likerId: currentUser.id,
+          timestamp: serverTimestamp(),
+      };
+      setDocumentNonBlocking(likedByRef, likedByData);
 
-    // Note: We are no longer updating the target user's likeCount or likedBy subcollection
-    // from the client. This logic should be moved to a Cloud Function for security and atomicity.
-    // For this prototype, this prevents the permission errors.
+      // Also increment the likeCount (best effort, again, should be a function)
+      const targetUserRef = doc(firestore, 'users', targetUserId);
+      setDocumentNonBlocking(targetUserRef, { likeCount: increment(1) }, { merge: true });
+    }
 
     // Move to the next card immediately for a smooth UI experience
     setTimeout(() => {
