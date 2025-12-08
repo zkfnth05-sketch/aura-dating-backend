@@ -13,24 +13,31 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 // No metadata export from a 'use client' component. 
 // If you need metadata, you'd move this to a server component parent.
 
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+function AuthDependentComponents() {
   const { authUser, user } = useUser();
-  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
-  const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
-
-  // Show BottomNav if the user is fully signed in and has a profile with photos.
   const showBottomNav = !!(authUser && user?.photoUrls && user.photoUrls.length > 0);
 
   return (
-    <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
+    <>
       {authUser && <IncomingCallToast />}
       {authUser && <NewLikeToast />}
+      {showBottomNav && <BottomNav />}
+    </>
+  );
+}
+
+function AppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
+  const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
+
+  return (
+    <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
       <main className={`flex-1 ${needsPadding ? 'pb-24' : ''}`}>
           {children}
       </main>
       <Toaster />
-      {showBottomNav && <BottomNav />}
+      <AuthDependentComponents />
     </div>
   );
 }
