@@ -110,11 +110,40 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
-  if (!currentUser) return null;
+  const otherUser = useMemo(() => {
+    if (!currentUser) return null;
+    return match.participants.find(p => p.id !== currentUser.id)!;
+  }, [match.participants, currentUser]);
 
-  const otherUser = match.participants.find(p => p.id !== currentUser.id)!;
-  const [lastSeenText, setLastSeenText] = useState(formatLastSeen(otherUser.lastSeen));
+  const [lastSeenText, setLastSeenText] = useState(otherUser ? formatLastSeen(otherUser.lastSeen) : '');
 
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+        const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
+        if(viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        }
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+        if(otherUser) {
+            setLastSeenText(formatLastSeen(otherUser.lastSeen));
+        }
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [otherUser]);
+
+  if (!currentUser || !otherUser) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+    );
+  }
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,24 +333,6 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
       });
       setIsCallActive(false);
   }
-
-
-  useEffect(() => {
-    if (scrollAreaRef.current) {
-        const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
-        if(viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
-        }
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-        setLastSeenText(formatLastSeen(otherUser.lastSeen));
-    }, 60000); // Update every minute
-
-    return () => clearInterval(interval);
-  }, [otherUser.lastSeen]);
 
   if (isCallActive) {
     return (
