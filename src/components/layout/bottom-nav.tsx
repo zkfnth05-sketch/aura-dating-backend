@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Map, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser } from '@/contexts/user-context';
 
 const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -34,8 +35,9 @@ const navItems = [
   { href: '/profile', label: '내프로필', icon: User },
 ];
 
-export default function BottomNav({ totalUnreadCount }: { totalUnreadCount: number }) {
+export default function BottomNav() {
   const pathname = usePathname();
+  const { totalUnreadCount } = useUser();
 
   const noNavPaths = ['/signup', '/chat/', '/profile/edit', '/users/'];
 
