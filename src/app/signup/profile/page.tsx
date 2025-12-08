@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { serverTimestamp } from 'firebase/firestore';
+import type { User } from '@/lib/types';
 
 export default function CreateProfilePage() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function CreateProfilePage() {
       setName(prev => prev || user?.name || authUser.displayName || '');
       setAge(prev => prev || user?.age?.toString() || '');
       setCity(prev => prev || user?.location || '');
-      setGender(prev => prev || user?.gender || '여성');
+      setGender(user?.gender || '여성');
     }
   }, [isLoaded, authUser, user, router]);
 
@@ -55,39 +56,38 @@ export default function CreateProfilePage() {
 
     setIsSubmitting(true);
 
-    try {
-      const userData: Partial<User> = {
-        name,
-        age: parseInt(age, 10),
-        location: city,
-        gender,
-      };
+    const userData: Partial<User> = {
+      name,
+      age: parseInt(age, 10),
+      location: city,
+      gender,
+    };
 
-      // Only add creation-specific fields if the user profile doesn't exist yet
-      if (!user) {
-        userData.id = authUser.uid;
-        userData.hobbies = ['독서', '영화 감상'];
-        userData.interests = ['맛집 탐방', '여행'];
-        userData.bio = '새로운 만남을 기다립니다!';
-        userData.lat = 37.5665;
-        userData.lng = 126.9780;
-        userData.createdAt = serverTimestamp() as any;
-        userData.likeCount = 0;
-      }
-      
-      await updateUser(userData);
-
-      router.push('/signup/photo');
-    } catch (error) {
+    // Only add creation-specific fields if the user profile doesn't exist yet
+    if (!user) {
+      userData.id = authUser.uid;
+      userData.hobbies = ['독서', '영화 감상'];
+      userData.interests = ['맛집 탐방', '여행'];
+      userData.bio = '새로운 만남을 기다립니다!';
+      userData.lat = 37.5665;
+      userData.lng = 126.9780;
+      userData.createdAt = serverTimestamp() as any;
+      userData.likeCount = 0;
+    }
+    
+    // Do not wait for the update to finish. Navigate immediately.
+    updateUser(userData).catch(error => {
+      // Still log errors if the background update fails.
       console.error("Failed to update user:", error);
       toast({
         variant: "destructive",
         title: "오류",
         description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
       });
-    } finally {
-        setIsSubmitting(false);
-    }
+      setIsSubmitting(false); // Re-enable button on error
+    });
+
+    router.push('/signup/photo');
   };
 
   // Show a global loader only if the auth state is still loading.
