@@ -8,9 +8,13 @@ import { useRouter } from 'next/navigation';
 
 export default function UserGrid({ users }: { users: User[] }) {
   const router = useRouter();
+  
+  if (users.length === 0) {
+    return <div className="text-center text-muted-foreground mt-8">목록이 비어있습니다.</div>;
+  }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 gap-4">
       {users.map((user) => {
         const prefetchUser = () => router.prefetch(`/users/${user.id}`);
         return (
