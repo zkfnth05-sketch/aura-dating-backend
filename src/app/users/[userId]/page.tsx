@@ -112,46 +112,48 @@ export default function UserProfilePage() {
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!user || !currentUser || !firestore) return;
-
+  
     // Like or Dislike Action
     if (action === 'like' || action === 'dislike') {
       const batch = writeBatch(firestore);
       const likeData = {
-          likerId: currentUser.id,
-          likeeId: user.id,
-          isLike: action === 'like',
-          timestamp: serverTimestamp(),
+        likerId: currentUser.id,
+        likeeId: user.id,
+        isLike: action === 'like',
+        timestamp: serverTimestamp(),
       };
-
-      const likeRef = doc(collection(firestore, 'users', currentUser.id, 'likes'));
+  
+      // Explicitly set the document ID to be the ID of the user being liked/disliked
+      const likeRef = doc(firestore, 'users', currentUser.id, 'likes', user.id);
       batch.set(likeRef, likeData);
-
+  
       if (action === 'like') {
-          const targetUserRef = doc(firestore, 'users', user.id);
-          batch.update(targetUserRef, { likeCount: increment(1) });
-          
-          const likedByRef = doc(collection(firestore, 'users', user.id, 'likedBy'));
-          batch.set(likedByRef, {
-              likerId: currentUser.id,
-              timestamp: serverTimestamp(),
-          });
+        const targetUserRef = doc(firestore, 'users', user.id);
+        batch.update(targetUserRef, { likeCount: increment(1) });
+  
+        // Explicitly set the document ID to be the ID of the liker
+        const likedByRef = doc(firestore, 'users', user.id, 'likedBy', currentUser.id);
+        batch.set(likedByRef, {
+          likerId: currentUser.id,
+          timestamp: serverTimestamp(),
+        });
       }
-
+  
       try {
         await batch.commit();
       } catch (e: any) {
         if (e.code === 'permission-denied') {
           const contextualError = new FirestorePermissionError({
             operation: 'write',
-            path: `users/${currentUser.id}/likes`,
-            requestResourceData: likeData,
+            path: `users/${currentUser.id}/likes... (batch)`,
+            requestResourceData: { likeData, likeCountIncrement: action === 'like' },
           });
           errorEmitter.emit('permission-error', contextualError);
         } else {
           console.error("Failed to record like/dislike:", e);
         }
       }
-
+  
       router.back();
       return;
     }

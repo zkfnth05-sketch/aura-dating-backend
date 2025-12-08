@@ -70,20 +70,19 @@ service cloud.firestore {
 
       /**
        * @description A user can only manage their own 'likes' subcollection.
-       * This is the primary rule to fix the permission error.
+       * The document ID must be the ID of the person being liked.
        */
       match /likes/{likeId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) && likeId == request.resource.data.likeeId;
       }
       
       /**
        * @description A user can read who has liked them. Writes are restricted.
-       * Client-side writes to this collection are discouraged. This should be handled by backend triggers.
+       * The document ID must be the ID of the person performing the like.
        */
       match /likedBy/{likerId} {
         allow read: if isOwner(userId);
         // Only allow creation if the person creating the 'likedBy' entry is the 'liker'
-        // This rule is simplified as client-side writes are now removed, but kept for clarity.
         allow create: if request.auth.uid == likerId;
         allow update, delete: if false; // prevent modification
       }
