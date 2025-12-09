@@ -68,7 +68,7 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       // Allow any signed-in user (like an admin) to create a new user document.
       allow create: if isSignedIn(); 
-      allow update: if isOwner(userId);
+      allow update: if isSignedIn();
       allow delete: if isOwner(userId);
 
       /**
