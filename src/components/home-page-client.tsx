@@ -8,7 +8,7 @@ import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -83,9 +83,11 @@ export default function HomePageClient() {
             let unseenUsers: User[] = [];
             for (let i = 0; i < unseenUserIds.length; i += CHUNK_SIZE) {
                 const chunk = unseenUserIds.slice(i, i + CHUNK_SIZE);
-                const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
-                const userDocs = await getDocs(usersQuery);
-                unseenUsers.push(...userDocs.docs.map(d => d.data() as User));
+                if (chunk.length > 0) {
+                    const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
+                    const userDocs = await getDocs(usersQuery);
+                    unseenUsers.push(...userDocs.docs.map(d => d.data() as User));
+                }
             }
             filteredUsers = applyFilters(unseenUsers, filters, currentUser);
         }
