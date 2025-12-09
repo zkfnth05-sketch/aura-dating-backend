@@ -357,7 +357,12 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
           </Avatar>
           <div>
             <p className="font-semibold">{otherUser.name}</p>
-            <p className="text-xs text-muted-foreground">{lastSeenText}</p>
+            <p className={cn(
+                "text-xs",
+                lastSeenText === '온라인' ? 'text-primary' : 'text-muted-foreground'
+            )}>
+                {lastSeenText}
+            </p>
           </div>
         </div>
         <Button 
