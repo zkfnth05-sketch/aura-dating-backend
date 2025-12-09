@@ -69,7 +69,7 @@ service cloud.firestore {
       // Allow any signed-in user (like an admin) to create a new user document.
       allow create: if isSignedIn(); 
       allow update: if isSignedIn();
-      allow delete: if isOwner(userId);
+      allow delete: if isSignedIn();
 
       /**
        * @description A user can only manage their own 'likes' subcollection.
