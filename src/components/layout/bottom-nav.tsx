@@ -39,7 +39,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { totalUnreadCount } = useUser();
 
-  const noNavPaths = ['/signup', '/chat/', '/profile/edit', '/users/'];
+  const noNavPaths = ['/signup', '/chat/', '/profile/edit', '/users/', '/admin'];
 
   const isNavHidden = noNavPaths.some(path => pathname.startsWith(path));
   if (isNavHidden) {
