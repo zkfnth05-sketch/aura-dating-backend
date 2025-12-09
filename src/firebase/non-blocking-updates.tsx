@@ -89,4 +89,13 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
     });
 }
 
-    
+// NOTE: It seems you're using `updateDoc` directly in `edit-user-dialog.tsx`.
+// For consistency with the non-blocking pattern, you might want to use
+// `updateDocumentNonBlocking` instead. However, since the dialog likely
+// closes upon successful submission and shows a toast, the current async/await
+// pattern with try/catch is also a valid and common UI approach.
+// I've ensured the catch block in edit-user-dialog.tsx now correctly
+// emits the detailed FirestorePermissionError. If you want to switch to
+// fully non-blocking, you would replace the try/catch with a call to
+// `updateDocumentNonBlocking(userRef, updatedPayload);` and handle UI
+// feedback optimistically.

@@ -21,6 +21,7 @@ import AdminLayout from '@/components/admin-layout';
 import Image from 'next/image';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import AddUserDialog from '@/components/add-user-dialog';
+import EditUserDialog from '@/components/edit-user-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,10 +31,15 @@ export default function AdminPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -58,6 +64,11 @@ export default function AdminPage() {
     setSelectedImageIndex(index);
     setIsCarouselOpen(true);
   };
+
+  const handleEditClick = (user: User) => {
+    setEditingUser(user);
+    setIsEditUserDialogOpen(true);
+  }
   
   const handleDeleteUser = async (userId: string) => {
     if (!firestore) return;
@@ -78,8 +89,12 @@ export default function AdminPage() {
   };
 
   const handleUserAdded = () => {
-    // This could trigger a re-fetch if needed, but useCollection is real-time.
     setIsAddUserDialogOpen(false);
+  }
+
+  const handleUserUpdated = () => {
+    setIsEditUserDialogOpen(false);
+    setEditingUser(null);
   }
 
   return (
@@ -164,7 +179,7 @@ export default function AdminPage() {
                             </Button>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white">수정</Button>
+                          <Button variant="ghost" size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleEditClick(user)}>수정</Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="destructive" size="sm" className="ml-2 h-8">삭제</Button>
@@ -205,6 +220,14 @@ export default function AdminPage() {
         onClose={() => setIsAddUserDialogOpen(false)}
         onUserAdded={handleUserAdded}
       />
+       {editingUser && (
+        <EditUserDialog
+          isOpen={isEditUserDialogOpen}
+          onClose={() => { setIsEditUserDialogOpen(false); setEditingUser(null); }}
+          onUserUpdated={handleUserUpdated}
+          user={editingUser}
+        />
+      )}
     </>
   );
 }
