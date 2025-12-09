@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import {
   Table,
@@ -20,14 +20,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import AdminLayout from '@/components/admin-layout';
 import Image from 'next/image';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
+import AddUserDialog from '@/components/add-user-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -52,7 +58,29 @@ export default function AdminPage() {
     setSelectedImageIndex(index);
     setIsCarouselOpen(true);
   };
+  
+  const handleDeleteUser = async (userId: string) => {
+    if (!firestore) return;
+    try {
+      await deleteDoc(doc(firestore, 'users', userId));
+      toast({
+        title: "사용자 삭제됨",
+        description: `사용자(ID: ${userId.substring(0,8)})가 성공적으로 삭제되었습니다.`,
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        variant: "destructive",
+        title: "삭제 실패",
+        description: "사용자를 삭제하는 데 실패했습니다.",
+      });
+    }
+  };
 
+  const handleUserAdded = () => {
+    // This could trigger a re-fetch if needed, but useCollection is real-time.
+    setIsAddUserDialogOpen(false);
+  }
 
   return (
     <>
@@ -61,7 +89,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">사용자 관리</h2>
             <div className="hidden md:flex items-center space-x-2">
-              <Button>사용자 추가</Button>
+              <Button onClick={() => setIsAddUserDialogOpen(true)}>사용자 추가</Button>
             </div>
           </div>
           
@@ -137,7 +165,25 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white">수정</Button>
-                          <Button variant="destructive" size="sm" className="ml-2 h-8">삭제</Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm" className="ml-2 h-8">삭제</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>정말로 삭제하시겠습니까?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  이 작업은 되돌릴 수 없습니다. 사용자 '{user.name}'의 모든 데이터가 영구적으로 삭제됩니다.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>취소</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteUser(user.id)} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                  삭제
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -153,6 +199,11 @@ export default function AdminPage() {
         onClose={() => setIsCarouselOpen(false)}
         images={selectedImages}
         startIndex={selectedImageIndex}
+      />
+      <AddUserDialog 
+        isOpen={isAddUserDialogOpen}
+        onClose={() => setIsAddUserDialogOpen(false)}
+        onUserAdded={handleUserAdded}
       />
     </>
   );
