@@ -17,6 +17,9 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { Switch } from './ui/switch';
+import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import { compressImage } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(1, '이름을 입력해주세요.'),
@@ -39,6 +42,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [aiEnhancement, setAiEnhancement] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -57,7 +61,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
       const file = event.target.files[0];
       const reader = new FileReader();
       reader.onload = (e) => {
-        setPhotoPreview(e.target?.result as string);
+        setPhotoPreview(e.target.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -66,6 +70,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
   const resetForm = () => {
     form.reset();
     setPhotoPreview(null);
+    setAiEnhancement(true);
   }
 
   const handleClose = () => {
@@ -73,7 +78,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
     onClose();
   }
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!firestore) return;
     setIsSubmitting(true);
 
@@ -82,7 +87,19 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
     
     let photoUrl: string;
     if (photoPreview) {
-      photoUrl = photoPreview;
+       try {
+        const compressedUri = await compressImage(photoPreview);
+        if (aiEnhancement) {
+            const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: values.gender });
+            photoUrl = await compressImage(result.enhancedPhotoDataUri);
+        } else {
+            photoUrl = compressedUri;
+        }
+      } catch (error) {
+        console.error("Photo processing failed:", error);
+        toast({ variant: "destructive", title: "사진 처리 오류", description: "사진을 처리하는 데 실패했습니다." });
+        photoUrl = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl;
+      }
     } else {
       const randomImage = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
       photoUrl = randomImage.imageUrl;
@@ -144,28 +161,34 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormItem>
-              <FormLabel>사진</FormLabel>
-              <FormControl>
-                <div
-                  className="relative w-24 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {photoPreview ? (
-                    <Image src={photoPreview} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
-                  ) : (
-                    <Plus className="w-8 h-8 text-zinc-500" />
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                </div>
-              </FormControl>
-            </FormItem>
+            <div className="flex flex-col gap-4">
+              <FormItem>
+                <FormLabel>사진</FormLabel>
+                <FormControl>
+                  <div
+                    className="relative w-24 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {photoPreview ? (
+                      <Image src={photoPreview} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
+                    ) : (
+                      <Plus className="w-8 h-8 text-zinc-500" />
+                    )}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                  </div>
+                </FormControl>
+              </FormItem>
+              <div className="flex items-center space-x-2">
+                <Switch id="ai-enhancement" checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
+                <Label htmlFor="ai-enhancement">AI 보정</Label>
+              </div>
+            </div>
             <FormField
               control={form.control}
               name="name"
