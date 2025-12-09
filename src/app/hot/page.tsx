@@ -7,9 +7,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
-import { useState, useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, where, getDocs, limit, documentId } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { useFirestore } from '@/firebase';
+import { collection, query, orderBy, where, getDocs, limit } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -41,56 +41,70 @@ const UserCard = ({ user }: { user: User }) => {
   );
 };
 
-
 export default function HotPage() {
   const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const [newUsers, setNewUsers] = useState<User[]>([]);
   const [hotUsers, setHotUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingNew, setIsLoadingNew] = useState(true);
+  const [isLoadingHot, setIsLoadingHot] = useState(false);
+  const [activeTab, setActiveTab] = useState('new');
   const firestore = useFirestore();
 
-  useEffect(() => {
+  const fetchNewUsers = useCallback(async () => {
     if (!currentUser || !firestore) return;
-
-    const fetchUsers = async () => {
-      setIsLoading(true);
-      
-      try {
-        // Fetch NEW Users - ensuring createdAt exists
-        const newUsersQuery = query(
-          collection(firestore, 'users'),
-          where('createdAt', '!=', null),
-          orderBy('createdAt', 'desc'),
-          limit(12)
-        );
-        const newUsersSnapshot = await getDocs(newUsersQuery);
-        const newUsersData = newUsersSnapshot.docs
-          .map(doc => doc.data() as User)
-          .filter(user => user.id !== currentUser.id);
-        setNewUsers(newUsersData);
-
-        // Fetch HOT Users - ensuring likeCount exists and is not null for ordering
-        const hotUsersQuery = query(
-          collection(firestore, 'users'),
-          where('likeCount', '!=', null),
-          orderBy('likeCount', 'desc'),
-          limit(12)
-        );
-        const hotUsersSnapshot = await getDocs(hotUsersQuery);
-        const hotUsersData = hotUsersSnapshot.docs
-          .map(doc => doc.data() as User)
-          .filter(user => user.id !== currentUser.id);
-        setHotUsers(hotUsersData);
-
-      } catch (error) {
-        console.error("Error fetching hot/new users:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUsers();
+    setIsLoadingNew(true);
+    try {
+      const newUsersQuery = query(
+        collection(firestore, 'users'),
+        where('createdAt', '!=', null),
+        orderBy('createdAt', 'desc'),
+        limit(12)
+      );
+      const newUsersSnapshot = await getDocs(newUsersQuery);
+      const newUsersData = newUsersSnapshot.docs
+        .map(doc => doc.data() as User)
+        .filter(user => user.id !== currentUser.id);
+      setNewUsers(newUsersData);
+    } catch (error) {
+      console.error("Error fetching new users:", error);
+    } finally {
+      setIsLoadingNew(false);
+    }
   }, [currentUser, firestore]);
+  
+  const fetchHotUsers = useCallback(async () => {
+    if (!currentUser || !firestore) return;
+    setIsLoadingHot(true);
+    try {
+      const hotUsersQuery = query(
+        collection(firestore, 'users'),
+        orderBy('likeCount', 'desc'),
+        limit(12)
+      );
+      const hotUsersSnapshot = await getDocs(hotUsersQuery);
+      const hotUsersData = hotUsersSnapshot.docs
+        .map(doc => doc.data() as User)
+        .filter(user => user.id !== currentUser.id);
+      setHotUsers(hotUsersData);
+    } catch (error) {
+      console.error("Error fetching hot users:", error);
+    } finally {
+      setIsLoadingHot(false);
+    }
+  }, [currentUser, firestore]);
+
+  useEffect(() => {
+    if (currentUser && firestore) {
+      fetchNewUsers();
+    }
+  }, [currentUser, firestore, fetchNewUsers]);
+  
+  const onTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === 'hot' && hotUsers.length === 0) {
+      fetchHotUsers();
+    }
+  }
 
   if (!isUserLoaded) {
     return (
@@ -107,7 +121,7 @@ export default function HotPage() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
-        <Tabs defaultValue="new" className="w-full">
+        <Tabs defaultValue="new" className="w-full" onValueChange={onTabChange}>
           <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 rounded-none h-14">
             <TabsTrigger 
               value="new" 
@@ -122,28 +136,34 @@ export default function HotPage() {
               HOT 회원
             </TabsTrigger>
           </TabsList>
-          {isLoading ? (
-            <div className="flex items-center justify-center pt-20">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : (
-            <>
-              <TabsContent value="new" className="mt-0 p-4">
-                <div className="grid grid-cols-2 gap-4">
-                    {newUsers.map((user) => (
-                        <UserCard key={`new-${user.id}`} user={user} />
-                    ))}
-                </div>
-              </TabsContent>
-              <TabsContent value="hot" className="mt-0 p-4">
-                <div className="grid grid-cols-2 gap-4">
-                    {hotUsers.map((user) => (
-                        <UserCard key={`hot-${user.id}`} user={user} />
-                    ))}
-                </div>
-              </TabsContent>
-            </>
-          )}
+          
+          <TabsContent value="new" className="mt-0 p-4">
+            {isLoadingNew ? (
+              <div className="flex items-center justify-center pt-20">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                  {newUsers.map((user) => (
+                      <UserCard key={`new-${user.id}`} user={user} />
+                  ))}
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="hot" className="mt-0 p-4">
+            {isLoadingHot ? (
+              <div className="flex items-center justify-center pt-20">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                  {hotUsers.map((user) => (
+                      <UserCard key={`hot-${user.id}`} user={user} />
+                  ))}
+              </div>
+            )}
+          </TabsContent>
+
         </Tabs>
       </main>
     </div>
