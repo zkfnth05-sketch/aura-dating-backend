@@ -19,7 +19,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Switch } from './ui/switch';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
-import { compressImage } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
@@ -87,21 +86,26 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
     const newUserRef = doc(usersCol);
     
     let photoUrl: string;
+
     if (photoPreview) {
-       try {
-        const compressedUri = await compressImage(photoPreview);
-        if (aiEnhancement) {
-            const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: values.gender });
-            photoUrl = await compressImage(result.enhancedPhotoDataUri);
-        } else {
-            photoUrl = compressedUri;
+      if (aiEnhancement) {
+        try {
+          const result = await getEnhancedPhoto({ photoDataUri: photoPreview, gender: values.gender });
+          photoUrl = result.enhancedPhotoDataUri;
+        } catch (error) {
+          console.error("AI enhancement failed:", error);
+          toast({
+            variant: "destructive",
+            title: "AI 보정 실패",
+            description: "사진 보정에 실패했습니다. 원본 사진이 사용됩니다.",
+          });
+          photoUrl = photoPreview; // Fallback to original uploaded image
         }
-      } catch (error) {
-        console.error("Photo processing failed:", error);
-        toast({ variant: "destructive", title: "사진 처리 오류", description: "사진을 처리하는 데 실패했습니다." });
-        photoUrl = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)].imageUrl;
+      } else {
+        photoUrl = photoPreview; // Use original uploaded image
       }
     } else {
+      // Assign a random placeholder if no photo is uploaded
       const randomImage = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
       photoUrl = randomImage.imageUrl;
     }
@@ -175,12 +179,14 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
                     ) : (
                       <Plus className="w-8 h-8 text-zinc-500" />
                     )}
+                     {isSubmitting && <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg"><Loader2 className="w-6 h-6 animate-spin"/></div>}
                     <input
                       type="file"
                       ref={fileInputRef}
                       onChange={handleFileChange}
                       className="hidden"
                       accept="image/*"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </FormControl>

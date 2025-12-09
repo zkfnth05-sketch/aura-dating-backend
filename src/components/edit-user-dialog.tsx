@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus } from 'lucide-react';
-import { compressImage } from '@/lib/utils';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
 import Image from 'next/image';
 import { Switch } from './ui/switch';
@@ -42,6 +41,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(user.photoUrls?.[0] || null);
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,23 +76,22 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
       const reader = new FileReader();
       reader.onload = async (e) => {
         const dataUri = e.target?.result as string;
-        setIsSubmitting(true);
-        try {
-          const compressedUri = await compressImage(dataUri);
-          if (aiEnhancement) {
-            setPhotoUrl(compressedUri); // Show compressed while enhancing
-            const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: form.getValues('gender') });
-            const finalUri = await compressImage(result.enhancedPhotoDataUri);
-            setPhotoUrl(finalUri);
-          } else {
-            setPhotoUrl(compressedUri);
+        if (!dataUri) return;
+
+        setPhotoUrl(dataUri); // Show original preview immediately
+        
+        if (aiEnhancement) {
+          setIsEnhancing(true);
+          try {
+            const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: form.getValues('gender') });
+            setPhotoUrl(result.enhancedPhotoDataUri);
+          } catch (error) {
+             console.error("Photo enhancement failed:", error);
+             toast({ variant: "destructive", title: "AI 보정 실패", description: "원본 이미지가 사용됩니다." });
+             setPhotoUrl(dataUri); // Fallback to original
+          } finally {
+              setIsEnhancing(false);
           }
-        } catch (error) {
-           console.error("Photo processing failed:", error);
-           toast({ variant: "destructive", title: "사진 처리 오류" });
-           setPhotoUrl(dataUri); // Fallback to original
-        } finally {
-            setIsSubmitting(false);
         }
       };
       reader.readAsDataURL(file);
@@ -101,6 +100,10 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!firestore || !user) return;
+    if(isEnhancing) {
+        toast({ variant: "destructive", title: "AI 보정 중", description: "사진 보정이 완료될 때까지 기다려주세요." });
+        return;
+    }
     setIsSubmitting(true);
 
     const userRef = doc(firestore, 'users', user.id);
@@ -142,6 +145,8 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
   
   if (!user) return null;
 
+  const isProcessing = isSubmitting || isEnhancing;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -166,14 +171,14 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
                     ) : (
                       <Plus className="w-8 h-8 text-zinc-500" />
                     )}
-                    {isSubmitting && <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg"><Loader2 className="w-6 h-6 animate-spin"/></div>}
+                    {isEnhancing && <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg"><Loader2 className="w-6 h-6 animate-spin"/></div>}
                     <input
                       type="file"
                       ref={fileInputRef}
                       onChange={handleFileChange}
                       className="hidden"
                       accept="image/*"
-                      disabled={isSubmitting}
+                      disabled={isProcessing}
                     />
                   </div>
                 </FormControl>
@@ -273,8 +278,8 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
             />
              <DialogFooter>
               <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={isProcessing}>
+                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 저장
               </Button>
             </DialogFooter>
