@@ -40,6 +40,7 @@ export default function MatchesPage() {
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
   const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
   const [isLoadingILiked, setIsLoadingILiked] = useState(true);
+  const [isLoadingWhoLikedMe, setIsLoadingWhoLikedMe] = useState(true);
 
   // --- 1. Get matches for the "Chats" tab (real-time) ---
   const matchesQuery = useMemoFirebase(() => {
@@ -49,7 +50,6 @@ export default function MatchesPage() {
   const { data: matches, isLoading: areMatchesLoading } = useCollection<Match>(matchesQuery);
 
   // --- 2. Get users who liked me (real-time) ---
-  // This now relies on a backend function to populate the 'likedBy' collection for security.
   const likedMeQuery = useMemoFirebase(() => {
     if (!currentUser || !firestore) return null;
     return query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
@@ -57,20 +57,25 @@ export default function MatchesPage() {
   const { data: likedByList, isLoading: areLikedByLoading } = useCollection<LikedBy>(likedMeQuery);
 
   useEffect(() => {
-      if (!likedByList || !firestore) return;
+      if (!firestore) return;
+      if (areLikedByLoading) return;
+
       const fetchLikerProfiles = async () => {
-          const likerIds = likedByList.map(like => like.likerId);
+          setIsLoadingWhoLikedMe(true);
+          const likerIds = likedByList?.map(like => like.likerId) || [];
           if (likerIds.length === 0) {
             setPeopleWhoLikedMe([]);
+            setIsLoadingWhoLikedMe(false);
             return;
           }
           const users = await fetchUsersByIds(firestore, likerIds);
           // Preserve order from likedByList
           const orderedUsers = likerIds.map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
           setPeopleWhoLikedMe(orderedUsers);
+          setIsLoadingWhoLikedMe(false);
       };
       fetchLikerProfiles();
-  }, [likedByList, firestore]);
+  }, [likedByList, firestore, areLikedByLoading]);
 
   // --- 3. Get users I liked (one-time fetch from my own 'likes' collection) ---
   useEffect(() => {
@@ -82,11 +87,9 @@ export default function MatchesPage() {
         const iLikedQuery = query(
             collection(firestore, 'users', currentUser.id, 'likes'),
             where('isLike', '==', true) // Only fetch actual likes
-            // orderBy('timestamp', 'desc') // This requires a composite index
         );
         const iLikedSnapshot = await getDocs(iLikedQuery);
         
-        // Sort snapshot by timestamp descending manually
         const sortedDocs = iLikedSnapshot.docs.sort((a, b) => {
             const timeA = a.data().timestamp?.seconds || 0;
             const timeB = b.data().timestamp?.seconds || 0;
@@ -99,7 +102,6 @@ export default function MatchesPage() {
           setPeopleILiked([]);
         } else {
           const iLikedUsers = await fetchUsersByIds(firestore, likedUserIds);
-          // Preserve order from the query result
            const orderedUsers = likedUserIds.map(id => iLikedUsers.find(u => u.id === id)).filter(Boolean) as User[];
           setPeopleILiked(orderedUsers);
         }
@@ -116,8 +118,19 @@ export default function MatchesPage() {
 
   }, [currentUser, firestore]);
   
-  const isLoading = !isUserLoaded || areMatchesLoading || areLikedByLoading || isLoadingILiked;
+  const isLoading = !isUserLoaded || areMatchesLoading || isLoadingWhoLikedMe || isLoadingILiked;
   
+  if (isLoading) {
+    return (
+        <div className="flex flex-col min-h-screen">
+          <Header />
+          <main className="flex-1 flex justify-center items-center pt-20">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </main>
+        </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -143,24 +156,17 @@ export default function MatchesPage() {
               내가 좋아요 한 사람
             </TabsTrigger>
           </TabsList>
-
-          {isLoading ? (
-            <div className="flex justify-center items-center pt-20">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : (
-            <>
-              <TabsContent value="chats" className="mt-0 p-4">
-                <MatchList matches={matches || []} />
-              </TabsContent>
-              <TabsContent value="liked-me" className="mt-0 p-4">
-                <UserGrid users={peopleWhoLikedMe} />
-              </TabsContent>
-              <TabsContent value="i-liked" className="mt-0 p-4">
-                <UserGrid users={peopleILiked} />
-              </TabsContent>
-            </>
-          )}
+          
+          <TabsContent value="chats" className="mt-0 p-4">
+            <MatchList matches={matches || []} />
+          </TabsContent>
+          <TabsContent value="liked-me" className="mt-0 p-4">
+            <UserGrid users={peopleWhoLikedMe} />
+          </TabsContent>
+          <TabsContent value="i-liked" className="mt-0 p-4">
+            <UserGrid users={peopleILiked} />
+          </TabsContent>
+            
         </Tabs>
       </main>
     </div>
