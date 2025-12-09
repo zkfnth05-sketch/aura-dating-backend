@@ -37,6 +37,7 @@ export default function AdminPage() {
     return (
       user.name.toLowerCase().includes(term) ||
       user.id.toLowerCase().includes(term) ||
+      (user.email && user.email.toLowerCase().includes(term)) ||
       (user.phoneNumber && user.phoneNumber.includes(term))
     );
   });
@@ -54,7 +55,7 @@ export default function AdminPage() {
         <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-                placeholder="이름, ID 또는 전화번호로 검색" 
+                placeholder="이름, ID, 이메일 또는 전화번호로 검색" 
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -73,6 +74,7 @@ export default function AdminPage() {
                   <TableRow>
                     <TableHead className="w-[100px]">ID</TableHead>
                     <TableHead>이름</TableHead>
+                    <TableHead>이메일</TableHead>
                     <TableHead>나이</TableHead>
                     <TableHead>성별</TableHead>
                     <TableHead>도시</TableHead>
@@ -86,6 +88,7 @@ export default function AdminPage() {
                     <TableRow key={user.id}>
                       <TableCell className="font-medium text-muted-foreground w-24 truncate">{user.id.substring(0, 8)}...</TableCell>
                       <TableCell>{user.name}</TableCell>
+                      <TableCell>{user.email || '미입력'}</TableCell>
                       <TableCell>{user.age}</TableCell>
                       <TableCell>
                         <Badge variant={user.gender === '여성' ? 'default' : 'secondary'}>

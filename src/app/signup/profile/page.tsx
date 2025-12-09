@@ -66,6 +66,7 @@ export default function CreateProfilePage() {
     // Only add creation-specific fields if the user profile doesn't exist yet
     if (!user) {
       userData.id = authUser.uid;
+      userData.email = authUser.email || '';
       userData.hobbies = ['독서', '영화 감상'];
       userData.interests = ['맛집 탐방', '여행'];
       userData.bio = '새로운 만남을 기다립니다!';
