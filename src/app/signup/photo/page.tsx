@@ -37,13 +37,12 @@ export default function UploadPhotoPage() {
   }, [isLoaded, authUser, router]);
 
   const processAndAddImage = async (dataUri: string) => {
-    const compressedUri = await compressImage(dataUri);
-
     if (aiEnhancement) {
-      setPhoto({ uri: compressedUri, isEnhancing: true });
+      setPhoto({ uri: dataUri, isEnhancing: true });
       try {
-        const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: user?.gender || '기타' });
-        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri, 0.8, 800, 800);
+        const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: user?.gender || '기타' });
+        // Compress the final enhanced image before setting it
+        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri, 0.8, 1024, 1024);
         setPhoto({ uri: finalCompressedUri, isEnhancing: false });
       } catch (error) {
         console.error("AI enhancement failed:", error);
@@ -52,10 +51,14 @@ export default function UploadPhotoPage() {
           title: "AI 보정 실패",
           description: "사진 보정에 실패했습니다. 원본 사진으로 등록됩니다.",
         });
-        setPhoto({ uri: compressedUri, isEnhancing: false });
+        // Compress the original image as a fallback
+        const compressedFallback = await compressImage(dataUri);
+        setPhoto({ uri: compressedFallback, isEnhancing: false });
       }
     } else {
-      setPhoto({ uri: compressedUri, isEnhancing: false });
+        // Compress the original image if AI enhancement is off
+        const compressedUri = await compressImage(dataUri);
+        setPhoto({ uri: compressedUri, isEnhancing: false });
     }
   };
 

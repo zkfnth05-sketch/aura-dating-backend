@@ -20,6 +20,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { Switch } from './ui/switch';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
 import { Label } from '@/components/ui/label';
+import { compressImage } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(1, '이름을 입력해주세요.'),
@@ -85,74 +86,63 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
     const usersCol = collection(firestore, 'users');
     const newUserRef = doc(usersCol);
     
-    let photoUrl: string;
+    let photoUrlToSave: string;
 
-    if (photoPreview) {
-      if (aiEnhancement) {
-        try {
-          const result = await getEnhancedPhoto({ photoDataUri: photoPreview, gender: values.gender });
-          photoUrl = result.enhancedPhotoDataUri;
-        } catch (error) {
-          console.error("AI enhancement failed:", error);
-          toast({
-            variant: "destructive",
-            title: "AI 보정 실패",
-            description: "사진 보정에 실패했습니다. 원본 사진이 사용됩니다.",
-          });
-          photoUrl = photoPreview; // Fallback to original uploaded image
+    try {
+      if (photoPreview) {
+        if (aiEnhancement) {
+            const result = await getEnhancedPhoto({ photoDataUri: photoPreview, gender: values.gender });
+            photoUrlToSave = await compressImage(result.enhancedPhotoDataUri);
+        } else {
+            photoUrlToSave = await compressImage(photoPreview); // Compress original if enhancement is off
         }
       } else {
-        photoUrl = photoPreview; // Use original uploaded image
+        const randomImage = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
+        photoUrlToSave = randomImage.imageUrl;
       }
-    } else {
-      // Assign a random placeholder if no photo is uploaded
-      const randomImage = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
-      photoUrl = randomImage.imageUrl;
-    }
 
-    const newUserPayload = {
-      id: newUserRef.id,
-      ...values,
-      createdAt: serverTimestamp(),
-      likeCount: 0,
-      photoUrls: [photoUrl],
-      bio: '새로운 만남을 기다립니다! 관리자에 의해 추가된 사용자입니다.',
-      hobbies: ['독서', '영화 감상'],
-      interests: ['맛집 탐방', '여행'],
-      lat: 37.5665 + (Math.random() - 0.5) * 0.1, // Seoul with some randomness
-      lng: 126.9780 + (Math.random() - 0.5) * 0.1,
-      phoneNumber: '',
-    };
+      const newUserPayload = {
+        id: newUserRef.id,
+        ...values,
+        createdAt: serverTimestamp(),
+        likeCount: 0,
+        photoUrls: [photoUrlToSave],
+        bio: '새로운 만남을 기다립니다! 관리자에 의해 추가된 사용자입니다.',
+        hobbies: ['독서', '영화 감상'],
+        interests: ['맛집 탐방', '여행'],
+        lat: 37.5665 + (Math.random() - 0.5) * 0.1, // Seoul with some randomness
+        lng: 126.9780 + (Math.random() - 0.5) * 0.1,
+        phoneNumber: '',
+      };
+  
+      await setDoc(newUserRef, newUserPayload);
 
-    setDoc(newUserRef, newUserPayload)
-      .then(() => {
-        toast({
-          title: "사용자 추가 성공",
-          description: `${values.name} 님이 시스템에 추가되었습니다.`,
-        });
-        onUserAdded();
-        handleClose();
-      })
-      .catch((error) => {
-        if (error.code === 'permission-denied') {
-          const contextualError = new FirestorePermissionError({
-            operation: 'create',
-            path: newUserRef.path,
-            requestResourceData: newUserPayload,
-          });
-          errorEmitter.emit('permission-error', contextualError);
-        } else {
-          console.error("Error adding user:", error);
-          toast({
-            variant: "destructive",
-            title: "오류",
-            description: "사용자를 추가하는 데 실패했습니다.",
-          });
-        }
-      })
-      .finally(() => {
-        setIsSubmitting(false);
+      toast({
+        title: "사용자 추가 성공",
+        description: `${values.name} 님이 시스템에 추가되었습니다.`,
       });
+      onUserAdded();
+      handleClose();
+
+    } catch (error: any) {
+        if (error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+              operation: 'create',
+              path: newUserRef.path,
+              requestResourceData: { /* Payload might be large, omitting for brevity in error */ ...values, id: newUserRef.id },
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          } else {
+            console.error("Error adding user:", error);
+            toast({
+              variant: "destructive",
+              title: "오류",
+              description: error.message || "사용자를 추가하는 데 실패했습니다.",
+            });
+          }
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (

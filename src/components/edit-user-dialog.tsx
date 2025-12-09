@@ -20,6 +20,7 @@ import { Label } from './ui/label';
 import type { User } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { compressImage } from '@/lib/utils';
 
 
 const formSchema = z.object({
@@ -84,14 +85,19 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
           setIsEnhancing(true);
           try {
             const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: form.getValues('gender') });
-            setPhotoUrl(result.enhancedPhotoDataUri);
+            const compressedResult = await compressImage(result.enhancedPhotoDataUri);
+            setPhotoUrl(compressedResult);
           } catch (error) {
              console.error("Photo enhancement failed:", error);
              toast({ variant: "destructive", title: "AI 보정 실패", description: "원본 이미지가 사용됩니다." });
-             setPhotoUrl(dataUri); // Fallback to original
+             const compressedFallback = await compressImage(dataUri);
+             setPhotoUrl(compressedFallback);
           } finally {
               setIsEnhancing(false);
           }
+        } else {
+            const compressedResult = await compressImage(dataUri);
+            setPhotoUrl(compressedResult);
         }
       };
       reader.readAsDataURL(file);
