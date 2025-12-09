@@ -20,14 +20,15 @@ export default function HomePage() {
       } else if (authUser && !user) {
         // If authenticated but no profile data exists (signup incomplete),
         // redirect to the profile creation page.
-        // This check is now more specific to prevent premature redirects.
+        // This is the key condition to only redirect if the user object is confirmed to be null after loading.
         router.replace('/signup/profile');
       }
       // If authUser and user both exist, do nothing and let HomePageClient render.
     }
   }, [authUser, isLoaded, user, router]);
 
-  // Show a splash screen while loading authentication state or if user data is not yet available.
+  // Show a splash screen while loading authentication state OR if the authenticated user's profile is still loading.
+  // This prevents the main interface from flashing before a potential redirect.
   if (!isLoaded || !authUser || !user) {
     return <SplashScreen />;
   }
