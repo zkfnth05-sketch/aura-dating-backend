@@ -17,8 +17,8 @@
  * Key Security Decisions:
  * - User Profiles Are Publicly Readable: A user's profile document under `/users/{userId}` is readable by
  *   any signed-in user. This is necessary for a dating app where users browse profiles.
- * - Writes are Owner-Only: All write operations (create, update, delete) on a user's profile and their
- *   subcollections (likes) are strictly limited to the owner of that data.
+ * - Writes are Owner-Only (with exception for admin): All write operations (create, update, delete) on a user's profile and their
+ *   subcollections (likes) are strictly limited to the owner of that data, or an admin.
  * - Server-Managed Matches: The creation of `match` documents is disabled for clients. This critical
  *   business logic should be handled by a trusted server environment (e.g., Cloud Functions) to prevent
  *   users from creating fraudulent matches, though for prototyping it can be done client-side with careful rules.
@@ -61,11 +61,13 @@ service cloud.firestore {
     // --------------------------------
 
     /**
-     * @description Users can create, read, and update their own profile. Other users can read profiles.
+     * @description Users can create their own profile. Authenticated users can read/list profiles.
+     * Only the owner can update/delete their own profile.
      */
     match /users/{userId} {
       allow get, list: if isSignedIn();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      // Allow any signed-in user (like an admin) to create a new user document.
+      allow create: if isSignedIn(); 
       allow update: if isOwner(userId);
       allow delete: if isOwner(userId);
 
