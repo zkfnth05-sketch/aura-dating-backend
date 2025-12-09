@@ -30,17 +30,16 @@ const AdminSidebar = () => {
                         const isActive = pathname === item.href;
                         return (
                             <li key={item.href}>
-                                <Link href={item.href} legacyBehavior>
-                                    <a
-                                        className={cn(
-                                            'flex items-center px-4 py-3 my-1 rounded-lg text-sm font-medium transition-colors',
-                                            isActive
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'hover:bg-neutral-800'
-                                        )}
-                                    >
-                                        {item.label}
-                                    </a>
+                                <Link
+                                    href={item.href}
+                                    className={cn(
+                                        'flex items-center px-4 py-3 my-1 rounded-lg text-sm font-medium transition-colors',
+                                        isActive
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'hover:bg-neutral-800'
+                                    )}
+                                >
+                                    {item.label}
                                 </Link>
                             </li>
                         );
