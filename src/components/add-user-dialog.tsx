@@ -20,6 +20,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { Switch } from './ui/switch';
 import { getEnhancedPhoto } from '@/app/actions/ai-actions';
 import { compressImage } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   name: z.string().min(1, '이름을 입력해주세요.'),
