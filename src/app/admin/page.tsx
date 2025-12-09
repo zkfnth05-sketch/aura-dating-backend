@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, where } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import {
   Table,
@@ -26,8 +26,6 @@ export default function AdminPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Simple search will be client-side for now.
-    // For a large user base, server-side search (e.g., with Algolia) would be better.
     return query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
@@ -45,10 +43,10 @@ export default function AdminPage() {
 
   return (
     <AdminLayout>
-      <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">사용자 관리</h2>
-          <div className="flex items-center space-x-2">
+          <div className="hidden md:flex items-center space-x-2">
             <Button>사용자 추가</Button>
           </div>
         </div>
@@ -69,60 +67,62 @@ export default function AdminPage() {
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>이름</TableHead>
-                  <TableHead>나이</TableHead>
-                  <TableHead>성별</TableHead>
-                  <TableHead>도시</TableHead>
-                  <TableHead>전화번호</TableHead>
-                  <TableHead>사진</TableHead>
-                  <TableHead className="text-right">액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers && filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium text-muted-foreground w-24">{user.id.substring(0, 8)}...</TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.age}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.gender === '여성' ? 'default' : 'secondary'}>
-                        {user.gender}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{user.location}</TableCell>
-                    <TableCell>{user.phoneNumber || '미입력'}</TableCell>
-                    <TableCell>
-                        <div className="flex items-center gap-2">
-                            {user.photoUrls && user.photoUrls.length > 0 ? (
-                                <Image 
-                                    src={user.photoUrls[0]} 
-                                    alt={user.name}
-                                    width={24}
-                                    height={24}
-                                    className="rounded-sm object-cover h-6 w-6"
-                                />
-                            ) : (
-                                <Avatar className="h-6 w-6">
-                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            )}
-                            <span className="text-muted-foreground text-xs">
-                                ({user.photoUrls?.length || 0}개)
-                            </span>
-                        </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white">수정</Button>
-                      <Button variant="destructive" size="sm" className="ml-2 h-8">삭제</Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">ID</TableHead>
+                    <TableHead>이름</TableHead>
+                    <TableHead>나이</TableHead>
+                    <TableHead>성별</TableHead>
+                    <TableHead>도시</TableHead>
+                    <TableHead>전화번호</TableHead>
+                    <TableHead>사진</TableHead>
+                    <TableHead className="text-right">액션</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers && filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium text-muted-foreground w-24 truncate">{user.id.substring(0, 8)}...</TableCell>
+                      <TableCell>{user.name}</TableCell>
+                      <TableCell>{user.age}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.gender === '여성' ? 'default' : 'secondary'}>
+                          {user.gender}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{user.location}</TableCell>
+                      <TableCell>{user.phoneNumber || '미입력'}</TableCell>
+                      <TableCell>
+                          <div className="flex items-center gap-2">
+                              {user.photoUrls && user.photoUrls.length > 0 ? (
+                                  <Image 
+                                      src={user.photoUrls[0]} 
+                                      alt={user.name}
+                                      width={24}
+                                      height={24}
+                                      className="rounded-sm object-cover h-6 w-6"
+                                  />
+                              ) : (
+                                  <Avatar className="h-6 w-6">
+                                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                              )}
+                              <span className="text-muted-foreground text-xs">
+                                  ({user.photoUrls?.length || 0}개)
+                              </span>
+                          </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white">수정</Button>
+                        <Button variant="destructive" size="sm" className="ml-2 h-8">삭제</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </div>
       </div>

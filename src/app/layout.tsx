@@ -10,34 +10,26 @@ import { NewLikeToast } from '@/components/new-like-toast';
 import { usePathname } from 'next/navigation';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
-// No metadata export from a 'use client' component. 
-// If you need metadata, you'd move this to a server component parent.
-
-function AuthDependentComponents() {
-  const { authUser, user } = useUser();
-  const showBottomNav = !!(authUser && user?.photoUrls && user.photoUrls.length > 0);
-
-  return (
-    <>
-      {authUser && <IncomingCallToast />}
-      {authUser && <NewLikeToast />}
-      {showBottomNav && <BottomNav />}
-    </>
-  );
-}
-
 function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { authUser, user } = useUser();
+  
+  const isAdminPage = pathname.startsWith('/admin');
+  
   const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
   const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
+  const showBottomNav = !!(authUser && user?.photoUrls && user.photoUrls.length > 0);
+
+  if (isAdminPage) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
       <main className={`flex-1 ${needsPadding ? 'pb-24' : ''}`}>
           {children}
       </main>
-      <Toaster />
-      <AuthDependentComponents />
+      {showBottomNav && <BottomNav />}
     </div>
   );
 }
@@ -71,6 +63,9 @@ export default function RootLayout({
             <AppLayout>
               {children}
             </AppLayout>
+            <Toaster />
+            <IncomingCallToast />
+            <NewLikeToast />
           </UserProvider>
         </FirebaseClientProvider>
       </body>
