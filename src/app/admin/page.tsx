@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, where } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import {
   Table,
@@ -12,83 +13,119 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
-import Link from 'next/link';
+import { Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-function AdminHeader() {
-    return (
-        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-14 max-w-screen-sm items-center justify-between">
-                <div className="flex-1">
-                     <Button variant="link" asChild>
-                        <Link href="/" className="text-muted-foreground">앱으로 돌아가기</Link>
-                     </Button>
-                </div>
-                <h1 className="text-xl font-bold text-center flex-1">관리자 대시보드</h1>
-                <div className="flex-1"></div>
-            </div>
-        </header>
-    );
-}
-
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import AdminLayout from '@/components/admin-layout';
+import Image from 'next/image';
 
 export default function AdminPage() {
   const firestore = useFirestore();
-  
+  const [searchTerm, setSearchTerm] = useState('');
+
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // Simple search will be client-side for now.
+    // For a large user base, server-side search (e.g., with Algolia) would be better.
     return query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
   const { data: users, isLoading } = useCollection<User>(usersQuery);
 
-  if (isLoading) {
+  const filteredUsers = users?.filter(user => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      user.name.toLowerCase().includes(term) ||
+      user.id.toLowerCase().includes(term) ||
+      (user.phoneNumber && user.phoneNumber.includes(term))
     );
-  }
+  });
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <AdminHeader />
-      <main className="flex-1 container py-8">
-        <h2 className="text-2xl font-bold mb-6">전체 사용자 목록 ({users?.length || 0}명)</h2>
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>이름</TableHead>
-                <TableHead className="hidden md:table-cell">이메일</TableHead>
-                <TableHead>나이</TableHead>
-                <TableHead>성별</TableHead>
-                <TableHead>가입일</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users && users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{user.id.substring(0, 15)}...</TableCell>
-                  <TableCell>{user.age}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.gender === '여성' ? 'default' : 'secondary'}>
-                      {user.gender}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {user.createdAt
-                      ? user.createdAt.toDate().toLocaleDateString('ko-KR')
-                      : 'N/A'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+    <AdminLayout>
+      <div className="flex-1 space-y-4 p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">사용자 관리</h2>
+          <div className="flex items-center space-x-2">
+            <Button>사용자 추가</Button>
+          </div>
         </div>
-      </main>
-    </div>
+        
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+                placeholder="이름, ID 또는 전화번호로 검색" 
+                className="pl-9"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          {isLoading ? (
+            <div className="flex h-96 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID</TableHead>
+                  <TableHead>이름</TableHead>
+                  <TableHead>나이</TableHead>
+                  <TableHead>성별</TableHead>
+                  <TableHead>도시</TableHead>
+                  <TableHead>전화번호</TableHead>
+                  <TableHead>사진</TableHead>
+                  <TableHead className="text-right">액션</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers && filteredUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium text-muted-foreground w-24">{user.id.substring(0, 8)}...</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.age}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.gender === '여성' ? 'default' : 'secondary'}>
+                        {user.gender}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{user.location}</TableCell>
+                    <TableCell>{user.phoneNumber || '미입력'}</TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                            {user.photoUrls && user.photoUrls.length > 0 ? (
+                                <Image 
+                                    src={user.photoUrls[0]} 
+                                    alt={user.name}
+                                    width={24}
+                                    height={24}
+                                    className="rounded-sm object-cover h-6 w-6"
+                                />
+                            ) : (
+                                <Avatar className="h-6 w-6">
+                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                            )}
+                            <span className="text-muted-foreground text-xs">
+                                ({user.photoUrls?.length || 0}개)
+                            </span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" className="h-8 bg-blue-600 hover:bg-blue-700 text-white">수정</Button>
+                      <Button variant="destructive" size="sm" className="ml-2 h-8">삭제</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </div>
+    </AdminLayout>
   );
 }

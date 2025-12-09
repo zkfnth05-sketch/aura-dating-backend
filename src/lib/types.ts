@@ -19,6 +19,7 @@ export type User = {
   lastSeen?: 'Online' | string; // 'Online' or ISO 8601 date string
   likeCount: number;
   createdAt?: Timestamp;
+  phoneNumber?: string;
 };
 
 export type Match = {
