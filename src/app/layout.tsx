@@ -42,7 +42,7 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang="ko" className="dark">
+    <html lang="ko" className="dark" suppressHydrationWarning>
       <head>
         {/* We can still have a head tag in a client component */}
         <title>Aura - 새로운 만남의 시작</title>
