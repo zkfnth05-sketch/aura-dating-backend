@@ -61,6 +61,8 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
 
   const [isCallActive, setIsCallActive] = useState(false);
 
+  const [lastSeenText, setLastSeenText] = useState('');
+
   useEffect(() => {
     if (!currentUser?.id || !firestore) return;
   
@@ -115,9 +117,6 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     return match.participants.find(p => p.id !== currentUser.id)!;
   }, [match.participants, currentUser]);
 
-  const [lastSeenText, setLastSeenText] = useState(otherUser ? formatLastSeen(otherUser.lastSeen) : '');
-
-
   useEffect(() => {
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
@@ -128,11 +127,14 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
   }, [messages]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-        if(otherUser) {
-            setLastSeenText(formatLastSeen(otherUser.lastSeen));
-        }
-    }, 60000); // Update every minute
+    // This effect runs only on the client, preventing hydration mismatch.
+    const updateLastSeen = () => {
+      if(otherUser) {
+          setLastSeenText(formatLastSeen(otherUser.lastSeen));
+      }
+    }
+    updateLastSeen(); // Initial update
+    const interval = setInterval(updateLastSeen, 60000); // Update every minute
 
     return () => clearInterval(interval);
   }, [otherUser]);
@@ -361,7 +363,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
                 "text-xs",
                 lastSeenText === '온라인' ? 'text-primary' : 'text-muted-foreground'
             )}>
-                {lastSeenText}
+                {lastSeenText || <>&nbsp;</>}
             </p>
           </div>
         </div>
