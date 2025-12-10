@@ -42,7 +42,7 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang="ko" className="dark" suppressHydrationWarning>
+    <html lang="ko" className="dark">
       <head>
         {/* We can still have a head tag in a client component */}
         <title>Aura - 새로운 만남의 시작</title>
@@ -57,7 +57,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased" suppressHydrationWarning>
         <FirebaseClientProvider>
           <UserProvider>
             <AppLayout>
