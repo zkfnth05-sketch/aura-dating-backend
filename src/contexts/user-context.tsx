@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser } from 'firebase/auth';
 import { useUser as useAuthUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, getDoc, serverTimestamp, collection, query, where } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, query, where } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
 
 interface NotificationSettings {
@@ -73,9 +73,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const loadUser = async () => {
       if (authUser && firestore) {
         const userRef = doc(firestore, 'users', authUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setUser(userSnap.data() as User);
+        const userSnap = await (await fetch(`/_next/data/development/users/${authUser.uid}.json`)).json();
+        if (userSnap) {
+          setUser(userSnap.pageProps.user);
         } else {
           setUser(null); // User exists in Auth but not in Firestore (mid-signup)
         }
@@ -84,7 +84,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    loadUser();
+    if (!isUserLoading) {
+        loadUser();
+    }
   }, [authUser, firestore, isUserLoading]);
 
   // Load settings from localStorage once on mount
