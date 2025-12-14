@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, deleteDoc, getCountFromServer } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import {
   Table,
@@ -13,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Image as ImageIcon, ShieldCheck } from 'lucide-react';
+import { Loader2, Search, Image as ImageIcon, ShieldCheck, Users, User as UserIcon, Bot, HeartHandshake, MessagesSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -135,6 +135,17 @@ export default function AdminPage() {
     );
   });
 
+  const stats = useMemo(() => {
+    if (!users) return { total: 0, male: 0, female: 0 };
+    const maleCount = users.filter(u => u.gender === '남성').length;
+    const femaleCount = users.filter(u => u.gender === '여성').length;
+    return {
+        total: users.length,
+        male: maleCount,
+        female: femaleCount,
+    }
+  }, [users]);
+
   const handleImageClick = (images: string[], index: number) => {
     setSelectedImages(images);
     setSelectedImageIndex(index);
@@ -191,6 +202,36 @@ export default function AdminPage() {
               <Button onClick={() => setIsAddUserDialogOpen(true)}>사용자 추가</Button>
             </div>
           </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">총 사용자</CardTitle>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                      <div className="text-2xl font-bold">{stats.total}</div>
+                  </CardContent>
+              </Card>
+              <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">남성 사용자</CardTitle>
+                      <UserIcon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                      <div className="text-2xl font-bold">{stats.male}</div>
+                  </CardContent>
+              </Card>
+              <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">여성 사용자</CardTitle>
+                      <UserIcon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                      <div className="text-2xl font-bold">{stats.female}</div>
+                  </CardContent>
+              </Card>
+          </div>
           
           <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -212,6 +253,7 @@ export default function AdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">No.</TableHead>
                       <TableHead className="w-[100px]">ID</TableHead>
                       <TableHead>이름</TableHead>
                       <TableHead>이메일</TableHead>
@@ -224,8 +266,9 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers && filteredUsers.map((user) => (
+                    {filteredUsers && filteredUsers.map((user, index) => (
                       <TableRow key={user.id}>
+                        <TableCell>{index + 1}</TableCell>
                         <TableCell className="font-medium text-muted-foreground w-24 truncate">{user.id.substring(0, 8)}...</TableCell>
                         <TableCell>{user.name}</TableCell>
                         <TableCell>{user.email || '미입력'}</TableCell>
