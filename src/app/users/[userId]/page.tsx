@@ -112,27 +112,23 @@ export default function UserProfilePage() {
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!user || !currentUser || !firestore) return;
-  
+
     const targetUserId = user.id;
-  
+
     if (action === 'message') {
+      // Optimized query to find a specific match between two users
       const matchQuery = query(
         collection(firestore, 'matches'),
-        where('users', 'array-contains', currentUser.id)
+        where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
       );
+
       const matchSnapshot = await getDocs(matchQuery);
-  
-      let existingMatch: { id: string } | null = null;
-      matchSnapshot.forEach(doc => {
-        const match = doc.data();
-        if (match.users.includes(targetUserId)) {
-          existingMatch = { id: doc.id, ...match };
-        }
-      });
-  
-      if (existingMatch) {
-        router.push(`/chat/${existingMatch.id}`);
+      const existingMatchDoc = matchSnapshot.docs[0];
+
+      if (existingMatchDoc) {
+        router.push(`/chat/${existingMatchDoc.id}`);
       } else {
+        // Create a new match
         const newMatchRef = doc(collection(firestore, 'matches'));
         const matchData = {
           id: newMatchRef.id,
@@ -148,7 +144,7 @@ export default function UserProfilePage() {
           callStatus: 'idle',
           callerId: null,
         };
-  
+
         setDoc(newMatchRef, matchData)
           .then(() => {
             const messagesColRef = collection(newMatchRef, 'messages');
@@ -174,7 +170,7 @@ export default function UserProfilePage() {
       }
       return;
     }
-  
+
     // --- Like or Dislike action ---
     const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
     const likeData = {
