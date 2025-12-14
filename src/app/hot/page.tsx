@@ -7,9 +7,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, orderBy, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -50,55 +50,64 @@ export default function HotPage() {
   const [activeTab, setActiveTab] = useState('new');
   const firestore = useFirestore();
 
-  const fetchNewUsers = useCallback(async () => {
-    if (!currentUser || !firestore) return;
-    setIsLoadingNew(true);
-    try {
-      const newUsersQuery = query(
-        collection(firestore, 'users'),
-        where('createdAt', '!=', null),
-        orderBy('createdAt', 'desc'),
-        limit(12)
-      );
-      const newUsersSnapshot = await getDocs(newUsersQuery);
-      const newUsersData = newUsersSnapshot.docs
-        .map(doc => doc.data() as User)
-        .filter(user => user.id !== currentUser.id);
-      setNewUsers(newUsersData);
-    } catch (error) {
-      console.error("Error fetching new users:", error);
-    } finally {
-      setIsLoadingNew(false);
+  useEffect(() => {
+    const fetchNewUsers = async () => {
+        if (!currentUser || !firestore) return;
+        setIsLoadingNew(true);
+        try {
+          const newUsersQuery = query(
+            collection(firestore, 'users'),
+            orderBy('createdAt', 'desc'),
+            limit(20)
+          );
+          const newUsersSnapshot = await getDocs(newUsersQuery);
+          const newUsersData = newUsersSnapshot.docs
+            .map(doc => doc.data() as User)
+            .filter(user => {
+                if (user.id === currentUser.id) return false;
+                if (currentUser.gender === '남성') return user.gender === '여성';
+                if (currentUser.gender === '여성') return user.gender === '남성';
+                return true;
+            });
+          setNewUsers(newUsersData);
+        } catch (error) {
+          console.error("Error fetching new users:", error);
+        } finally {
+          setIsLoadingNew(false);
+        }
+    };
+    
+    if (isUserLoaded) {
+        fetchNewUsers();
     }
-  }, [currentUser, firestore]);
+  }, [currentUser, firestore, isUserLoaded]);
   
-  const fetchHotUsers = useCallback(async () => {
+  const fetchHotUsers = async () => {
     if (!currentUser || !firestore) return;
     setIsLoadingHot(true);
     try {
       const hotUsersQuery = query(
         collection(firestore, 'users'),
         orderBy('likeCount', 'desc'),
-        limit(12)
+        limit(20)
       );
       const hotUsersSnapshot = await getDocs(hotUsersQuery);
       const hotUsersData = hotUsersSnapshot.docs
         .map(doc => doc.data() as User)
-        .filter(user => user.id !== currentUser.id);
+        .filter(user => {
+            if (user.id === currentUser.id) return false;
+            if (currentUser.gender === '남성') return user.gender === '여성';
+            if (currentUser.gender === '여성') return user.gender === '남성';
+            return true;
+        });
       setHotUsers(hotUsersData);
     } catch (error) {
       console.error("Error fetching hot users:", error);
     } finally {
       setIsLoadingHot(false);
     }
-  }, [currentUser, firestore]);
+  };
 
-  useEffect(() => {
-    if (currentUser && firestore) {
-      fetchNewUsers();
-    }
-  }, [currentUser, firestore, fetchNewUsers]);
-  
   const onTabChange = (value: string) => {
     setActiveTab(value);
     if (value === 'hot' && hotUsers.length === 0) {

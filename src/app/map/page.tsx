@@ -4,18 +4,50 @@ import MapClient from '@/components/map-client';
 import Header from '@/components/layout/header';
 import { useUser } from '@/contexts/user-context';
 import { APIProvider } from '@vis.gl/react-google-maps';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, getDocs, limit } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function MapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const { user: currentUser, isLoaded } = useUser();
+  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const firestore = useFirestore();
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
-  const { data: users, isLoading } = useCollection<User>(usersQuery);
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!currentUser || !firestore) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const usersQuery = query(collection(firestore, 'users'), limit(100));
+        const usersSnapshot = await getDocs(usersQuery);
+        const allUsers = usersSnapshot.docs.map(doc => doc.data() as User);
+        
+        const filteredUsers = allUsers.filter(user => {
+            if (user.id === currentUser.id) return true; // Always include current user
+            if (currentUser.gender === '남성') return user.gender === '여성';
+            if (currentUser.gender === '여성') return user.gender === '남성';
+            return true;
+        });
+        setUsers(filteredUsers);
+      } catch (error) {
+        console.error("Error fetching users for map:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (isUserLoaded) {
+        fetchUsers();
+    }
+  }, [currentUser, firestore, isUserLoaded]);
+
 
   if (!apiKey) {
     return (
@@ -39,7 +71,7 @@ export default function MapPage() {
     );
   }
 
-  if (isLoading || !isLoaded || !currentUser || !users) {
+  if (isLoading || !isUserLoaded || !currentUser) {
       return (
         <div className="flex flex-col h-screen">
             <Header />

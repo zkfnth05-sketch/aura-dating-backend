@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
@@ -9,11 +9,10 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc, limit } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { useToast } from '@/hooks/use-toast';
 
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
@@ -49,58 +48,56 @@ const applyFilters = (users: User[], filters: FilterSettings, currentUser: User)
 
 export default function HomePageClient() {
   const { user: currentUser, filters, isLoaded } = useUser();
-  const { toast } = useToast();
   const router = useRouter();
   const firestore = useFirestore();
-  const [users, setUsers] = useState<User[]>([]);
+
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   
   useEffect(() => {
-    const fetchAndFilterUsers = async () => {
+    const fetchUsers = async () => {
         if (!isLoaded || !currentUser || !firestore) return;
 
         setIsLoadingUsers(true);
 
+        // 1. Get IDs of users I've already interacted with.
         const likesColRef = collection(firestore, 'users', currentUser.id, 'likes');
         const likesSnapshot = await getDocs(likesColRef);
         const seenUserIds = new Set(likesSnapshot.docs.map(doc => doc.id));
         seenUserIds.add(currentUser.id);
+
+        // 2. Fetch a batch of potential users (e.g., 50)
+        // In a real-world scenario, you'd implement more complex pagination logic.
+        const usersQuery = query(collection(firestore, 'users'), limit(50));
+        const allUsersSnapshot = await getDocs(usersQuery);
+
+        // 3. Filter out users I've already seen on the client.
+        const unseenUsers = allUsersSnapshot.docs
+            .map(doc => doc.data() as User)
+            .filter(user => !seenUserIds.has(user.id));
         
-        let unseenUserIds: string[] = [];
-        const allUsersSnapshot = await getDocs(collection(firestore, 'users'));
-        allUsersSnapshot.forEach(doc => {
-            if (!seenUserIds.has(doc.id)) {
-                unseenUserIds.push(doc.id);
-            }
-        });
-        
-        let filteredUsers: User[] = [];
-        if(unseenUserIds.length > 0) {
-            // Firestore 'in' query has a limit of 30 items
-            const CHUNK_SIZE = 30;
-            let unseenUsers: User[] = [];
-            for (let i = 0; i < unseenUserIds.length; i += CHUNK_SIZE) {
-                const chunk = unseenUserIds.slice(i, i + CHUNK_SIZE);
-                if (chunk.length > 0) {
-                    const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
-                    const userDocs = await getDocs(usersQuery);
-                    unseenUsers.push(...userDocs.docs.map(d => d.data() as User));
-                }
-            }
-            filteredUsers = applyFilters(unseenUsers, filters, currentUser);
-        }
-        
-        setUsers(filteredUsers);
-        setCurrentIndex(0);
+        setAllUsers(unseenUsers);
         setIsLoadingUsers(false);
     };
 
-    fetchAndFilterUsers();
-  }, [filters, isLoaded, currentUser, firestore]);
-  
-  const activeUser = users[currentIndex];
+    fetchUsers();
+  }, [isLoaded, currentUser, firestore]);
+
+  useEffect(() => {
+    if (!currentUser || allUsers.length === 0) {
+        setDisplayedUsers([]);
+        return;
+    }
+    const filtered = applyFilters(allUsers, filters, currentUser);
+    setDisplayedUsers(filtered);
+    setCurrentIndex(0);
+  }, [allUsers, filters, currentUser]);
+
+  const activeUser = displayedUsers[currentIndex];
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || !activeUser || !firestore) return;
@@ -177,11 +174,8 @@ export default function HomePageClient() {
       timestamp: serverTimestamp(),
     };
   
-    // Non-blocking write to own 'likes' subcollection.
-    // This is the only write operation to prevent permission errors.
     setDocumentNonBlocking(likeRef, likeData);
   
-    // Move to the next card immediately for a smooth UI experience
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
@@ -208,12 +202,12 @@ export default function HomePageClient() {
              <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
-          ) : users.length === 0 ? (
+          ) : displayedUsers.length === 0 ? (
              <div className="text-center">
               <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
               <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
             </div>
-          ) : currentIndex >= users.length ? (
+          ) : currentIndex >= displayedUsers.length ? (
             <div className="text-center">
               <h2 className="text-2xl font-bold text-primary">오늘은 여기까지예요!</h2>
               <p className="text-muted-foreground mt-2">새로운 상대를 보려면 나중에 다시 확인해주세요.</p>
