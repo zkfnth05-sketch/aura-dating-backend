@@ -37,12 +37,12 @@ export async function enhancePhoto(input: EnhancePhotoInput): Promise<EnhancePho
 const generateEnhancementPrompt = (gender: '남성' | '여성' | '기타') => {
     let specificInstruction = '';
     if (gender === '여성') {
-        specificInstruction = 'Make the woman in the photo very beautiful. ';
+        specificInstruction = 'Make the woman in the photo very sexy and beautiful. ';
     } else if (gender === '남성') {
-        specificInstruction = 'Make the man in the photo very handsome. ';
+        specificInstruction = 'Make the man in the photo very handsome and sophisticated. ';
     }
 
-    return `${specificInstruction}Enhance this user's profile picture for a high-end dating app. Improve the lighting and composition to make the person look more stylish, sexy, have a balanced body, confident, and attractive. Give the photo a polished, professional, and slightly more glamorous feel, while ensuring the person's core features remain recognizable. Make them look their absolute best. The output must be a photorealistic image.`;
+    return `${specificInstruction}Enhance this user's profile picture for a high-end dating app. Improve the lighting and composition to make the person look more stylish, confident, and attractive. Give the photo a polished, professional, and very glamorous and luxurious feel, while ensuring the person's core features remain recognizable. Make them look their absolute best. The output must be a photorealistic image.`;
 };
 
 
@@ -62,6 +62,24 @@ const enhancePhotoFlow = ai.defineFlow(
         ],
         config: {
             responseModalities: ['TEXT', 'IMAGE'],
+            safetySettings: [
+              {
+                category: 'HARM_CATEGORY_HATE_SPEECH',
+                threshold: 'BLOCK_ONLY_HIGH',
+              },
+              {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                threshold: 'BLOCK_NONE',
+              },
+              {
+                category: 'HARM_CATEGORY_HARASSMENT',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+              },
+              {
+                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                threshold: 'BLOCK_LOW_AND_ABOVE',
+              },
+            ],
         },
     });
 
