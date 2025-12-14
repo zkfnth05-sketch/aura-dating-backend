@@ -15,7 +15,7 @@ import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc } from 'firebase/firestore';
+import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp } from 'firebase/firestore';
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -41,6 +41,17 @@ const VideoIcon = (props: React.SVGProps<SVGSVGElement>) => (
         <path d="M21 6.5l-4 4V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3.5l4 4v-11z"/>
     </svg>
 );
+
+const formatMessageTime = (timestamp: Timestamp | any): string => {
+    if (!timestamp?.toDate) {
+      return '';
+    }
+    return timestamp.toDate().toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+};
 
 export default function ChatInterface({ match: initialMatch, messagesColRef }: { match: Match; messagesColRef: CollectionReference }) {
   const router = useRouter();
@@ -386,24 +397,29 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
               className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'justify-end' : 'justify-start')}
             >
               {message.senderId !== currentUser.id && (
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 self-start">
                   <AvatarImage src={otherUser.photoUrls?.[0]} />
                   <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
               )}
-              <div
-                className={cn('max-w-xs md:max-w-md px-4 py-2 rounded-2xl',
-                  message.senderId === currentUser.id
-                    ? 'bg-primary text-primary-foreground rounded-br-none'
-                    : 'bg-accent text-accent-foreground rounded-bl-none'
-                )}
-              >
-                {message.audioUrl ? (
-                    <audio controls src={message.audioUrl} className="h-10" />
-                ) : (
-                    <p className="text-sm">{message.text}</p>
-                )}
-              </div>
+               <div className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'flex-row-reverse' : 'flex-row')}>
+                    <div
+                        className={cn('max-w-xs md:max-w-md px-4 py-2 rounded-2xl',
+                        message.senderId === currentUser.id
+                            ? 'bg-primary text-primary-foreground rounded-br-none'
+                            : 'bg-accent text-accent-foreground rounded-bl-none'
+                        )}
+                    >
+                        {message.audioUrl ? (
+                            <audio controls src={message.audioUrl} className="h-10" />
+                        ) : (
+                            <p className="text-sm break-words">{message.text}</p>
+                        )}
+                    </div>
+                    <span className="text-xs text-muted-foreground pb-1">
+                        {formatMessageTime(message.timestamp)}
+                    </span>
+                </div>
             </div>
           ))}
         </div>
