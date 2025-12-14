@@ -30,7 +30,6 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
       rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
     `,
     transition: 'transform 0.5s ease-in-out',
-    opacity: 1, // Always opaque as only one is rendered
     zIndex: zIndex,
   };
 

@@ -145,7 +145,7 @@ export default function HomePageClient() {
   const activeUser = displayedUsers[currentIndex];
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
-    if (!currentUser || !activeUser || !firestore) return;
+    if (!currentUser || !activeUser || !firestore || swipeState) return;
   
     const targetUserId = activeUser.id;
   
