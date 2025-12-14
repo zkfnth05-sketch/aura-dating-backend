@@ -55,7 +55,7 @@ const enhancePhotoFlow = ai.defineFlow(
   async (input) => {
     const enhancementPrompt = generateEnhancementPrompt(input.gender);
     const { media } = await ai.generate({
-        model: googleAI.model('gemini-2.5-flash-image-preview'),
+        model: googleAI.model('gemini-pro-vision'),
         prompt: [
             { media: { url: input.photoDataUri } },
             { text: enhancementPrompt },
