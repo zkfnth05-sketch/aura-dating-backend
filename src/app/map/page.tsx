@@ -5,7 +5,7 @@ import Header from '@/components/layout/header';
 import { useUser } from '@/contexts/user-context';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -25,17 +25,29 @@ export default function MapPage() {
       }
       setIsLoading(true);
       try {
-        const usersQuery = query(collection(firestore, 'users'), limit(100));
-        const usersSnapshot = await getDocs(usersQuery);
-        const allUsers = usersSnapshot.docs.map(doc => doc.data() as User);
+        let usersQuery;
+        if (currentUser.gender === '남성') {
+            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), limit(100));
+        } else if (currentUser.gender === '여성') {
+            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(100));
+        } else {
+            // '기타' 성별이거나 성별 정보가 없을 경우, 모든 성별을 100명까지 가져옴
+            usersQuery = query(collection(firestore, 'users'), limit(100));
+        }
         
-        const filteredUsers = allUsers.filter(user => {
-            if (user.id === currentUser.id) return true; // Always include current user
-            if (currentUser.gender === '남성') return user.gender === '여성';
-            if (currentUser.gender === '여성') return user.gender === '남성';
-            return true;
+        const usersSnapshot = await getDocs(usersQuery);
+        const fetchedUsers = usersSnapshot.docs.map(doc => doc.data() as User);
+
+        // Ensure current user is always on the map
+        const finalUsers = [currentUser];
+        fetchedUsers.forEach(user => {
+            if (user.id !== currentUser.id) {
+                finalUsers.push(user);
+            }
         });
-        setUsers(filteredUsers);
+        
+        setUsers(finalUsers);
+
       } catch (error) {
         console.error("Error fetching users for map:", error);
       } finally {
