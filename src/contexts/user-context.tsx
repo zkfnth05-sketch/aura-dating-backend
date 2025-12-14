@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser } from 'firebase/auth';
 import { useUser as useAuthUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, collection, query, where } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, query, where, getDoc } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
 
 interface NotificationSettings {
@@ -70,24 +70,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Load user data from Firestore
   useEffect(() => {
-    const loadUser = async () => {
-      if (authUser && firestore) {
-        const userRef = doc(firestore, 'users', authUser.uid);
-        const userSnap = await (await fetch(`/_next/data/development/users/${authUser.uid}.json`)).json();
-        if (userSnap) {
-          setUser(userSnap.pageProps.user);
-        } else {
-          setUser(null); // User exists in Auth but not in Firestore (mid-signup)
+    const fetchUser = async () => {
+        if (authUser && firestore) {
+            const userRef = doc(firestore, 'users', authUser.uid);
+            try {
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    setUser(userSnap.data() as User);
+                } else {
+                    setUser(null); // User exists in Auth but not in Firestore (mid-signup)
+                }
+            } catch (error) {
+                console.error("Failed to fetch user document:", error);
+                setUser(null);
+            }
+        } else if (!isUserLoading) {
+            setUser(null); // No authenticated user or firestore not ready
         }
-      } else if (!isUserLoading) {
-        setUser(null); // No authenticated user
-      }
     };
-
-    if (!isUserLoading) {
-        loadUser();
-    }
-  }, [authUser, firestore, isUserLoading]);
+    
+    fetchUser();
+}, [authUser, firestore, isUserLoading]);
 
   // Load settings from localStorage once on mount
   useEffect(() => {
