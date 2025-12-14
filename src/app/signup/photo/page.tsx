@@ -49,11 +49,10 @@ export default function UploadPhotoPage() {
         toast({
           variant: "destructive",
           title: "AI 보정 실패",
-          description: "AI 보정에 실패하여 원본 사진을 사용합니다.",
+          description: "AI 보정에 실패했습니다. 다시 시도해 주세요",
         });
-        // Compress the original image as a fallback
-        const compressedFallback = await compressImage(dataUri);
-        setPhoto({ uri: compressedFallback, isEnhancing: false });
+        // Reset photo state to allow retry
+        setPhoto({ uri: null, isEnhancing: false });
       }
     } else {
         // Compress the original image if AI enhancement is off
