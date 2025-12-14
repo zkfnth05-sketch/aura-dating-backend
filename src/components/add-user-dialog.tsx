@@ -107,7 +107,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
         createdAt: serverTimestamp(),
         likeCount: 0,
         photoUrls: [photoUrlToSave],
-        bio: '새로운 만남을 기다립니다! 관리자에 의해 추가된 사용자입니다.',
+        bio: '새로운 만남을 기다립니다!',
         hobbies: ['독서', '영화 감상'],
         interests: ['맛집 탐방', '여행'],
         lat: 37.5665 + (Math.random() - 0.5) * 0.1, // Seoul with some randomness
