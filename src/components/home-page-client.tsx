@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc, limit, startAfter, DocumentSnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -54,7 +54,7 @@ export default function HomePageClient() {
   const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
 
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
@@ -63,7 +63,7 @@ export default function HomePageClient() {
   const [showLoadMorePrompt, setShowLoadMorePrompt] = useState(false);
   
 
-  const fetchUsers = useCallback(async (lastVisibleDoc: QueryDocumentSnapshot | null = null) => {
+  const fetchUsers = useCallback(async (lastVisibleDoc: QueryDocumentSnapshot<DocumentData> | null = null) => {
     if (!isLoaded || !currentUser || !firestore) return;
 
     if (lastVisibleDoc === null) {

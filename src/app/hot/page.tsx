@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { useState, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, orderBy, getDocs, limit, where } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -55,22 +55,20 @@ export default function HotPage() {
         if (!currentUser || !firestore) return;
         setIsLoadingNew(true);
         try {
-          let baseQuery = query(
-            collection(firestore, 'users'),
-            orderBy('createdAt', 'desc'),
-            limit(20)
-          );
-
+          let baseQuery;
           if (currentUser.gender === '남성') {
-            baseQuery = query(baseQuery, where('gender', '==', '여성'));
+            baseQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), limit(20));
           } else if (currentUser.gender === '여성') {
-            baseQuery = query(baseQuery, where('gender', '==', '남성'));
+            baseQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(20));
+          } else {
+            baseQuery = query(collection(firestore, 'users'), limit(20));
           }
 
           const newUsersSnapshot = await getDocs(baseQuery);
           const newUsersData = newUsersSnapshot.docs
             .map(doc => doc.data() as User)
-            .filter(user => user.id !== currentUser.id);
+            .filter(user => user.id !== currentUser.id)
+            .sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
 
           setNewUsers(newUsersData);
         } catch (error) {
@@ -89,23 +87,21 @@ export default function HotPage() {
     if (!currentUser || !firestore) return;
     setIsLoadingHot(true);
     try {
-      let baseQuery = query(
-        collection(firestore, 'users'),
-        orderBy('likeCount', 'desc'),
-        limit(20)
-      );
-
-      if (currentUser.gender === '남성') {
-        baseQuery = query(baseQuery, where('gender', '==', '여성'));
-      } else if (currentUser.gender === '여성') {
-        baseQuery = query(baseQuery, where('gender', '==', '남성'));
-      }
-
+        let baseQuery;
+        if (currentUser.gender === '남성') {
+            baseQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), limit(20));
+        } else if (currentUser.gender === '여성') {
+            baseQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(20));
+        } else {
+            baseQuery = query(collection(firestore, 'users'), limit(20));
+        }
+      
       const hotUsersSnapshot = await getDocs(baseQuery);
       const hotUsersData = hotUsersSnapshot.docs
         .map(doc => doc.data() as User)
-        .filter(user => user.id !== currentUser.id);
-        
+        .filter(user => user.id !== currentUser.id)
+        .sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
+
       setHotUsers(hotUsersData);
     } catch (error) {
       console.error("Error fetching hot users:", error);
