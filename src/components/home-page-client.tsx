@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
@@ -9,10 +9,11 @@ import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc, limit } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc, limit, startAfter, DocumentSnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { Button } from './ui/button';
 
 
 const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
@@ -46,6 +47,8 @@ const applyFilters = (users: User[], filters: FilterSettings, currentUser: User)
     });
 };
 
+const FETCH_LIMIT = 30;
+
 export default function HomePageClient() {
   const { user: currentUser, filters, isLoaded } = useUser();
   const router = useRouter();
@@ -54,38 +57,58 @@ export default function HomePageClient() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
 
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [showLoadMorePrompt, setShowLoadMorePrompt] = useState(false);
   
-  useEffect(() => {
-    const fetchUsers = async () => {
-        if (!isLoaded || !currentUser || !firestore) return;
 
-        setIsLoadingUsers(true);
+  const fetchUsers = useCallback(async (lastVisibleDoc: QueryDocumentSnapshot | null = null) => {
+    if (!isLoaded || !currentUser || !firestore) return;
 
-        // 1. Get IDs of users I've already interacted with.
+    if (lastVisibleDoc === null) {
+      setIsLoadingUsers(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+
+    // Initialize seenUserIds if it's the first fetch
+    if (lastVisibleDoc === null && seenUserIds.size === 0) {
         const likesColRef = collection(firestore, 'users', currentUser.id, 'likes');
         const likesSnapshot = await getDocs(likesColRef);
-        const seenUserIds = new Set(likesSnapshot.docs.map(doc => doc.id));
-        seenUserIds.add(currentUser.id);
+        const initialSeenIds = new Set(likesSnapshot.docs.map(doc => doc.id));
+        initialSeenIds.add(currentUser.id);
+        setSeenUserIds(initialSeenIds);
+    }
 
-        // 2. Fetch a batch of potential users (e.g., 50)
-        // In a real-world scenario, you'd implement more complex pagination logic.
-        const usersQuery = query(collection(firestore, 'users'), limit(50));
-        const allUsersSnapshot = await getDocs(usersQuery);
+    let usersQuery = query(collection(firestore, 'users'), limit(FETCH_LIMIT));
 
-        // 3. Filter out users I've already seen on the client.
-        const unseenUsers = allUsersSnapshot.docs
-            .map(doc => doc.data() as User)
-            .filter(user => !seenUserIds.has(user.id));
-        
-        setAllUsers(unseenUsers);
-        setIsLoadingUsers(false);
-    };
+    if (lastVisibleDoc) {
+      usersQuery = query(collection(firestore, 'users'), startAfter(lastVisibleDoc), limit(FETCH_LIMIT));
+    }
 
+    const allUsersSnapshot = await getDocs(usersQuery);
+    const newLastDoc = allUsersSnapshot.docs[allUsersSnapshot.docs.length - 1] || null;
+    setLastDoc(newLastDoc);
+
+    const freshUsers = allUsersSnapshot.docs
+      .map(doc => doc.data() as User)
+      .filter(user => !seenUserIds.has(user.id) && user.id !== currentUser.id);
+
+    setAllUsers(prevUsers => lastVisibleDoc ? [...prevUsers, ...freshUsers] : freshUsers);
+    setIsLoadingUsers(false);
+    setIsLoadingMore(false);
+    setShowLoadMorePrompt(false);
+  }, [isLoaded, currentUser, firestore, seenUserIds]);
+
+  useEffect(() => {
     fetchUsers();
-  }, [isLoaded, currentUser, firestore]);
+  }, [fetchUsers]);
+
 
   useEffect(() => {
     if (!currentUser || allUsers.length === 0) {
@@ -94,8 +117,14 @@ export default function HomePageClient() {
     }
     const filtered = applyFilters(allUsers, filters, currentUser);
     setDisplayedUsers(filtered);
-    setCurrentIndex(0);
+    // Do not reset currentIndex here, as allUsers could be appended to
   }, [allUsers, filters, currentUser]);
+
+  useEffect(() => {
+    if(!isLoadingUsers && !isLoadingMore && currentIndex >= displayedUsers.length && displayedUsers.length > 0) {
+        setShowLoadMorePrompt(true);
+    }
+  }, [currentIndex, displayedUsers, isLoadingUsers, isLoadingMore]);
 
   const activeUser = displayedUsers[currentIndex];
 
@@ -175,6 +204,7 @@ export default function HomePageClient() {
     };
   
     setDocumentNonBlocking(likeRef, likeData);
+    setSeenUserIds(prev => new Set(prev).add(targetUserId));
   
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
@@ -202,16 +232,24 @@ export default function HomePageClient() {
              <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
-          ) : displayedUsers.length === 0 ? (
+          ) : displayedUsers.length === 0 && !isLoadingMore ? (
              <div className="text-center">
               <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
               <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
             </div>
-          ) : currentIndex >= displayedUsers.length ? (
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-primary">오늘은 여기까지예요!</h2>
-              <p className="text-muted-foreground mt-2">새로운 상대를 보려면 나중에 다시 확인해주세요.</p>
+          ) : showLoadMorePrompt ? (
+            <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
+              <h2 className="text-2xl font-bold text-primary mb-4">새로운 회원을 불러올까요?</h2>
+              <p className="text-muted-foreground mb-6">계속해서 새로운 인연을 탐색해보세요.</p>
+              <div className="flex justify-center gap-4">
+                <Button variant="secondary" onClick={() => setShowLoadMorePrompt(false)} className="px-8 py-3 text-base">아니오</Button>
+                <Button onClick={() => fetchUsers(lastDoc)} className="px-8 py-3 text-base">
+                  {isLoadingMore ? <Loader2 className="h-5 w-5 animate-spin"/> : '예'}
+                </Button>
+              </div>
             </div>
+          ) : isLoadingMore ? (
+             <Loader2 className="h-12 w-12 animate-spin text-primary" />
           ) : (
             activeUser && (
               <ProfileCard
@@ -225,7 +263,7 @@ export default function HomePageClient() {
           )}
         </div>
         
-        {activeUser && (
+        {activeUser && !showLoadMorePrompt && (
           <div className="absolute bottom-24 z-20">
             <ActionButtons
               onDislike={() => handleAction('dislike')}
