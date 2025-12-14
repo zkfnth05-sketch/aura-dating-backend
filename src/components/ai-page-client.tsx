@@ -85,7 +85,7 @@ export default function AiPageClient({ recommendedUsers, currentUser }: AiPageCl
             </TabsTrigger>
           </TabsList>
           <TabsContent value="ideal-type" className="mt-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {recommendedUsers.map((user) => (
                 <RecommendedUserCard key={user.id} user={user} currentUser={currentUser} />
               ))}
