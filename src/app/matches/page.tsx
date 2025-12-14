@@ -34,7 +34,7 @@ async function fetchUsersByIds(firestore: Firestore, userIds: string[]): Promise
 
 
 export default function MatchesPage() {
-  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
+  const { user: currentUser } = useUser();
   const firestore = useFirestore();
   
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
@@ -49,33 +49,34 @@ export default function MatchesPage() {
   }, [firestore, currentUser]);
   const { data: matches, isLoading: areMatchesLoading } = useCollection<Match>(matchesQuery);
 
-  // --- 2. Get users who liked me (real-time) ---
-  const likedMeQuery = useMemoFirebase(() => {
-    if (!currentUser || !firestore) return null;
-    return query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
-  }, [firestore, currentUser]);
-  const { data: likedByList, isLoading: areLikedByLoading } = useCollection<LikedBy>(likedMeQuery);
-
+  // --- 2. Get users who liked me (one-time fetch) ---
   useEffect(() => {
-      if (!firestore) return;
-      if (areLikedByLoading) return;
+    if (!currentUser || !firestore) return;
+    
+    const fetchWhoLikedMe = async () => {
+        setIsLoadingWhoLikedMe(true);
+        try {
+            const likedMeQuery = query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
+            const likedBySnapshot = await getDocs(likedMeQuery);
+            const likerIds = likedBySnapshot.docs.map(doc => doc.data().likerId);
 
-      const fetchLikerProfiles = async () => {
-          setIsLoadingWhoLikedMe(true);
-          const likerIds = likedByList?.map(like => like.likerId) || [];
-          if (likerIds.length === 0) {
+            if (likerIds.length === 0) {
+                setPeopleWhoLikedMe([]);
+            } else {
+                const users = await fetchUsersByIds(firestore, likerIds);
+                const orderedUsers = likerIds.map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
+                setPeopleWhoLikedMe(orderedUsers);
+            }
+        } catch (error) {
+            console.error("Error fetching who liked me:", error);
             setPeopleWhoLikedMe([]);
+        } finally {
             setIsLoadingWhoLikedMe(false);
-            return;
-          }
-          const users = await fetchUsersByIds(firestore, likerIds);
-          // Preserve order from likedByList
-          const orderedUsers = likerIds.map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
-          setPeopleWhoLikedMe(orderedUsers);
-          setIsLoadingWhoLikedMe(false);
-      };
-      fetchLikerProfiles();
-  }, [likedByList, firestore, areLikedByLoading]);
+        }
+    };
+    
+    fetchWhoLikedMe();
+  }, [currentUser, firestore]);
 
   // --- 3. Get users I liked (one-time fetch from my own 'likes' collection) ---
   useEffect(() => {
@@ -118,7 +119,7 @@ export default function MatchesPage() {
 
   }, [currentUser, firestore]);
   
-  const isLoading = !isUserLoaded || areMatchesLoading || isLoadingWhoLikedMe || isLoadingILiked;
+  const isLoading = !currentUser || areMatchesLoading || isLoadingWhoLikedMe || isLoadingILiked;
   
   if (isLoading) {
     return (

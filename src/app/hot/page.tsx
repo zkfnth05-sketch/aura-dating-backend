@@ -42,7 +42,7 @@ const UserCard = ({ user }: { user: User }) => {
 };
 
 export default function HotPage() {
-  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
+  const { user: currentUser } = useUser();
   const [newUsers, setNewUsers] = useState<User[]>([]);
   const [hotUsers, setHotUsers] = useState<User[]>([]);
   const [isLoadingNew, setIsLoadingNew] = useState(true);
@@ -77,10 +77,10 @@ export default function HotPage() {
         }
     };
     
-    if (isUserLoaded) {
+    if (currentUser) {
         fetchNewUsers();
     }
-  }, [currentUser, firestore, isUserLoaded]);
+  }, [currentUser, firestore]);
   
   const fetchHotUsers = async () => {
     if (!currentUser || !firestore) return;
@@ -115,7 +115,7 @@ export default function HotPage() {
     }
   }
 
-  if (!isUserLoaded) {
+  if (!currentUser) {
     return (
         <div className="flex flex-col h-screen">
             <Header />

@@ -49,7 +49,7 @@ export default function AiPage() {
     }
   }, [currentUser, firestore, isUserLoaded]);
 
-  if (!isUserLoaded || isLoading || !currentUser) {
+  if (isUserLoaded || isLoading || !currentUser) {
     return (
         <div className="flex flex-col h-screen">
             <Header />
