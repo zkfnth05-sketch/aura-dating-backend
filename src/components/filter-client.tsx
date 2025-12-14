@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import type { FilterSettings } from '@/contexts/user-context';
@@ -47,11 +47,11 @@ export default function FilterClient() {
     // Initialize local state with a default and then update from context when loaded.
     const [localFilters, setLocalFilters] = useState<FilterSettings | null>(null);
 
-    useState(() => {
+    useEffect(() => {
         if (isLoaded) {
             setLocalFilters(filters);
         }
-    });
+    }, [isLoaded, filters]);
     
     if (!isLoaded || !user) {
         return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -122,7 +122,7 @@ export default function FilterClient() {
 
     return (
         <>
-            <main className="container pb-24 px-4">
+            <main className="container pb-4 px-4">
                 <Section title="나이">
                     <div className="flex items-center gap-4">
                         <Input 
@@ -181,14 +181,14 @@ export default function FilterClient() {
                     </Section>
                 ))}
 
-            </main>
-
-            <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-zinc-800 z-50">
-                <div className="flex w-full gap-2">
-                    <Button variant="secondary" onClick={handleReset} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">초기화</Button>
-                    <Button onClick={handleApply} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">적용하기</Button>
+                 <div className="py-4">
+                    <div className="flex w-full gap-2">
+                        <Button variant="secondary" onClick={handleReset} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">초기화</Button>
+                        <Button onClick={handleApply} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">적용하기</Button>
+                    </div>
                 </div>
-            </footer>
+
+            </main>
         </>
     );
 }
