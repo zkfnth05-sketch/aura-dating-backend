@@ -5,7 +5,7 @@ import AiPageClient from '@/components/ai-page-client';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit } from 'firebase/firestore';
+import { collection, query, getDocs, limit, where } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Header from '@/components/layout/header';
 
@@ -18,23 +18,29 @@ export default function AiPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       if (!currentUser || !firestore) {
+        if (!isUserLoaded) {
+            // still waiting for user to load
+            return;
+        }
         setIsLoading(false);
         return;
       }
       
       setIsLoading(true);
       try {
-        const usersQuery = query(collection(firestore, 'users'), limit(20));
+        let usersQuery;
+         if (currentUser.gender === '남성') {
+            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), limit(20));
+        } else if (currentUser.gender === '여성') {
+            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(20));
+        } else {
+            usersQuery = query(collection(firestore, 'users'), limit(20));
+        }
+
         const usersSnapshot = await getDocs(usersQuery);
         const allUsers = usersSnapshot.docs.map(doc => doc.data() as User);
         
-        const filteredUsers = allUsers.filter(user => {
-          if (user.id === currentUser.id) return false;
-          if (currentUser.gender === '남성') return user.gender === '여성';
-          if (currentUser.gender === '여성') return user.gender === '남성';
-          if (currentUser.gender === '기타') return true; 
-          return false;
-        });
+        const filteredUsers = allUsers.filter(user => user.id !== currentUser.id);
 
         setRecommendedUsers(filteredUsers.slice(0, 6));
       } catch (error) {
@@ -49,7 +55,7 @@ export default function AiPage() {
     }
   }, [currentUser, firestore, isUserLoaded]);
 
-  if (isUserLoaded || isLoading || !currentUser) {
+  if (isLoading || !currentUser) {
     return (
         <div className="flex flex-col h-screen">
             <Header />
