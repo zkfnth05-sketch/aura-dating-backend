@@ -42,14 +42,14 @@ export default function UploadPhotoPage() {
       try {
         const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: user?.gender || '기타' });
         // Compress the final enhanced image before setting it
-        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri, 0.8, 1024, 1024);
+        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
         setPhoto({ uri: finalCompressedUri, isEnhancing: false });
       } catch (error) {
-        console.error("AI enhancement failed:", error);
+        console.error("AI enhancement failed, using original image:", error);
         toast({
           variant: "destructive",
           title: "AI 보정 실패",
-          description: "사진 보정에 실패했습니다. 원본 사진으로 등록됩니다.",
+          description: "AI 보정에 실패하여 원본 사진을 사용합니다.",
         });
         // Compress the original image as a fallback
         const compressedFallback = await compressImage(dataUri);
