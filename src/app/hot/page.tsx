@@ -9,7 +9,7 @@ import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { useState, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, orderBy, getDocs, limit } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, limit, where } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -55,20 +55,23 @@ export default function HotPage() {
         if (!currentUser || !firestore) return;
         setIsLoadingNew(true);
         try {
-          const newUsersQuery = query(
+          let baseQuery = query(
             collection(firestore, 'users'),
             orderBy('createdAt', 'desc'),
             limit(20)
           );
-          const newUsersSnapshot = await getDocs(newUsersQuery);
+
+          if (currentUser.gender === '남성') {
+            baseQuery = query(baseQuery, where('gender', '==', '여성'));
+          } else if (currentUser.gender === '여성') {
+            baseQuery = query(baseQuery, where('gender', '==', '남성'));
+          }
+
+          const newUsersSnapshot = await getDocs(baseQuery);
           const newUsersData = newUsersSnapshot.docs
             .map(doc => doc.data() as User)
-            .filter(user => {
-                if (user.id === currentUser.id) return false;
-                if (currentUser.gender === '남성') return user.gender === '여성';
-                if (currentUser.gender === '여성') return user.gender === '남성';
-                return true;
-            });
+            .filter(user => user.id !== currentUser.id);
+
           setNewUsers(newUsersData);
         } catch (error) {
           console.error("Error fetching new users:", error);
@@ -86,20 +89,23 @@ export default function HotPage() {
     if (!currentUser || !firestore) return;
     setIsLoadingHot(true);
     try {
-      const hotUsersQuery = query(
+      let baseQuery = query(
         collection(firestore, 'users'),
         orderBy('likeCount', 'desc'),
         limit(20)
       );
-      const hotUsersSnapshot = await getDocs(hotUsersQuery);
+
+      if (currentUser.gender === '남성') {
+        baseQuery = query(baseQuery, where('gender', '==', '여성'));
+      } else if (currentUser.gender === '여성') {
+        baseQuery = query(baseQuery, where('gender', '==', '남성'));
+      }
+
+      const hotUsersSnapshot = await getDocs(baseQuery);
       const hotUsersData = hotUsersSnapshot.docs
         .map(doc => doc.data() as User)
-        .filter(user => {
-            if (user.id === currentUser.id) return false;
-            if (currentUser.gender === '남성') return user.gender === '여성';
-            if (currentUser.gender === '여성') return user.gender === '남성';
-            return true;
-        });
+        .filter(user => user.id !== currentUser.id);
+        
       setHotUsers(hotUsersData);
     } catch (error) {
       console.error("Error fetching hot users:", error);

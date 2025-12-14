@@ -31,20 +31,15 @@ export default function MapPage() {
         } else if (currentUser.gender === '여성') {
             usersQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(100));
         } else {
-            // '기타' 성별이거나 성별 정보가 없을 경우, 모든 성별을 100명까지 가져옴
-            usersQuery = query(collection(firestore, 'users'), limit(100));
+            // '기타' 성별이거나 성별 정보가 없을 경우, 모든 성별을 100명까지 가져옴 (본인 제외)
+            usersQuery = query(collection(firestore, 'users'), where('id', '!=', currentUser.id), limit(100));
         }
         
         const usersSnapshot = await getDocs(usersQuery);
         const fetchedUsers = usersSnapshot.docs.map(doc => doc.data() as User);
 
         // Ensure current user is always on the map
-        const finalUsers = [currentUser];
-        fetchedUsers.forEach(user => {
-            if (user.id !== currentUser.id) {
-                finalUsers.push(user);
-            }
-        });
+        const finalUsers = [currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)];
         
         setUsers(finalUsers);
 

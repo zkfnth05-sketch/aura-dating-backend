@@ -29,17 +29,19 @@ export default function AiPage() {
       setIsLoading(true);
       try {
         let usersQuery;
-         if (currentUser.gender === '남성') {
+        if (currentUser.gender === '남성') {
             usersQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), limit(20));
         } else if (currentUser.gender === '여성') {
             usersQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(20));
         } else {
-            usersQuery = query(collection(firestore, 'users'), limit(20));
+            // For '기타' or undefined gender, fetch any gender but not the current user
+            usersQuery = query(collection(firestore, 'users'), where('id', '!=', currentUser.id), limit(20));
         }
 
         const usersSnapshot = await getDocs(usersQuery);
         const allUsers = usersSnapshot.docs.map(doc => doc.data() as User);
         
+        // Final filter to ensure current user is not in the list, although query should handle most cases
         const filteredUsers = allUsers.filter(user => user.id !== currentUser.id);
 
         setRecommendedUsers(filteredUsers.slice(0, 6));
@@ -55,7 +57,7 @@ export default function AiPage() {
     }
   }, [currentUser, firestore, isUserLoaded]);
 
-  if (isLoading || !currentUser) {
+  if (isLoading || !isUserLoaded || !currentUser) {
     return (
         <div className="flex flex-col h-screen">
             <Header />

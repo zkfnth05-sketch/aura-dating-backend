@@ -21,18 +21,14 @@ const applyFilters = (users: User[], filters: FilterSettings, currentUser: User)
       // This function assumes users are already pre-filtered by seen status and self.
       if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
 
-      if (filters.gender.length > 0 && user.gender && !filters.gender.includes(user.gender)) return false;
-      
-      // Default filtering by opposite gender if no specific gender is selected
-      if (filters.gender.length === 0) {
-        if (currentUser.gender === '남성' && user.gender !== '여성') return false;
-        if (currentUser.gender === '여성' && user.gender !== '남성') return false;
+      // Gender filtering is now handled by the Firestore query, but we keep this as a fallback.
+      if (filters.gender.length > 0) {
+        if (user.gender && !filters.gender.includes(user.gender)) return false;
       }
       
       const checkTags = (userTags: string[] = [], filterTags: string[]) => {
         if (filterTags.length === 0) return true;
         if (!userTags || userTags.length === 0) return false;
-        // Check if user has ALL of the filter tags. Use .some() if you want to check for ANY.
         return filterTags.every(tag => userTags.includes(tag));
       };
 
@@ -85,11 +81,27 @@ export default function HomePageClient() {
         setSeenUserIds(initialSeenIds);
     }
 
-    let usersQuery = query(collection(firestore, 'users'), limit(FETCH_LIMIT));
-
-    if (lastVisibleDoc) {
-      usersQuery = query(collection(firestore, 'users'), startAfter(lastVisibleDoc), limit(FETCH_LIMIT));
+    let usersQuery: Query<DocumentData>;
+    const baseUsersRef = collection(firestore, 'users');
+    
+    // Base query with gender filter
+    if (filters.gender.length > 0) {
+      usersQuery = query(baseUsersRef, where('gender', 'in', filters.gender));
+    } else if (currentUser.gender === '남성') {
+      usersQuery = query(baseUsersRef, where('gender', '==', '여성'));
+    } else if (currentUser.gender === '여성') {
+      usersQuery = query(baseUsersRef, where('gender', '==', '남성'));
+    } else {
+      usersQuery = query(baseUsersRef);
     }
+    
+    // Add pagination and limit
+    if (lastVisibleDoc) {
+      usersQuery = query(usersQuery, startAfter(lastVisibleDoc), limit(FETCH_LIMIT));
+    } else {
+      usersQuery = query(usersQuery, limit(FETCH_LIMIT));
+    }
+
 
     const allUsersSnapshot = await getDocs(usersQuery);
     const newLastDoc = allUsersSnapshot.docs[allUsersSnapshot.docs.length - 1] || null;
@@ -103,7 +115,7 @@ export default function HomePageClient() {
     setIsLoadingUsers(false);
     setIsLoadingMore(false);
     setShowLoadMorePrompt(false);
-  }, [isLoaded, currentUser, firestore, seenUserIds]);
+  }, [isLoaded, currentUser, firestore, seenUserIds, filters.gender]);
 
   useEffect(() => {
     fetchUsers();
@@ -115,16 +127,20 @@ export default function HomePageClient() {
         setDisplayedUsers([]);
         return;
     }
+    // Gender filtering is now mostly done server-side, but client-side filtering handles advanced filter combinations.
     const filtered = applyFilters(allUsers, filters, currentUser);
     setDisplayedUsers(filtered);
     // Do not reset currentIndex here, as allUsers could be appended to
   }, [allUsers, filters, currentUser]);
 
   useEffect(() => {
-    if(!isLoadingUsers && !isLoadingMore && currentIndex >= displayedUsers.length && displayedUsers.length > 0) {
+    if(!isLoadingUsers && !isLoadingMore && currentIndex >= displayedUsers.length && lastDoc !== null) {
         setShowLoadMorePrompt(true);
+    } else if (!isLoadingUsers && !isLoadingMore && currentIndex >= displayedUsers.length && lastDoc === null && displayedUsers.length > 0){
+        // End of all profiles
+        setShowLoadMorePrompt(true); // Re-use the prompt to show a different message
     }
-  }, [currentIndex, displayedUsers, isLoadingUsers, isLoadingMore]);
+  }, [currentIndex, displayedUsers, isLoadingUsers, isLoadingMore, lastDoc]);
 
   const activeUser = displayedUsers[currentIndex];
 
@@ -232,21 +248,30 @@ export default function HomePageClient() {
              <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
-          ) : displayedUsers.length === 0 && !isLoadingMore ? (
-             <div className="text-center">
+          ) : displayedUsers.length === 0 && !isLoadingMore && !showLoadMorePrompt ? (
+             <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
               <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
               <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
             </div>
           ) : showLoadMorePrompt ? (
             <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
-              <h2 className="text-2xl font-bold text-primary mb-4">새로운 회원을 불러올까요?</h2>
-              <p className="text-muted-foreground mb-6">계속해서 새로운 인연을 탐색해보세요.</p>
-              <div className="flex justify-center gap-4">
-                <Button variant="secondary" onClick={() => setShowLoadMorePrompt(false)} className="px-8 py-3 text-base">아니오</Button>
-                <Button onClick={() => fetchUsers(lastDoc)} className="px-8 py-3 text-base">
-                  {isLoadingMore ? <Loader2 className="h-5 w-5 animate-spin"/> : '예'}
-                </Button>
-              </div>
+              {lastDoc ? (
+                <>
+                  <h2 className="text-2xl font-bold text-primary mb-4">새로운 회원을 불러올까요?</h2>
+                  <p className="text-muted-foreground mb-6">계속해서 새로운 인연을 탐색해보세요.</p>
+                  <div className="flex justify-center gap-4">
+                    <Button variant="secondary" onClick={() => setShowLoadMorePrompt(false)} className="px-8 py-3 text-base">아니오</Button>
+                    <Button onClick={() => fetchUsers(lastDoc)} className="px-8 py-3 text-base">
+                      {isLoadingMore ? <Loader2 className="h-5 w-5 animate-spin"/> : '예'}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                 <>
+                  <h2 className="text-2xl font-bold text-primary mb-4">오늘은 여기까지예요!</h2>
+                  <p className="text-muted-foreground mb-6">모든 추천 프로필을 확인했어요. 내일 새로운 분들을 소개해 드릴게요.</p>
+                 </>
+              )}
             </div>
           ) : isLoadingMore ? (
              <Loader2 className="h-12 w-12 animate-spin text-primary" />
