@@ -8,6 +8,9 @@ import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, limit, where } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import Header from '@/components/layout/header';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DateCourseForm from '@/components/date-course-form';
+
 
 export default function AiPage() {
   const { user: currentUser, isLoaded: isUserLoaded } = useUser();
@@ -57,7 +60,7 @@ export default function AiPage() {
     }
   }, [currentUser, firestore, isUserLoaded]);
 
-  if (isLoading || !isUserLoaded || !currentUser) {
+  if (!isUserLoaded || !currentUser) {
     return (
         <div className="flex flex-col h-screen">
             <Header />
@@ -68,5 +71,39 @@ export default function AiPage() {
     );
   }
 
-  return <AiPageClient recommendedUsers={recommendedUsers} currentUser={currentUser} />;
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1 container py-8">
+        <Tabs defaultValue="ideal-type" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 border-b border-border/40 rounded-none">
+            <TabsTrigger
+              value="ideal-type"
+              className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground"
+            >
+              AI 추천 이상형찾기
+            </TabsTrigger>
+            <TabsTrigger
+              value="date-course"
+              className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground"
+            >
+              AI 추천 데이트 코스
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="ideal-type" className="mt-6">
+            {isLoading ? (
+               <div className="flex items-center justify-center pt-20">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <AiPageClient recommendedUsers={recommendedUsers} currentUser={currentUser} />
+            )}
+          </TabsContent>
+          <TabsContent value="date-course" className="mt-6">
+            <DateCourseForm />
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
 }
