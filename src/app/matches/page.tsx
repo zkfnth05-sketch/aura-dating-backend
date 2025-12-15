@@ -8,7 +8,7 @@ import { useUser } from '@/contexts/user-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, getDoc, getDocs, collectionGroup, documentId, Query, Firestore, orderBy } from 'firebase/firestore';
 import type { User, Like, Match, LikedBy } from '@/lib/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 
 // Helper function to fetch users for a list of IDs, handling the 30-item 'in' query limit.
@@ -39,8 +39,9 @@ export default function MatchesPage() {
   
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
   const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
-  const [isLoadingILiked, setIsLoadingILiked] = useState(true);
-  const [isLoadingWhoLikedMe, setIsLoadingWhoLikedMe] = useState(true);
+  const [isLoadingILiked, setIsLoadingILiked] = useState(false);
+  const [isLoadingWhoLikedMe, setIsLoadingWhoLikedMe] = useState(false);
+  const [activeTab, setActiveTab] = useState('chats');
 
   // --- 1. Get matches for the "Chats" tab (real-time) ---
   const matchesQuery = useMemoFirebase(() => {
@@ -49,79 +50,76 @@ export default function MatchesPage() {
   }, [firestore, currentUser]);
   const { data: matches, isLoading: areMatchesLoading } = useCollection<Match>(matchesQuery);
 
-  // --- 2. Get users who liked me (one-time fetch) ---
-  useEffect(() => {
+  // --- 2. Function to fetch users who liked me ---
+  const fetchWhoLikedMe = useCallback(async () => {
     if (!currentUser || !firestore) return;
-    
-    const fetchWhoLikedMe = async () => {
-        setIsLoadingWhoLikedMe(true);
-        try {
-            const likedMeQuery = query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
-            const likedBySnapshot = await getDocs(likedMeQuery);
-            const likerIds = likedBySnapshot.docs.map(doc => doc.data().likerId);
+    setIsLoadingWhoLikedMe(true);
+    try {
+        const likedMeQuery = query(collection(firestore, 'users', currentUser.id, 'likedBy'), orderBy('timestamp', 'desc'));
+        const likedBySnapshot = await getDocs(likedMeQuery);
+        const likerIds = likedBySnapshot.docs.map(doc => doc.data().likerId);
 
-            if (likerIds.length === 0) {
-                setPeopleWhoLikedMe([]);
-            } else {
-                const users = await fetchUsersByIds(firestore, likerIds);
-                const orderedUsers = likerIds.map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
-                setPeopleWhoLikedMe(orderedUsers);
-            }
-        } catch (error) {
-            console.error("Error fetching who liked me:", error);
+        if (likerIds.length === 0) {
             setPeopleWhoLikedMe([]);
-        } finally {
-            setIsLoadingWhoLikedMe(false);
-        }
-    };
-    
-    fetchWhoLikedMe();
-  }, [currentUser, firestore]);
-
-  // --- 3. Get users I liked (one-time fetch from my own 'likes' collection) ---
-  useEffect(() => {
-    if (!currentUser || !firestore) return;
-
-    const fetchILikedData = async () => {
-      setIsLoadingILiked(true);
-      try {
-        const iLikedQuery = query(
-            collection(firestore, 'users', currentUser.id, 'likes'),
-            where('isLike', '==', true) // Only fetch actual likes
-        );
-        const iLikedSnapshot = await getDocs(iLikedQuery);
-        
-        const sortedDocs = iLikedSnapshot.docs.sort((a, b) => {
-            const timeA = a.data().timestamp?.seconds || 0;
-            const timeB = b.data().timestamp?.seconds || 0;
-            return timeB - timeA;
-        });
-
-        const likedUserIds = sortedDocs.map(doc => doc.data().likeeId);
-        
-        if (likedUserIds.length === 0) {
-          setPeopleILiked([]);
         } else {
-          const iLikedUsers = await fetchUsersByIds(firestore, likedUserIds);
-           const orderedUsers = likedUserIds.map(id => iLikedUsers.find(u => u.id === id)).filter(Boolean) as User[];
-          setPeopleILiked(orderedUsers);
+            const users = await fetchUsersByIds(firestore, likerIds);
+            const orderedUsers = likerIds.map(id => users.find(u => u.id === id)).filter(Boolean) as User[];
+            setPeopleWhoLikedMe(orderedUsers);
         }
-
-      } catch (error) {
-        console.error("Error fetching 'I liked' data:", error);
-        setPeopleILiked([]);
-      } finally {
-        setIsLoadingILiked(false);
-      }
-    };
-
-    fetchILikedData();
-
+    } catch (error) {
+        console.error("Error fetching who liked me:", error);
+        setPeopleWhoLikedMe([]);
+    } finally {
+        setIsLoadingWhoLikedMe(false);
+    }
   }, [currentUser, firestore]);
   
-  const isLoading = !currentUser || areMatchesLoading || isLoadingWhoLikedMe || isLoadingILiked;
+  // --- 3. Function to fetch users I liked ---
+  const fetchILikedData = useCallback(async () => {
+    if (!currentUser || !firestore) return;
+    setIsLoadingILiked(true);
+    try {
+      const iLikedQuery = query(
+          collection(firestore, 'users', currentUser.id, 'likes'),
+          where('isLike', '==', true) // Only fetch actual likes
+      );
+      const iLikedSnapshot = await getDocs(iLikedQuery);
+      
+      const sortedDocs = iLikedSnapshot.docs.sort((a, b) => {
+          const timeA = a.data().timestamp?.seconds || 0;
+          const timeB = b.data().timestamp?.seconds || 0;
+          return timeB - timeA;
+      });
+
+      const likedUserIds = sortedDocs.map(doc => doc.data().likeeId);
+      
+      if (likedUserIds.length === 0) {
+        setPeopleILiked([]);
+      } else {
+        const iLikedUsers = await fetchUsersByIds(firestore, likedUserIds);
+         const orderedUsers = likedUserIds.map(id => iLikedUsers.find(u => u.id === id)).filter(Boolean) as User[];
+        setPeopleILiked(orderedUsers);
+      }
+
+    } catch (error) {
+      console.error("Error fetching 'I liked' data:", error);
+      setPeopleILiked([]);
+    } finally {
+      setIsLoadingILiked(false);
+    }
+  }, [currentUser, firestore]);
+
+  // --- 4. Effect to trigger fetch based on active tab ---
+  useEffect(() => {
+    if (activeTab === 'liked-me' && peopleWhoLikedMe.length === 0) {
+        fetchWhoLikedMe();
+    }
+    if (activeTab === 'i-liked' && peopleILiked.length === 0) {
+        fetchILikedData();
+    }
+  }, [activeTab, peopleWhoLikedMe.length, peopleILiked.length, fetchWhoLikedMe, fetchILikedData]);
   
-  if (isLoading) {
+  if (!currentUser || areMatchesLoading) {
     return (
         <div className="flex flex-col min-h-screen">
           <Header />
@@ -132,11 +130,24 @@ export default function MatchesPage() {
     );
   }
 
+  const renderTabContent = (tabValue: string) => {
+    if (tabValue === 'chats') {
+        return <MatchList matches={matches || []} />;
+    }
+    if (tabValue === 'liked-me') {
+        return isLoadingWhoLikedMe ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleWhoLikedMe} />;
+    }
+    if (tabValue === 'i-liked') {
+        return isLoadingILiked ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleILiked} />;
+    }
+    return null;
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
-        <Tabs defaultValue="chats" className="w-full">
+        <Tabs defaultValue="chats" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 rounded-none h-14">
             <TabsTrigger
               value="chats"
@@ -159,13 +170,13 @@ export default function MatchesPage() {
           </TabsList>
           
           <TabsContent value="chats" className="mt-0 p-4">
-            <MatchList matches={matches || []} />
+            {renderTabContent('chats')}
           </TabsContent>
           <TabsContent value="liked-me" className="mt-0 p-4">
-            <UserGrid users={peopleWhoLikedMe} />
+             {renderTabContent('liked-me')}
           </TabsContent>
           <TabsContent value="i-liked" className="mt-0 p-4">
-            <UserGrid users={peopleILiked} />
+            {renderTabContent('i-liked')}
           </TabsContent>
             
         </Tabs>
