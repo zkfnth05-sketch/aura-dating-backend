@@ -44,7 +44,6 @@ export default function FilterClient() {
     const router = useRouter();
     const { filters, updateFilters, resetFilters: resetGlobalFilters, isLoaded, user } = useUser();
     
-    // Initialize local state with a default and then update from context when loaded.
     const [localFilters, setLocalFilters] = useState<FilterSettings | null>(null);
 
     useEffect(() => {
@@ -53,15 +52,9 @@ export default function FilterClient() {
         }
     }, [isLoaded, filters]);
     
-    if (!isLoaded || !user) {
-        return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    if (!isLoaded || !user || !localFilters) {
+        return <main className="container pb-4 px-4 flex h-[80vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></main>;
     }
-
-    if (!localFilters) {
-         // This can happen briefly before the effect runs
-        return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
-
 
     const handleMultiSelect = (field: keyof FilterSettings, value: string) => {
         setLocalFilters(prev => {
@@ -121,74 +114,72 @@ export default function FilterClient() {
     };
 
     return (
-        <>
-            <main className="container pb-4 px-4">
-                <Section title="나이">
-                    <div className="flex items-center gap-4">
-                        <Input 
-                            type="number"
-                            value={localFilters.ageRange.min}
-                            onChange={e => handleAgeChange('min', e.target.value)}
-                            className="bg-zinc-900 border-zinc-800 text-center"
-                        />
-                        <span className="text-muted-foreground">-</span>
-                        <Input 
-                            type="number"
-                            value={localFilters.ageRange.max}
-                            onChange={e => handleAgeChange('max', e.target.value)}
-                            className="bg-zinc-900 border-zinc-800 text-center"
-                        />
-                    </div>
-                </Section>
+        <main className="container pb-4 px-4">
+            <Section title="나이">
+                <div className="flex items-center gap-4">
+                    <Input 
+                        type="number"
+                        value={localFilters.ageRange.min}
+                        onChange={e => handleAgeChange('min', e.target.value)}
+                        className="bg-zinc-900 border-zinc-800 text-center"
+                    />
+                    <span className="text-muted-foreground">-</span>
+                    <Input 
+                        type="number"
+                        value={localFilters.ageRange.max}
+                        onChange={e => handleAgeChange('max', e.target.value)}
+                        className="bg-zinc-900 border-zinc-800 text-center"
+                    />
+                </div>
+            </Section>
 
-                <Section title="성별">
-                    <div className="flex flex-wrap gap-2">
+            <Section title="성별">
+                <div className="flex flex-wrap gap-2">
+                    <TagButton 
+                        label="전체"
+                        isSelected={localFilters.gender.length === 0 || localFilters.gender.length === genderOptions.length}
+                        onClick={() => setLocalFilters(prev => prev ? {...prev, gender: []} : null)}
+                    />
+                    {genderOptions.map(gender => (
                         <TagButton 
-                            label="전체"
-                            isSelected={localFilters.gender.length === 0 || localFilters.gender.length === genderOptions.length}
-                            onClick={() => setLocalFilters(prev => prev ? {...prev, gender: []} : null)}
+                            key={gender} 
+                            label={gender}
+                            isSelected={localFilters.gender.includes(gender)}
+                            onClick={() => handleGenderSelect(gender)}
                         />
-                        {genderOptions.map(gender => (
+                    ))}
+                </div>
+            </Section>
+            
+            {Object.entries({
+                '찾는 관계': 'relationship', 
+                '가치관': 'values', 
+                '소통 스타일': 'communication',
+                '라이프스타일': 'lifestyle',
+                '취미': 'hobbies',
+                '관심사': 'interests'
+            }).map(([title, key]) => (
+                <Section key={key} title={title}>
+                    <div className="flex flex-wrap gap-2">
+                        {allValues[key as keyof typeof allValues].map(item => (
                             <TagButton 
-                                key={gender} 
-                                label={gender}
-                                isSelected={localFilters.gender.includes(gender)}
-                                onClick={() => handleGenderSelect(gender)}
+                                key={item}
+                                label={item}
+                                isSelected={(localFilters[key as keyof typeof localFilters] as string[]).includes(item)}
+                                onClick={() => handleMultiSelect(key as keyof FilterSettings, item)}
                             />
                         ))}
                     </div>
                 </Section>
-                
-                {Object.entries({
-                    '찾는 관계': 'relationship', 
-                    '가치관': 'values', 
-                    '소통 스타일': 'communication',
-                    '라이프스타일': 'lifestyle',
-                    '취미': 'hobbies',
-                    '관심사': 'interests'
-                }).map(([title, key]) => (
-                    <Section key={key} title={title}>
-                        <div className="flex flex-wrap gap-2">
-                            {allValues[key as keyof typeof allValues].map(item => (
-                                <TagButton 
-                                    key={item}
-                                    label={item}
-                                    isSelected={(localFilters[key as keyof typeof localFilters] as string[]).includes(item)}
-                                    onClick={() => handleMultiSelect(key as keyof FilterSettings, item)}
-                                />
-                            ))}
-                        </div>
-                    </Section>
-                ))}
+            ))}
 
-                 <div className="py-4">
-                    <div className="flex w-full gap-2">
-                        <Button variant="secondary" onClick={handleReset} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">초기화</Button>
-                        <Button onClick={handleApply} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">적용하기</Button>
-                    </div>
+             <div className="py-4">
+                <div className="flex w-full gap-2">
+                    <Button variant="secondary" onClick={handleReset} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">초기화</Button>
+                    <Button onClick={handleApply} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">적용하기</Button>
                 </div>
+            </div>
 
-            </main>
-        </>
+        </main>
     );
 }
