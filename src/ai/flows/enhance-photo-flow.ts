@@ -57,8 +57,8 @@ const enhancePhotoFlow = ai.defineFlow(
     const { media } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash-image-preview'),
         prompt: [
-            { media: { url: input.photoDataUri } },
             { text: enhancementPrompt },
+            { media: { url: input.photoDataUri } },
         ],
         config: {
             responseModalities: ['TEXT', 'IMAGE'],
@@ -77,7 +77,7 @@ const enhancePhotoFlow = ai.defineFlow(
               },
               {
                 category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                threshold: 'BLOCK_LOW_AND_ABOVE',
+                threshold: 'BLOCK_MEDIUM_AND_ABOVE',
               },
             ],
         },
