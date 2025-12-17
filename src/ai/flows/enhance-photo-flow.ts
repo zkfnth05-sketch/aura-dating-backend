@@ -63,7 +63,7 @@ const enhancePhotoFlow = ai.defineFlow(
             { media: { url: input.photoDataUri } },
         ],
         config: {
-            responseModalities: ['TEXT', 'IMAGE'],
+            responseModalities: ['IMAGE'],
             safetySettings: [
               {
                 category: 'HARM_CATEGORY_HATE_SPEECH',
