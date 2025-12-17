@@ -35,14 +35,16 @@ export async function enhancePhoto(input: EnhancePhotoInput): Promise<EnhancePho
 }
 
 const generateEnhancementPrompt = (gender: '남성' | '여성' | '기타') => {
-    let specificInstruction = '';
+    let basePrompt = "이 사용자의 프로필 사진을 고급 데이팅 앱에 맞게 보정해 주세요. 조명과 구도를 개선하여 사람을 더 스타일리시하고, 자신감 넘치며, 매력적으로 보이게 만들어 주세요. 사용자의 본래 이목구비(핵심 특징)는 그대로 유지하면서, 사진에 세련되고 전문적이며 아주 화려함과 고급스러움을 더해 주세요. 그들의 모습이 가장 돋보이도록 만들어 주세요. The output must be a photorealistic image.";
+    
+    let genderSpecificInstruction = '';
     if (gender === '여성') {
-        specificInstruction = 'Make the woman in the photo very sexy and beautiful. ';
+        genderSpecificInstruction = '여자의 얼굴은 섹시하고 아름답게, 몸매는 더 볼륨있고 섹시하게 만들어주세요.';
     } else if (gender === '남성') {
-        specificInstruction = 'Make the man in the photo very handsome and sophisticated. ';
+        genderSpecificInstruction = '남자의 얼굴은 더 핸섬하고 몸매는 더 볼륨있게 만들어주세요.';
     }
 
-    return `${specificInstruction}Enhance this user's profile picture for a high-end dating app. Improve the lighting and composition to make the person look more stylish, confident, and attractive. Give the photo a polished, professional, and very glamorous and luxurious feel, while ensuring the person's core features remain recognizable. Make them look their absolute best. The output must be a photorealistic image.`;
+    return `${genderSpecificInstruction} ${basePrompt}`;
 };
 
 
