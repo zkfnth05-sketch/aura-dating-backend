@@ -20,10 +20,6 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
   const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
-  const prefetchUser = () => {
-    router.prefetch(`/users/${potentialMatch.id}`);
-  };
-
   const cardStyle = {
     transform: `
       translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
@@ -52,8 +48,6 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
       <Link 
         href={`/users/${potentialMatch.id}`} 
         className="block w-full h-full"
-        onMouseEnter={prefetchUser}
-        onTouchStart={prefetchUser}
       >
         <Image
           src={potentialMatch.photoUrls[0]}
