@@ -14,16 +14,9 @@ import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const UserCard = ({ user }: { user: User }) => {
-  const router = useRouter();
-  const prefetchUser = () => {
-    router.prefetch(`/users/${user.id}`);
-  };
-
   return (
     <Link
       href={`/users/${user.id}`}
-      onMouseEnter={prefetchUser}
-      onTouchStart={prefetchUser}
     >
       <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
         <Image
