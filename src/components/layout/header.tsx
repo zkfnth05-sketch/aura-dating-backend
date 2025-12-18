@@ -23,10 +23,6 @@ export default function Header() {
     }
   };
 
-  const prefetchAiPage = () => {
-    router.prefetch('/ai');
-  };
-
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container grid h-14 max-w-screen-sm grid-cols-3 items-center">
@@ -34,8 +30,6 @@ export default function Header() {
             <Link 
               href="/ai" 
               className="flex items-center gap-1 font-semibold text-muted-foreground hover:text-primary transition-colors text-sm"
-              onMouseEnter={prefetchAiPage}
-              onTouchStart={prefetchAiPage}
             >
                 <span>✨</span>
                 <span>AI 추천</span>
