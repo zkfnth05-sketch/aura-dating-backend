@@ -41,7 +41,7 @@ const generateEnhancementPrompt = (gender: '남성' | '여성' | '기타') => {
     if (gender === '여성') {
         genderSpecificInstruction = '여자의 얼굴은 섹시하고 아름답게, 몸매는 더 볼륨있고 섹시하게 만들어주세요.';
     } else if (gender === '남성') {
-        genderSpecificInstruction = '남자의 얼굴은 더 핸섬하고 몸매는 더 좋아 보이게 만들어주세요.';
+        genderSpecificInstruction = '남자의 얼굴은 아주 핸섬하게 만들어주세요.';
     }
 
     return `${genderSpecificInstruction} ${basePrompt}`;
