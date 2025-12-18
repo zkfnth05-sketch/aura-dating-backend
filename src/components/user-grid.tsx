@@ -16,13 +16,10 @@ export default function UserGrid({ users }: { users: User[] }) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {users.map((user) => {
-        const prefetchUser = () => router.prefetch(`/users/${user.id}`);
         return (
           <Link
             href={`/users/${user.id}`}
             key={user.id}
-            onMouseEnter={prefetchUser}
-            onTouchStart={prefetchUser}
           >
             <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
               <Image
