@@ -121,7 +121,7 @@ export default function MatchesPage() {
   
   if (!currentUser || areMatchesLoading) {
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-full">
           <Header />
           <main className="flex-1 flex justify-center items-center pt-20">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -144,7 +144,7 @@ export default function MatchesPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-full">
       <Header />
       <main className="flex-1">
         <Tabs defaultValue="chats" className="w-full" onValueChange={setActiveTab}>
