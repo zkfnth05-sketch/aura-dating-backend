@@ -23,14 +23,24 @@ export default function CreateProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // This is a protected route. If auth state is loaded and there's no authenticated user,
+    // redirect to the start of the signup flow.
     if (isLoaded && !authUser) {
       router.replace('/signup');
+      return;
     }
+    
+    // If the user profile ALREADY exists, it means they have completed signup.
+    // Send them to the main app.
+    if (isLoaded && authUser && user) {
+        router.replace('/');
+        return;
+    }
+
+    // Pre-fill form if authUser exists (they've passed OTP) but no full profile yet.
     if (authUser) {
-      setName(prev => prev || user?.name || authUser.displayName || '');
-      setAge(prev => prev || user?.age?.toString() || '');
-      setCity(prev => prev || user?.location || '');
-      setGender(user?.gender || '여성');
+      setName(prev => prev || authUser.displayName || '');
+      // We don't pre-fill from `user` object here because its existence means they should be redirected.
     }
   }, [isLoaded, authUser, user, router]);
 
@@ -60,19 +70,16 @@ export default function CreateProfilePage() {
       location: city,
       gender,
       phoneNumber: authUser.phoneNumber || '',
+      id: authUser.uid,
+      email: authUser.email || '',
+      hobbies: ['독서', '영화 감상'],
+      interests: ['맛집 탐방', '여행'],
+      bio: '새로운 만남을 기다립니다!',
+      lat: 37.5665,
+      lng: 126.9780,
+      createdAt: serverTimestamp() as any,
+      likeCount: 0,
     };
-
-    if (!user) {
-      userData.id = authUser.uid;
-      userData.email = authUser.email || '';
-      userData.hobbies = ['독서', '영화 감상'];
-      userData.interests = ['맛집 탐방', '여행'];
-      userData.bio = '새로운 만남을 기다립니다!';
-      userData.lat = 37.5665;
-      userData.lng = 126.9780;
-      userData.createdAt = serverTimestamp() as any;
-      userData.likeCount = 0;
-    }
     
     updateUser(userData).catch(error => {
       console.error("Failed to update user:", error);
@@ -87,7 +94,9 @@ export default function CreateProfilePage() {
     router.push('/signup/photo');
   };
 
-  if (isLoaded === false) {
+  if (!isLoaded || !authUser || user) {
+    // While loading, or if no authUser (will be redirected), or if user exists (will be redirected),
+    // show a loader to prevent content flash.
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 

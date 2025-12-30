@@ -31,6 +31,8 @@ export default function UploadPhotoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // This is a protected route. If auth state is loaded and there's no authenticated user,
+    // redirect to the start of the signup flow.
     if (isLoaded && !authUser) {
       router.replace('/signup');
     }
@@ -107,11 +109,18 @@ export default function UploadPhotoPage() {
       setIsSubmitting(false); // Re-enable button on error
     });
 
-    router.push('/profile');
+    router.push('/');
   };
   
-  if (!isLoaded || !authUser) {
+  // While auth state is loading, show a loader to prevent flicker or incorrect redirects.
+  if (!isLoaded) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
+  // If, after loading, we confirm there's no authUser, this component should not render its content.
+  // The useEffect above will handle the redirect.
+  if (!authUser) {
+     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
   return (
