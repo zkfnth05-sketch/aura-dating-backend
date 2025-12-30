@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
@@ -25,24 +25,70 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
   </div>
 );
 
-const AIReasonSection = ({ reason, isLoading }: { reason: string | null; isLoading: boolean }) => (
+const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User, potentialMatch: User }) => {
+  const [aiReason, setAiReason] = useState<string | null>(null);
+  const [isAiReasonLoading, setIsAiReasonLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentUser && potentialMatch && !aiReason) {
+      const fetchReason = async () => {
+        setIsAiReasonLoading(true);
+        try {
+          const potentialMatchWithDefaults = {
+            ...potentialMatch,
+            hobbies: potentialMatch.hobbies || [],
+            interests: potentialMatch.interests || [],
+            values: potentialMatch.values || [],
+            communication: potentialMatch.communication || [],
+            lifestyle: potentialMatch.lifestyle || [],
+          };
+          const currentUserWithDefaults = {
+            ...currentUser,
+            hobbies: currentUser.hobbies || [],
+            interests: currentUser.interests || [],
+            values: currentUser.values || [],
+            communication: currentUser.communication || [],
+            lifestyle: currentUser.lifestyle || [],
+          };
+          
+          delete (potentialMatchWithDefaults as Partial<User>).createdAt;
+          delete (currentUserWithDefaults as Partial<User>).createdAt;
+
+          const result = await getAIRecommendationReason({ 
+              currentUser: currentUserWithDefaults, 
+              potentialMatch: potentialMatchWithDefaults 
+          });
+          setAiReason(result.reason);
+        } catch (error) {
+          console.error("Failed to get AI recommendation reason:", error);
+          setAiReason("추천 이유를 불러오는 데 실패했습니다.");
+        } finally {
+          setIsAiReasonLoading(false);
+        }
+      }
+      fetchReason();
+    }
+  }, [currentUser, potentialMatch, aiReason]);
+
+  return (
     <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4 min-h-[120px] flex flex-col relative">
         <h3 className="flex items-center font-semibold text-primary text-sm">
             <Sparkles className="h-4 w-4 mr-2 text-primary/80" />
             AI 추천 이유
         </h3>
         <div className="flex-grow flex items-center justify-center pt-2">
-            {isLoading ? (
+            {isAiReasonLoading ? (
                 <div className="text-center">
                     <Loader2 className="h-6 w-6 animate-spin text-primary/80 mx-auto" />
                     <p className="text-sm text-foreground/70 mt-2">AI 추천 이유 생성 중...</p>
                 </div>
             ) : (
-                <p className="text-sm text-foreground/80 text-center">{reason}</p>
+                <p className="text-sm text-foreground/80 text-center">{aiReason}</p>
             )}
         </div>
     </div>
-)
+  )
+}
 
 export default function UserProfilePage() {
   const router = useRouter();
@@ -63,52 +109,6 @@ export default function UserProfilePage() {
   
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-  const [aiReason, setAiReason] = useState<string | null>(null);
-  const [isAiReasonLoading, setIsAiReasonLoading] = useState(false);
-
-  useEffect(() => {
-    if (user && currentUser && source === 'ai' && !aiReason) {
-      const fetchReason = async () => {
-        setIsAiReasonLoading(true);
-        try {
-          const potentialMatchWithDefaults = {
-            ...user,
-            hobbies: user.hobbies || [],
-            interests: user.interests || [],
-            values: user.values || [],
-            communication: user.communication || [],
-            lifestyle: user.lifestyle || [],
-          };
-          const currentUserWithDefaults = {
-            ...currentUser,
-            hobbies: currentUser.hobbies || [],
-            interests: currentUser.interests || [],
-            values: currentUser.values || [],
-            communication: currentUser.communication || [],
-            lifestyle: currentUser.lifestyle || [],
-          };
-          
-          delete (potentialMatchWithDefaults as Partial<User>).createdAt;
-          delete (currentUserWithDefaults as Partial<User>).createdAt;
-
-
-          const result = await getAIRecommendationReason({ 
-              currentUser: currentUserWithDefaults, 
-              potentialMatch: potentialMatchWithDefaults 
-          });
-          setAiReason(result.reason);
-        } catch (error) {
-          console.error("Failed to get AI recommendation reason:", error);
-          setAiReason("추천 이유를 불러오는 데 실패했습니다.");
-        } finally {
-          setIsAiReasonLoading(false);
-        }
-      }
-      fetchReason();
-    }
-  }, [user, currentUser, source, aiReason]);
-
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!user || !currentUser || !firestore) return;
@@ -260,7 +260,7 @@ export default function UserProfilePage() {
           </div>
 
           <div className="container relative z-10 px-4 mt-6">
-            {source === 'ai' && <AIReasonSection reason={aiReason} isLoading={isAiReasonLoading} />}
+            {source === 'ai' && currentUser && <AIReasonComponent currentUser={currentUser} potentialMatch={user} />}
             <div className="bg-card p-4 rounded-lg">
 
               <ProfileSection title="소개">
