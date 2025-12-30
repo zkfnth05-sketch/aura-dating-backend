@@ -15,14 +15,14 @@ export default function HomePage() {
     // Wait until authentication state is fully loaded
     if (isLoaded) {
       if (!authUser) {
-        // If no user is authenticated, redirect to the signup page.
+        // 1. If no user is authenticated, redirect to the signup page.
         router.replace('/signup');
       } else if (authUser && !user) {
-        // If authenticated but no profile data exists (signup incomplete),
+        // 2. If authenticated but no profile data exists (signup incomplete),
         // redirect to the profile creation page.
         router.replace('/signup/profile');
       }
-      // If authUser and user both exist, do nothing and let the main component render.
+      // 3. If authUser and user both exist, do nothing and let the component render HomePageClient.
     }
   }, [authUser, isLoaded, user, router]);
 
