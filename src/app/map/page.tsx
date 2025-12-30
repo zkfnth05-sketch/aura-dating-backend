@@ -34,7 +34,7 @@ export default function MapPage() {
 
   if (!isLoaded || isAppDataLoading || !currentUser) {
       return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-screen">
             <Header />
             <main className="flex-1 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -45,9 +45,10 @@ export default function MapPage() {
 
   return (
     <APIProvider apiKey={apiKey}>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col h-screen w-full">
         <Header />
-        <main className="flex-1 flex flex-col">
+        {/* The main content area takes up the remaining space */}
+        <main style={{ height: 'calc(100vh - 56px)' }}>
             <MapClient users={appData.mapUsers} currentUser={currentUser} />
         </main>
       </div>
