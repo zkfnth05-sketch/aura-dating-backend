@@ -72,15 +72,6 @@ export default function HomePageClient() {
       setIsLoadingMore(true);
     }
 
-    // Initialize seenUserIds if it's the first fetch
-    if (lastVisibleDoc === null && seenUserIds.size === 0) {
-        const likesColRef = collection(firestore, 'users', currentUser.id, 'likes');
-        const likesSnapshot = await getDocs(likesColRef);
-        const initialSeenIds = new Set(likesSnapshot.docs.map(doc => doc.id));
-        initialSeenIds.add(currentUser.id);
-        setSeenUserIds(initialSeenIds);
-    }
-
     let usersQuery: Query<DocumentData>;
     const baseUsersRef = collection(firestore, 'users');
     
@@ -118,8 +109,11 @@ export default function HomePageClient() {
   }, [isLoaded, currentUser, firestore, seenUserIds, filters.gender]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    // Initial fetch when component mounts and user is loaded
+    if(isLoaded && currentUser) {
+      fetchUsers();
+    }
+  }, [isLoaded, currentUser]); // Removed fetchUsers from dependency array to prevent re-fetching on every render
 
 
   useEffect(() => {
@@ -127,11 +121,13 @@ export default function HomePageClient() {
         setDisplayedUsers([]);
         return;
     }
-    // Gender filtering is now mostly done server-side, but client-side filtering handles advanced filter combinations.
-    const filtered = applyFilters(allUsers, filters, currentUser);
+    // Filter out users that are already seen or are the current user
+    const unseenUsers = allUsers.filter(user => !seenUserIds.has(user.id) && user.id !== currentUser.id);
+    const filtered = applyFilters(unseenUsers, filters, currentUser);
     setDisplayedUsers(filtered);
-    // Do not reset currentIndex here, as allUsers could be appended to
-  }, [allUsers, filters, currentUser]);
+    // Reset index if the source of users changes
+    setCurrentIndex(0);
+  }, [allUsers, filters, currentUser, seenUserIds]);
 
   useEffect(() => {
     if(!isLoadingUsers && !isLoadingMore && currentIndex >= displayedUsers.length && lastDoc !== null) {
