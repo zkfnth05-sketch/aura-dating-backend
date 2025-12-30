@@ -9,11 +9,11 @@ import { useUser } from '@/contexts/user-context';
 
 export default function HomePage() {
   const router = useRouter();
-  const { authUser, isLoaded, user, isSignupFlowActive } = useUser();
+  const { authUser, isLoaded, user } = useUser();
 
   useEffect(() => {
-    // Wait until authentication state is fully loaded and signup flow is not active
-    if (isLoaded && !isSignupFlowActive) {
+    // Wait until authentication state is fully loaded.
+    if (isLoaded) {
       if (!authUser) {
         // 1. If no user is authenticated, redirect to the signup page.
         router.replace('/signup');
@@ -24,9 +24,9 @@ export default function HomePage() {
       }
       // 3. If authUser and user both exist, do nothing and let the component render HomePageClient.
     }
-  }, [authUser, isLoaded, user, router, isSignupFlowActive]);
+  }, [authUser, isLoaded, user, router]);
 
-  // Show a splash screen while loading authentication state OR if a redirect is imminent.
+  // Show a splash screen while loading or redirecting.
   // This prevents the main interface from flashing before the redirect happens.
   if (!isLoaded || !authUser || !user) {
     return <SplashScreen />;
