@@ -152,6 +152,15 @@ export default function UserProfilePage() {
               senderId: 'system',
               text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
               timestamp: serverTimestamp(),
+            }).catch(e => {
+                if (e.code === 'permission-denied') {
+                  const contextualError = new FirestorePermissionError({
+                    operation: 'create',
+                    path: `matches/${newMatchRef.id}/messages`,
+                    requestResourceData: { senderId: 'system', text: '...'},
+                  });
+                  errorEmitter.emit('permission-error', contextualError);
+                }
             });
             router.push(`/chat/${newMatchRef.id}`);
           })
