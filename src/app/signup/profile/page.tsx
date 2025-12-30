@@ -9,13 +9,12 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { serverTimestamp } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 
 export default function CreateProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, updateUser, authUser, isLoaded } = useUser();
+  const { user, updateUser, authUser, isLoaded, isSignupFlowActive } = useUser();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
@@ -30,9 +29,9 @@ export default function CreateProfilePage() {
       return;
     }
     
-    // If the user profile ALREADY exists, it means they have completed signup.
-    // Send them to the main app.
-    if (isLoaded && authUser && user) {
+    // If the user profile ALREADY exists and we are NOT in an active signup flow,
+    // it means they have completed signup. Send them to the main app.
+    if (isLoaded && authUser && user && !isSignupFlowActive) {
         router.replace('/');
         return;
     }
@@ -42,7 +41,7 @@ export default function CreateProfilePage() {
       setName(prev => prev || authUser.displayName || '');
       // We don't pre-fill from `user` object here because its existence means they should be redirected.
     }
-  }, [isLoaded, authUser, user, router]);
+  }, [isLoaded, authUser, user, router, isSignupFlowActive]);
 
   const handleNext = async () => {
     if (!name || !age || !city) {
@@ -64,7 +63,7 @@ export default function CreateProfilePage() {
 
     setIsSubmitting(true);
 
-    const userData: Partial<User> = {
+    const userData: Partial<User> & { createdAt: any } = {
       name,
       age: parseInt(age, 10),
       location: city,
@@ -77,7 +76,7 @@ export default function CreateProfilePage() {
       bio: '새로운 만남을 기다립니다!',
       lat: 37.5665,
       lng: 126.9780,
-      createdAt: serverTimestamp() as any,
+      createdAt: "serverTimestamp", // Special marker for the context
       likeCount: 0,
     };
     
@@ -94,7 +93,7 @@ export default function CreateProfilePage() {
     router.push('/signup/photo');
   };
 
-  if (!isLoaded || !authUser || user) {
+  if (!isLoaded || !authUser || (user && !isSignupFlowActive)) {
     // While loading, or if no authUser (will be redirected), or if user exists (will be redirected),
     // show a loader to prevent content flash.
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;

@@ -21,7 +21,7 @@ type PhotoState = {
 
 export default function UploadPhotoPage() {
   const router = useRouter();
-  const { user, updateUser, isLoaded, authUser } = useUser();
+  const { user, updateUser, isLoaded, authUser, setIsSignupFlowActive } = useUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<PhotoState>({ uri: null, isEnhancing: false });
@@ -36,7 +36,11 @@ export default function UploadPhotoPage() {
     if (isLoaded && !authUser) {
       router.replace('/signup');
     }
-  }, [isLoaded, authUser, router]);
+    // If the user lands here without basic profile info, send them back
+    else if (isLoaded && authUser && !user) {
+      router.replace('/signup/profile');
+    }
+  }, [isLoaded, authUser, user, router]);
 
   const processAndAddImage = async (dataUri: string) => {
     if (aiEnhancement) {
@@ -94,6 +98,7 @@ export default function UploadPhotoPage() {
     }
 
     setIsSubmitting(true);
+    setIsSignupFlowActive(false); // Signal that the signup flow is now complete
     
     // Non-blocking update. Navigate immediately.
     updateUser({
@@ -107,21 +112,17 @@ export default function UploadPhotoPage() {
         description: "프로필을 완성하는 데 실패했습니다. 다시 시도해주세요."
       });
       setIsSubmitting(false); // Re-enable button on error
+      setIsSignupFlowActive(true); // Re-activate signup flow on error
     });
 
     router.push('/');
   };
   
-  // While auth state is loading, show a loader to prevent flicker or incorrect redirects.
-  if (!isLoaded) {
+  // While auth state is loading, or user data is missing show a loader to prevent flicker or incorrect redirects.
+  if (!isLoaded || !user) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
-  // If, after loading, we confirm there's no authUser, this component should not render its content.
-  // The useEffect above will handle the redirect.
-  if (!authUser) {
-     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  }
 
   return (
     <>

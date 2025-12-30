@@ -51,6 +51,8 @@ interface UserContextType {
   isLoaded: boolean;
   totalUnreadCount: number;
   phoneAuth: PhoneAuthState;
+  isSignupFlowActive: boolean;
+  setIsSignupFlowActive: (isActive: boolean) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -84,6 +86,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isContextLoaded, setIsContextLoaded] = useState(false);
+  const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
+
 
   // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -165,15 +169,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     
-    if ((newUserData as any).createdAt === 'serverTimestamp') {
-        dataToSave.createdAt = serverTimestamp();
+    // Check if this is the initial profile creation
+    if (newUserData.createdAt) {
+      dataToSave.createdAt = serverTimestamp();
+      setIsSignupFlowActive(true); // Activate signup flow flag
     }
   
     setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   
     setUser(prevUser => {
       const updatedUser = { ...(prevUser || {}), ...dataToSave } as User;
-      if ((newUserData as any).createdAt === 'serverTimestamp') {
+      // Don't set createdAt on local user object as it's a server value
+      if (newUserData.createdAt) {
         delete (updatedUser as Partial<User>).createdAt;
       }
       return updatedUser;
@@ -311,7 +318,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       reauthenticate,
       isSendingOtp,
       isVerifyingOtp,
-    }
+    },
+    isSignupFlowActive,
+    setIsSignupFlowActive,
   };
 
   return (
