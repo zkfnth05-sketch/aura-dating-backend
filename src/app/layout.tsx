@@ -18,7 +18,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
   const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
-  const showBottomNav = !!(authUser && user?.photoUrls && user.photoUrls.length > 0);
+  const showBottomNav = !!(authUser && user);
 
   if (isAdminPage) {
     return <>{children}</>;
