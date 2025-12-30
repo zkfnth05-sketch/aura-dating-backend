@@ -27,7 +27,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import ReauthDialog from './reauth-dialog';
+
 
 type Photo = {
   id: string;
@@ -92,6 +94,7 @@ export default function ProfileEditForm() {
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
+  const [isReauthDialogOpen, setIsReauthDialogOpen] = useState(false);
 
 
   useEffect(() => {
@@ -248,14 +251,10 @@ export default function ProfileEditForm() {
       router.push('/signup');
     } catch (error: any) {
       console.error("Failed to delete account:", error);
-      let description = "계정 삭제 중 오류가 발생했습니다. 다시 시도해주세요.";
-      if (error.code === 'auth/requires-recent-login') {
-        description = "보안을 위해 재로그인 후 다시 시도해주세요.";
-      }
       toast({
         variant: "destructive",
         title: "오류",
-        description: description,
+        description: "계정 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
       });
     }
   };
@@ -430,7 +429,7 @@ export default function ProfileEditForm() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>취소</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAccount} className={cn(buttonVariants({ variant: "destructive" }))}>
+                  <AlertDialogAction onClick={() => setIsReauthDialogOpen(true)} className={cn(buttonVariants({ variant: "destructive" }))}>
                     회원 탈퇴
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -438,6 +437,14 @@ export default function ProfileEditForm() {
             </AlertDialog>
         </div>
       </footer>
+
+      {isReauthDialogOpen && (
+        <ReauthDialog
+          isOpen={isReauthDialogOpen}
+          onClose={() => setIsReauthDialogOpen(false)}
+          onReauthSuccess={handleDeleteAccount}
+        />
+      )}
     </>
   );
 }

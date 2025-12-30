@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
+import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult, PhoneAuthProvider, PhoneAuthCredential } from 'firebase/auth';
 import { useUser as useAuthUser, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp, collection, query, where, getDoc } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
@@ -32,8 +32,9 @@ interface PhoneAuthState {
   confirmationResult: ConfirmationResult | null;
   recaptchaVerifier: RecaptchaVerifier | null;
   setupRecaptcha: (container: HTMLElement) => void;
-  sendVerificationCode: () => Promise<void>;
+  sendVerificationCode: (phoneNumberOverride?: string) => Promise<string | undefined>;
   verifyOtp: (otp: string) => Promise<void>;
+  reauthenticate: (otp: string) => Promise<void>;
   isSendingOtp: boolean;
   isVerifyingOtp: boolean;
 }
@@ -90,6 +91,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [reauthVerificationId, setReauthVerificationId] = useState<string | null>(null);
 
 
   // Load user data from Firestore
@@ -224,14 +226,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [auth, recaptchaVerifier]);
 
-  const sendVerificationCode = useCallback(async () => {
-    if (recaptchaVerifier && phoneNumber) {
+  const sendVerificationCode = useCallback(async (phoneNumberOverride?: string) => {
+    const targetPhoneNumber = phoneNumberOverride || phoneNumber;
+    if (recaptchaVerifier && targetPhoneNumber) {
       setIsSendingOtp(true);
       try {
         const { signInWithPhoneNumber } = require('firebase/auth');
-        const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+        const confirmation = await signInWithPhoneNumber(auth, targetPhoneNumber, recaptchaVerifier);
         setConfirmationResult(confirmation);
-        router.push('/signup/otp');
+        setReauthVerificationId(confirmation.verificationId);
+        if(!phoneNumberOverride) { // Don't redirect on re-auth
+            router.push('/signup/otp');
+        }
+        return confirmation.verificationId;
       } catch (error) {
         console.error("SMS 전송 실패:", error);
         alert("인증 코드 전송에 실패했습니다. 전화번호를 확인하고 다시 시도해주세요.");
@@ -256,6 +263,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [confirmationResult, router]);
+  
+  const reauthenticate = useCallback(async (otp: string) => {
+    if (!reauthVerificationId || !otp || !authUser) {
+      throw new Error("인증 정보가 부족합니다.");
+    }
+    setIsVerifyingOtp(true);
+    try {
+        const { PhoneAuthProvider } = require('firebase/auth');
+        const credential = PhoneAuthProvider.credential(reauthVerificationId, otp);
+        const { reauthenticateWithCredential } = require('firebase/auth');
+        await reauthenticateWithCredential(authUser, credential);
+    } catch (error) {
+        console.error("재인증 실패:", error);
+        throw new Error("인증 코드가 잘못되었습니다. 다시 시도해주세요.");
+    } finally {
+        setIsVerifyingOtp(false);
+    }
+  }, [reauthVerificationId, authUser]);
   // --- End Phone Auth Logic ---
 
   const value: UserContextType = {
@@ -277,6 +302,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setupRecaptcha,
       sendVerificationCode,
       verifyOtp,
+      reauthenticate,
       isSendingOtp,
       isVerifyingOtp,
     }
