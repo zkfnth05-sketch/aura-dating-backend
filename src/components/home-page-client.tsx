@@ -6,65 +6,33 @@ import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
-import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
-import { useFirestore, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, addDoc, writeBatch, documentId, Query, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from './ui/button';
 
-
-const applyFilters = (users: User[], filters: FilterSettings, currentUser: User): User[] => {
-    return users.filter(user => {
-      // This function assumes users are already pre-filtered by seen status and self.
-      if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
-
-      // Gender filtering is now handled by the Firestore query, but we keep this as a fallback.
-      if (filters.gender.length > 0) {
-        if (user.gender && !filters.gender.includes(user.gender)) return false;
-      }
-      
-      const checkTags = (userTags: string[] = [], filterTags: string[]) => {
-        if (filterTags.length === 0) return true;
-        if (!userTags || userTags.length === 0) return false;
-        return filterTags.every(tag => userTags.includes(tag));
-      };
-
-      if (!checkTags(user.relationship, filters.relationship)) return false;
-      if (!checkTags(user.values, filters.values)) return false;
-      if (!checkTags(user.communication, filters.communication)) return false;
-      if (!checkTags(user.lifestyle, filters.lifestyle)) return false;
-      if (!checkTags(user.hobbies, filters.hobbies)) return false;
-      if (!checkTags(user.interests, filters.interests)) return false;
-      
-      return true;
-    });
-};
-
-const FETCH_LIMIT = 30;
+const FETCH_LIMIT = 10;
 
 export default function HomePageClient() {
   const { user: currentUser, filters, isLoaded } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
 
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [seenUserIds, setSeenUserIds] = useState<Set<string>>(new Set());
 
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [showLoadMorePrompt, setShowLoadMorePrompt] = useState(false);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
   
-
   const fetchUsers = useCallback(async (lastVisibleDoc: QueryDocumentSnapshot<DocumentData> | null = null) => {
-    if (!isLoaded || !currentUser || !firestore) return;
+    if (!isLoaded || !currentUser || !firestore || isLoadingMore) return;
 
     if (lastVisibleDoc === null) {
       setIsLoadingUsers(true);
@@ -75,68 +43,84 @@ export default function HomePageClient() {
     let usersQuery: Query<DocumentData>;
     const baseUsersRef = collection(firestore, 'users');
     
-    // Base query with gender filter
+    let genderFilter: ('남성' | '여성' | '기타')[] = [];
     if (filters.gender.length > 0) {
-      usersQuery = query(baseUsersRef, where('gender', 'in', filters.gender));
+      genderFilter = filters.gender;
     } else if (currentUser.gender === '남성') {
-      usersQuery = query(baseUsersRef, where('gender', '==', '여성'));
+      genderFilter = ['여성'];
     } else if (currentUser.gender === '여성') {
-      usersQuery = query(baseUsersRef, where('gender', '==', '남성'));
-    } else {
-      usersQuery = query(baseUsersRef);
+      genderFilter = ['남성'];
     }
-    
-    // Add pagination and limit
+
+    if (genderFilter.length > 0) {
+        usersQuery = query(
+            baseUsersRef, 
+            where('gender', 'in', genderFilter), 
+            orderBy('createdAt', 'desc')
+        );
+    } else {
+        usersQuery = query(
+            baseUsersRef,
+            orderBy('createdAt', 'desc')
+        );
+    }
+
+    // Add pagination
     if (lastVisibleDoc) {
       usersQuery = query(usersQuery, startAfter(lastVisibleDoc), limit(FETCH_LIMIT));
     } else {
       usersQuery = query(usersQuery, limit(FETCH_LIMIT));
     }
 
+    try {
+        const snapshot = await getDocs(usersQuery);
+        const newUsers = snapshot.docs
+            .map(doc => doc.data() as User)
+            .filter(user => user.id !== currentUser.id);
+        
+        // Simple client-side filter for age range and tags
+        const applySimpleFilters = (users: User[]): User[] => {
+            return users.filter(user => {
+                if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
+                
+                const checkTags = (userTags: string[] = [], filterTags: string[]) => {
+                    if (filterTags.length === 0) return true;
+                    return filterTags.every(tag => userTags.includes(tag));
+                };
 
-    const allUsersSnapshot = await getDocs(usersQuery);
-    const newLastDoc = allUsersSnapshot.docs[allUsersSnapshot.docs.length - 1] || null;
-    setLastDoc(newLastDoc);
+                if (!checkTags(user.relationship, filters.relationship)) return false;
+                if (!checkTags(user.values, filters.values)) return false;
+                if (!checkTags(user.communication, filters.communication)) return false;
+                if (!checkTags(user.lifestyle, filters.lifestyle)) return false;
+                if (!checkTags(user.hobbies, filters.hobbies)) return false;
+                if (!checkTags(user.interests, filters.interests)) return false;
+                
+                return true;
+            });
+        };
 
-    const freshUsers = allUsersSnapshot.docs
-      .map(doc => doc.data() as User)
-      .filter(user => !seenUserIds.has(user.id) && user.id !== currentUser.id);
+        const filteredNewUsers = applySimpleFilters(newUsers);
 
-    setAllUsers(prevUsers => lastVisibleDoc ? [...prevUsers, ...freshUsers] : freshUsers);
-    setIsLoadingUsers(false);
-    setIsLoadingMore(false);
-    setShowLoadMorePrompt(false);
-  }, [isLoaded, currentUser, firestore, seenUserIds, filters.gender]);
+        setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+        setHasMoreUsers(snapshot.docs.length === FETCH_LIMIT);
+        
+        setDisplayedUsers(prev => lastVisibleDoc ? [...prev, ...filteredNewUsers] : filteredNewUsers);
+
+    } catch (e) {
+        console.error("Error fetching users:", e);
+    } finally {
+        setIsLoadingUsers(false);
+        setIsLoadingMore(false);
+    }
+  }, [isLoaded, currentUser, firestore, isLoadingMore, filters]);
 
   useEffect(() => {
-    // Initial fetch when component mounts and user is loaded
+    // Initial fetch
     if(isLoaded && currentUser) {
       fetchUsers();
     }
-  }, [isLoaded, currentUser]); // Removed fetchUsers from dependency array to prevent re-fetching on every render
+  }, [isLoaded, currentUser, filters]); // Re-fetch when filters change
 
-
-  useEffect(() => {
-    if (!currentUser || allUsers.length === 0) {
-        setDisplayedUsers([]);
-        return;
-    }
-    // Filter out users that are already seen or are the current user
-    const unseenUsers = allUsers.filter(user => !seenUserIds.has(user.id) && user.id !== currentUser.id);
-    const filtered = applyFilters(unseenUsers, filters, currentUser);
-    setDisplayedUsers(filtered);
-    // Reset index if the source of users changes
-    setCurrentIndex(0);
-  }, [allUsers, filters, currentUser, seenUserIds]);
-
-  useEffect(() => {
-    if(!isLoadingUsers && !isLoadingMore && currentIndex >= displayedUsers.length && lastDoc !== null) {
-        setShowLoadMorePrompt(true);
-    } else if (!isLoadingUsers && !isLoadingMore && currentIndex >= displayedUsers.length && lastDoc === null && displayedUsers.length > 0){
-        // End of all profiles
-        setShowLoadMorePrompt(true); // Re-use the prompt to show a different message
-    }
-  }, [currentIndex, displayedUsers, isLoadingUsers, isLoadingMore, lastDoc]);
 
   const activeUser = displayedUsers[currentIndex];
 
@@ -203,7 +187,6 @@ export default function HomePageClient() {
       return;
     }
   
-    // --- Like or Dislike action ---
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
   
@@ -216,9 +199,11 @@ export default function HomePageClient() {
     };
   
     setDocumentNonBlocking(likeRef, likeData);
-    setSeenUserIds(prev => new Set(prev).add(targetUserId));
   
     setTimeout(() => {
+      if (currentIndex === displayedUsers.length - 1 && hasMoreUsers) {
+        fetchUsers(lastDoc);
+      }
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
     }, 500);
@@ -244,47 +229,41 @@ export default function HomePageClient() {
              <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
-          ) : displayedUsers.length === 0 && !isLoadingMore && !showLoadMorePrompt ? (
+          ) : !activeUser ? (
              <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
               <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
               <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
+               <Button onClick={() => fetchUsers()} className="mt-6">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                다시 시도
+              </Button>
             </div>
-          ) : showLoadMorePrompt ? (
-            <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
-              {lastDoc ? (
-                <>
-                  <h2 className="text-2xl font-bold text-primary mb-4">새로운 회원을 불러올까요?</h2>
-                  <p className="text-muted-foreground mb-6">계속해서 새로운 인연을 탐색해보세요.</p>
-                  <div className="flex justify-center gap-4">
-                    <Button variant="secondary" onClick={() => setShowLoadMorePrompt(false)} className="px-8 py-3 text-base">아니오</Button>
-                    <Button onClick={() => fetchUsers(lastDoc)} className="px-8 py-3 text-base">
-                      {isLoadingMore ? <Loader2 className="h-5 w-5 animate-spin"/> : '예'}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                 <>
-                  <h2 className="text-2xl font-bold text-primary mb-4">오늘은 여기까지예요!</h2>
-                  <p className="text-muted-foreground mb-6">모든 추천 프로필을 확인했어요. 내일 새로운 분들을 소개해 드릴게요.</p>
-                 </>
-              )}
-            </div>
-          ) : isLoadingMore ? (
-             <Loader2 className="h-12 w-12 animate-spin text-primary" />
           ) : (
-            activeUser && (
-              <ProfileCard
-                currentUser={currentUser}
-                potentialMatch={activeUser}
-                isActive={true}
-                swipeState={swipeState}
-                zIndex={1}
-              />
-            )
+            <>
+              {displayedUsers.map((user, index) => {
+                  if (index < currentIndex) return null;
+                  const isTop = index === currentIndex;
+                  return (
+                      <ProfileCard
+                          key={user.id}
+                          currentUser={currentUser}
+                          potentialMatch={user}
+                          isActive={isTop}
+                          swipeState={isTop ? swipeState : null}
+                          zIndex={displayedUsers.length - index}
+                      />
+                  )
+              })}
+              {(isLoadingMore) && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl z-50">
+                    <Loader2 className="h-12 w-12 animate-spin text-white" />
+                </div>
+              )}
+            </>
           )}
         </div>
         
-        {activeUser && !showLoadMorePrompt && (
+        {activeUser && (
           <div className="absolute bottom-24 z-20">
             <ActionButtons
               onDislike={() => handleAction('dislike')}
@@ -297,3 +276,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    

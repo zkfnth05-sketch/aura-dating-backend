@@ -49,14 +49,20 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
         href={`/users/${potentialMatch.id}`} 
         className="block w-full h-full"
       >
-        <Image
-          src={potentialMatch.photoUrls[0]}
-          alt={`Profile of ${potentialMatch.name}`}
-          fill
-          className="object-cover"
-          data-ai-hint="person portrait"
-          priority={isActive}
-        />
+        {potentialMatch.photoUrls && potentialMatch.photoUrls.length > 0 ? (
+          <Image
+            src={potentialMatch.photoUrls[0]}
+            alt={`Profile of ${potentialMatch.name}`}
+            fill
+            className="object-cover"
+            data-ai-hint="person portrait"
+            priority={isActive}
+          />
+        ) : (
+          <div className="w-full h-full bg-secondary flex items-center justify-center">
+            <span className="text-muted-foreground">No image</span>
+          </div>
+        )}
         
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
             <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
@@ -99,3 +105,5 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
 ProfileCard.displayName = 'ProfileCard';
 
 export default ProfileCard;
+
+    
