@@ -191,8 +191,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
           const queries = {
               map: query(usersCollection, where('gender', '==', oppositeGender), limit(100)),
-              hot: query(usersCollection, orderBy('likeCount', 'desc'), limit(40)), // Fetch more to filter client-side
-              new: query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(20)),
+              hot: query(usersCollection, orderBy('likeCount', 'desc'), limit(40)),
+              new: query(usersCollection, orderBy('createdAt', 'desc'), limit(40)),
               matches: query(collection(firestore, 'matches'), where('users', 'array-contains', user.id)),
               likedBy: query(collection(firestore, 'users', user.id, 'likedBy'), orderBy('timestamp', 'desc')),
               iLiked: query(collection(firestore, 'users', user.id, 'likes'), where('isLike', '==', true))
@@ -211,7 +211,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
           const hotUsersRaw = hotSnap.docs.map(d => d.data() as User);
           const hotUsers = hotUsersRaw.filter(u => u.id !== user.id && u.gender === oppositeGender).slice(0, 20);
 
-          const newUsers = newSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id);
+          const newUsersRaw = newSnap.docs.map(d => d.data() as User);
+          const newUsers = newUsersRaw.filter(u => u.id !== user.id && u.gender === oppositeGender).slice(0, 20);
+          
           const matches = matchesSnap.docs.map(d => d.data() as Match);
 
           const likedByIds = likedBySnap.docs.map(d => d.data().likerId);
