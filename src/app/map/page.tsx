@@ -91,9 +91,11 @@ export default function MapPage() {
 
   return (
     <APIProvider apiKey={apiKey}>
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col min-h-screen">
         <Header />
-        <MapClient users={users} currentUser={currentUser} />
+        <main className="flex-1 flex flex-col">
+            <MapClient users={users} currentUser={currentUser} />
+        </main>
       </div>
     </APIProvider>
   );
