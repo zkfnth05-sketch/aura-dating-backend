@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
     ppr: false,
+    serverActions: {
+      bodySizeLimit: '4.5mb',
+      // Increase timeout for AI operations
+      executionTimeout: 120,
+    },
   },
   typescript: {
     ignoreBuildErrors: true,
