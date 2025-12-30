@@ -101,7 +101,7 @@ const initialAppData: AppDataType = {
 async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
     if (userIds.length === 0) return [];
     const users: User[] = [];
-    const CHUNK_SIZE = 30;
+    const CHUNK_SIZE = 30; // Firestore 'in' query limit
     for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
         const chunk = userIds.slice(i, i + CHUNK_SIZE);
         if (chunk.length > 0) {
@@ -150,19 +150,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (firestore) {
         const userRef = doc(firestore, 'users', authUser.uid);
         try {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
+            },
+            () => { updateDoc(userRef, { lastSeen: new Date().toISOString() }); },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
           const userSnap = await getDoc(userRef);
           if (isMounted) {
             if (userSnap.exists()) {
               const userData = userSnap.data() as User;
               setUser(userData);
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  const { latitude, longitude } = position.coords;
-                  updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
-                },
-                () => { updateDoc(userRef, { lastSeen: new Date().toISOString() }); },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-              );
             } else {
               setUser(null);
             }
@@ -185,37 +185,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setIsAppDataLoading(true);
 
       try {
-          // Determine opposite gender for queries
           const oppositeGender = user.gender === '남성' ? '여성' : '남성';
           const usersCollection = collection(firestore, 'users');
 
-          // Build queries
           const queries = {
               map: query(usersCollection, where('gender', '==', oppositeGender), limit(100)),
               hot: query(usersCollection, where('gender', '==', oppositeGender), orderBy('likeCount', 'desc'), limit(20)),
               new: query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(20)),
               matches: query(collection(firestore, 'matches'), where('users', 'array-contains', user.id)),
               likedBy: query(collection(firestore, 'users', user.id, 'likedBy'), orderBy('timestamp', 'desc')),
-              iLiked: query(collection(firestore, 'users', user.id, 'likes'), where('isLike', '==', true), orderBy('timestamp', 'desc'))
           };
           
-          // Execute all queries in parallel
           const [mapSnap, hotSnap, newSnap, matchesSnap, likedBySnap, iLikedSnap] = await Promise.all([
               getDocs(queries.map),
               getDocs(queries.hot),
               getDocs(queries.new),
               getDocs(queries.matches),
               getDocs(queries.likedBy),
-              getDocs(queries.iLiked)
+              getDocs(query(collection(firestore, 'users', user.id, 'likes'), where('isLike', '==', true))) // Fetch all likes
           ]);
 
-          // Process results
           const mapUsers = [user, ...mapSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id)];
           const hotUsers = hotSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id);
           const newUsers = newSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id);
           const matches = matchesSnap.docs.map(d => d.data() as Match);
 
-          // Fetch user profiles for like lists
           const likedByIds = likedBySnap.docs.map(d => d.data().likerId);
           const iLikedIds = iLikedSnap.docs.map(d => d.data().likeeId);
           
@@ -223,11 +217,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
               fetchUsersByIds(firestore, likedByIds),
               fetchUsersByIds(firestore, iLikedIds)
           ]);
-
-          // Order liked users based on original timestamp order
+          
           const orderedLikedBy = likedByIds.map(id => peopleWhoLikedMe.find(u => u.id === id)).filter(Boolean) as User[];
           const orderedILiked = iLikedIds.map(id => peopleILiked.find(u => u.id === id)).filter(Boolean) as User[];
-          
+
           setAppData({
               mapUsers,
               hotUsers,
