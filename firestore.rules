@@ -113,7 +113,7 @@ service cloud.firestore {
        */
       match /messages/{messageId} {
         allow read, list: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId)));
-        allow create: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) && request.resource.data.senderId == request.auth.uid;
+        allow create: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) && (request.resource.data.senderId == request.auth.uid || request.resource.data.senderId == 'system');
         allow update: if false; // Messages are immutable
         allow delete: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) && resource.data.senderId == request.auth.uid;
       }
