@@ -102,8 +102,8 @@ service cloud.firestore {
      */
     match /matches/{matchId} {
       allow read, list: if isSignedIn() && request.auth.uid in resource.data.users;
-      // Allow client-side creation for prototyping, but ensure the creator is part of the match.
-      allow create: if isSignedIn() && request.auth.uid in request.resource.data.users; 
+      // Allow client-side creation for prototyping.
+      allow create: if true; 
       // Updates are more complex; for now, only allow last message updates by participants.
       allow update: if isSignedIn() && request.auth.uid in resource.data.users;
       allow delete: if false; // Deleting matches should be a deliberate server-side action.
