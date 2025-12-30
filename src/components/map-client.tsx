@@ -125,7 +125,7 @@ export default function MapClient({ users, currentUser }: MapClientProps) {
   }
 
   return (
-    <div className="relative flex-1 flex">
+    <div className="relative flex-1">
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-full px-4">
         <div className="bg-black/50 backdrop-blur-sm rounded-full p-1 flex justify-around items-center text-white text-sm font-semibold">
           {distanceOptions.map(option => (
