@@ -101,7 +101,8 @@ const initialAppData: AppDataType = {
 async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
     if (userIds.length === 0) return [];
     const users: User[] = [];
-    const CHUNK_SIZE = 30; // Firestore 'in' query limit
+    // Firestore 'in' query supports up to 30 elements in the array.
+    const CHUNK_SIZE = 30; 
     for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
         const chunk = userIds.slice(i, i + CHUNK_SIZE);
         if (chunk.length > 0) {
@@ -190,10 +191,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
           const queries = {
               map: query(usersCollection, where('gender', '==', oppositeGender), limit(100)),
-              hot: query(usersCollection, where('gender', '==', oppositeGender), orderBy('likeCount', 'desc'), limit(20)),
+              hot: query(usersCollection, orderBy('likeCount', 'desc'), limit(40)), // Fetch more to filter client-side
               new: query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(20)),
               matches: query(collection(firestore, 'matches'), where('users', 'array-contains', user.id)),
               likedBy: query(collection(firestore, 'users', user.id, 'likedBy'), orderBy('timestamp', 'desc')),
+              iLiked: query(collection(firestore, 'users', user.id, 'likes'), where('isLike', '==', true))
           };
           
           const [mapSnap, hotSnap, newSnap, matchesSnap, likedBySnap, iLikedSnap] = await Promise.all([
@@ -202,11 +204,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
               getDocs(queries.new),
               getDocs(queries.matches),
               getDocs(queries.likedBy),
-              getDocs(query(collection(firestore, 'users', user.id, 'likes'), where('isLike', '==', true))) // Fetch all likes
+              getDocs(queries.iLiked)
           ]);
 
           const mapUsers = [user, ...mapSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id)];
-          const hotUsers = hotSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id);
+          const hotUsersRaw = hotSnap.docs.map(d => d.data() as User);
+          const hotUsers = hotUsersRaw.filter(u => u.id !== user.id && u.gender === oppositeGender).slice(0, 20);
+
           const newUsers = newSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id);
           const matches = matchesSnap.docs.map(d => d.data() as Match);
 
