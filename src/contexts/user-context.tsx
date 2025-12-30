@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult, PhoneAuthProvider, PhoneAuthCredential } from 'firebase/auth';
+import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp, collection, query, where, getDoc, updateDoc } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
@@ -51,6 +51,8 @@ interface UserContextType {
   isLoaded: boolean;
   totalUnreadCount: number;
   phoneAuth: PhoneAuthState;
+  isSignupFlowActive: boolean;
+  setIsSignupFlowActive: (isActive: boolean) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -76,15 +78,15 @@ const initialFilters: FilterSettings = {
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const { user: authUser, isUserLoading } = useAuthUserHook();
+  const { user: authUser, isUserLoading: isAuthLoading } = useAuthUserHook();
   const firestore = useFirestore();
   const auth = useAuth();
   const router = useRouter();
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
-  const [isContextLoaded, setIsContextLoaded] = useState(false);
-
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
 
   // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -95,57 +97,65 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [reauthVerificationId, setReauthVerificationId] = useState<string | null>(null);
 
 
-  // Load user data from Firestore
   useEffect(() => {
     let isMounted = true;
-    const fetchUser = async () => {
-        if (authUser && firestore) {
-            const userRef = doc(firestore, 'users', authUser.uid);
-            try {
-                const userSnap = await getDoc(userRef);
-                if (isMounted) {
-                    if (userSnap.exists()) {
-                        setUser(userSnap.data() as User);
-                    } else {
-                        setUser(null);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to fetch user document:", error);
-                if (isMounted) setUser(null);
-            }
-        } else if (!isUserLoading && isMounted) {
-            setUser(null);
-        }
-    };
-    
-    fetchUser();
-    return () => { isMounted = false };
-}, [authUser, firestore, isUserLoading]);
 
-useEffect(() => {
-    if (authUser && firestore && user) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const userRef = doc(firestore, 'users', authUser.uid);
-                updateDoc(userRef, {
-                    lat: latitude,
-                    lng: longitude,
-                    lastSeen: new Date().toISOString(),
-                });
-                setUser(prevUser => prevUser ? {...prevUser, lat: latitude, lng: longitude} : null);
-            },
-            (error) => {
-                console.warn("Could not get user location:", error.message);
-                // If we can't get location, just update lastSeen
-                const userRef = doc(firestore, 'users', authUser.uid);
-                updateDoc(userRef, { lastSeen: new Date().toISOString() });
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    }
-}, [authUser, firestore, user?.id]); // Rerun when user ID is available
+    const manageUserFlow = async () => {
+      // Don't do anything until Firebase Auth has resolved
+      if (isAuthLoading) {
+        return;
+      }
+
+      // If no one is logged in via Firebase Auth, reset state and finish.
+      if (!authUser) {
+        setUser(null);
+        setIsLoaded(true);
+        return;
+      }
+
+      // If we have an authUser, try to fetch their profile.
+      if (firestore) {
+        const userRef = doc(firestore, 'users', authUser.uid);
+        try {
+          const userSnap = await getDoc(userRef);
+          if (isMounted) {
+            if (userSnap.exists()) {
+              const userData = userSnap.data() as User;
+              setUser(userData);
+
+              // Update location and lastSeen in background
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  const { latitude, longitude } = position.coords;
+                  updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
+                },
+                () => {
+                  updateDoc(userRef, { lastSeen: new Date().toISOString() });
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+              );
+
+            } else {
+              // Auth user exists but no profile doc. This means they're in the signup flow.
+              setUser(null);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch user document:", error);
+          if (isMounted) setUser(null);
+        }
+      }
+      
+      // Mark loading as complete for the entire context.
+      if (isMounted) {
+        setIsLoaded(true);
+      }
+    };
+
+    manageUserFlow();
+
+    return () => { isMounted = false; };
+  }, [authUser, firestore, isAuthLoading]);
 
 
   // Load settings from localStorage once on mount
@@ -163,14 +173,6 @@ useEffect(() => {
       console.error("Failed to parse data from localStorage", error);
     }
   }, []);
-
-  // Determine overall loading state
-  useEffect(() => {
-      // isContextLoaded is true once the initial auth state check is complete.
-      if (!isUserLoading) {
-          setIsContextLoaded(true);
-      }
-  }, [isUserLoading]);
 
   const matchesQuery = useMemoFirebase(() => {
     if (!firestore || !user || !user.id) return null;
@@ -331,7 +333,7 @@ useEffect(() => {
     filters,
     updateFilters,
     resetFilters,
-    isLoaded: isContextLoaded,
+    isLoaded,
     totalUnreadCount,
     phoneAuth: {
       phoneNumber,
@@ -345,6 +347,8 @@ useEffect(() => {
       isSendingOtp,
       isVerifyingOtp,
     },
+    isSignupFlowActive,
+    setIsSignupFlowActive,
   };
 
   return (

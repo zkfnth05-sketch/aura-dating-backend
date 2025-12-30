@@ -31,14 +31,15 @@ export default function UploadPhotoPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // This is a protected route. If auth state is loaded and there's no authenticated user,
-    // redirect to the start of the signup flow.
-    if (isLoaded && !authUser) {
-      router.replace('/signup');
-    }
-    // If the user lands here without basic profile info, send them back
-    else if (isLoaded && authUser && !user) {
-      router.replace('/signup/profile');
+    // This is a protected route.
+    if (isLoaded) {
+      if (!authUser) {
+        // Not authenticated, should be on the initial signup page.
+        router.replace('/signup');
+      } else if (!user) {
+        // Authenticated but no profile, should be creating profile first.
+        router.replace('/signup/profile');
+      }
     }
   }, [isLoaded, authUser, user, router]);
 
