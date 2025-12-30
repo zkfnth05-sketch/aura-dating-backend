@@ -8,7 +8,7 @@ import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import type { FilterSettings } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, updateDoc, getDoc, arrayUnion, writeBatch, increment, documentId, Query, collectionGroup, addDoc, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';

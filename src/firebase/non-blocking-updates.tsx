@@ -19,14 +19,18 @@ import {FirestorePermissionError} from '@/firebase/errors';
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
   const operation = options && 'merge' in options ? 'update' : 'create';
   setDoc(docRef, data, options || {}).catch(error => {
-    errorEmitter.emit(
-      'permission-error',
-      new FirestorePermissionError({
-        path: docRef.path,
-        operation: operation,
-        requestResourceData: data,
-      })
-    )
+    // Check if the error is a permission error before creating the custom error
+    if (error.code === 'permission-denied') {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: operation,
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    } else {
+        // Handle other types of errors (e.g., network issues) if necessary
+        console.error("Firestore setDoc failed:", error);
+    }
   })
   // Execution continues immediately
 }
@@ -40,14 +44,16 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
   const promise = addDoc(colRef, data)
     .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: data,
-        })
-      )
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: colRef.path, // Note: This is the collection path, not a document path
+              operation: 'create',
+              requestResourceData: data,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error("Firestore addDoc failed:", error);
+        }
     });
   return promise;
 }
@@ -60,14 +66,16 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
   updateDoc(docRef, data)
     .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        })
-      )
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'update',
+              requestResourceData: data,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+             console.error("Firestore updateDoc failed:", error);
+        }
     });
 }
 
@@ -79,13 +87,15 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
 export function deleteDocumentNonBlocking(docRef: DocumentReference) {
   deleteDoc(docRef)
     .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        })
-      )
+        if (error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error("Firestore deleteDoc failed:", error);
+        }
     });
 }
 
