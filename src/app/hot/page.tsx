@@ -7,11 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
-import { useState, useEffect, useCallback } from 'react';
-import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit, where, orderBy } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 const UserCard = ({ user }: { user: User }) => {
   return (
@@ -35,89 +31,27 @@ const UserCard = ({ user }: { user: User }) => {
 };
 
 export default function HotPage() {
-  const { user: currentUser } = useUser();
-  const [newUsers, setNewUsers] = useState<User[]>([]);
-  const [hotUsers, setHotUsers] = useState<User[]>([]);
-  const [isLoadingNew, setIsLoadingNew] = useState(true);
-  const [isLoadingHot, setIsLoadingHot] = useState(true);
-  const [activeTab, setActiveTab] = useState('new');
-  const firestore = useFirestore();
+  const { user: currentUser, appData, isAppDataLoading, isLoaded } = useUser();
+  const { newUsers, hotUsers } = appData;
 
-  const fetchNewUsers = useCallback(async () => {
-    if (!currentUser || !firestore) return;
-    setIsLoadingNew(true);
-    try {
-      let baseQuery;
-      if (currentUser.gender === '남성') {
-        baseQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), orderBy('createdAt', 'desc'), limit(20));
-      } else if (currentUser.gender === '여성') {
-        baseQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), orderBy('createdAt', 'desc'), limit(20));
-      } else {
-        baseQuery = query(collection(firestore, 'users'), orderBy('createdAt', 'desc'), limit(20));
-      }
-
-      const newUsersSnapshot = await getDocs(baseQuery);
-      const newUsersData = newUsersSnapshot.docs
-        .map(doc => doc.data() as User)
-        .filter(user => user.id !== currentUser.id)
-
-      setNewUsers(newUsersData);
-    } catch (error) {
-      console.error("Error fetching new users:", error);
-    } finally {
-      setIsLoadingNew(false);
-    }
-  }, [currentUser, firestore]);
-  
-  const fetchHotUsers = useCallback(async () => {
-    if (!currentUser || !firestore) return;
-    setIsLoadingHot(true);
-    try {
-        let baseQuery;
-        if (currentUser.gender === '남성') {
-            baseQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), orderBy('likeCount', 'desc'), limit(20));
-        } else if (currentUser.gender === '여성') {
-            baseQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), orderBy('likeCount', 'desc'), limit(20));
-        } else {
-            baseQuery = query(collection(firestore, 'users'), orderBy('likeCount', 'desc'), limit(20));
-        }
-      
-      const hotUsersSnapshot = await getDocs(baseQuery);
-      const hotUsersData = hotUsersSnapshot.docs
-        .map(doc => doc.data() as User)
-        .filter(user => user.id !== currentUser.id);
-
-      setHotUsers(hotUsersData);
-    } catch (error) {
-      console.error("Error fetching hot users:", error);
-    } finally {
-      setIsLoadingHot(false);
-    }
-  }, [currentUser, firestore]);
-
-  useEffect(() => {
-    if (currentUser) {
-        fetchNewUsers();
-        fetchHotUsers();
-    }
-  }, [currentUser, fetchNewUsers, fetchHotUsers]);
+  const isLoading = !isLoaded || isAppDataLoading;
 
   if (!currentUser) {
     return (
-        <div className="flex flex-col h-screen">
-            <Header />
-            <main className="flex-1 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </main>
-        </div>
-      );
+      <div className="flex flex-col h-screen">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </main>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
-        <Tabs defaultValue="new" className="w-full" onValueChange={setActiveTab}>
+        <Tabs defaultValue="new" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 rounded-none h-14">
             <TabsTrigger 
               value="new" 
@@ -134,7 +68,7 @@ export default function HotPage() {
           </TabsList>
           
           <TabsContent value="new" className="mt-0 p-4">
-            {isLoadingNew ? (
+            {isLoading ? (
               <div className="flex items-center justify-center pt-20">
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>
@@ -147,7 +81,7 @@ export default function HotPage() {
             )}
           </TabsContent>
           <TabsContent value="hot" className="mt-0 p-4">
-            {isLoadingHot ? (
+            {isLoading ? (
               <div className="flex items-center justify-center pt-20">
                   <Loader2 className="h-8 w-8 animate-spin" />
               </div>

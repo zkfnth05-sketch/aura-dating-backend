@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, collection, query, where, getDoc, updateDoc } from 'firebase/firestore';
-import type { User, Match } from '@/lib/types';
+import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, collectionGroup, documentId, orderBy, limit } from 'firebase/firestore';
+import type { User, Match, LikedBy } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 interface NotificationSettings {
@@ -39,6 +39,15 @@ interface PhoneAuthState {
   isVerifyingOtp: boolean;
 }
 
+interface AppDataType {
+    mapUsers: User[];
+    hotUsers: User[];
+    newUsers: User[];
+    peopleWhoLikedMe: User[];
+    peopleILiked: User[];
+    matches: Match[];
+}
+
 interface UserContextType {
   user: User | null;
   authUser: AuthUser | null;
@@ -53,6 +62,9 @@ interface UserContextType {
   phoneAuth: PhoneAuthState;
   isSignupFlowActive: boolean;
   setIsSignupFlowActive: (isActive: boolean) => void;
+  appData: AppDataType;
+  isAppDataLoading: boolean;
+  fetchInitialData: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -76,6 +88,31 @@ const initialFilters: FilterSettings = {
     interests: [],
 }
 
+const initialAppData: AppDataType = {
+    mapUsers: [],
+    hotUsers: [],
+    newUsers: [],
+    peopleWhoLikedMe: [],
+    peopleILiked: [],
+    matches: [],
+}
+
+
+async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
+    if (userIds.length === 0) return [];
+    const users: User[] = [];
+    const CHUNK_SIZE = 30;
+    for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
+        const chunk = userIds.slice(i, i + CHUNK_SIZE);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
+            const userDocs = await getDocs(usersQuery);
+            users.push(...userDocs.docs.map(d => d.data() as User));
+        }
+    }
+    return users;
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const { user: authUser, isUserLoading: isAuthLoading } = useAuthUserHook();
@@ -87,6 +124,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
+  const [isAppDataLoading, setIsAppDataLoading] = useState(true);
+  const [appData, setAppData] = useState<AppDataType>(initialAppData);
 
   // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -101,19 +140,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
 
     const manageUserFlow = async () => {
-      // Don't do anything until Firebase Auth has resolved
-      if (isAuthLoading) {
-        return;
-      }
-
-      // If no one is logged in via Firebase Auth, reset state and finish.
+      if (isAuthLoading) return;
       if (!authUser) {
         setUser(null);
         setIsLoaded(true);
         return;
       }
 
-      // If we have an authUser, try to fetch their profile.
       if (firestore) {
         const userRef = doc(firestore, 'users', authUser.uid);
         try {
@@ -122,21 +155,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
             if (userSnap.exists()) {
               const userData = userSnap.data() as User;
               setUser(userData);
-
-              // Update location and lastSeen in background
               navigator.geolocation.getCurrentPosition(
                 (position) => {
                   const { latitude, longitude } = position.coords;
                   updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
                 },
-                () => {
-                  updateDoc(userRef, { lastSeen: new Date().toISOString() });
-                },
+                () => { updateDoc(userRef, { lastSeen: new Date().toISOString() }); },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
               );
-
             } else {
-              // Auth user exists but no profile doc. This means they're in the signup flow.
               setUser(null);
             }
           }
@@ -146,42 +173,97 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Mark loading as complete for the entire context.
-      if (isMounted) {
-        setIsLoaded(true);
-      }
+      if (isMounted) setIsLoaded(true);
     };
 
     manageUserFlow();
-
     return () => { isMounted = false; };
   }, [authUser, firestore, isAuthLoading]);
 
+  const fetchInitialData = useCallback(async () => {
+      if (!user || !firestore) return;
+      setIsAppDataLoading(true);
+
+      try {
+          // Determine opposite gender for queries
+          const oppositeGender = user.gender === '남성' ? '여성' : '남성';
+          const usersCollection = collection(firestore, 'users');
+
+          // Build queries
+          const queries = {
+              map: query(usersCollection, where('gender', '==', oppositeGender), limit(100)),
+              hot: query(usersCollection, where('gender', '==', oppositeGender), orderBy('likeCount', 'desc'), limit(20)),
+              new: query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(20)),
+              matches: query(collection(firestore, 'matches'), where('users', 'array-contains', user.id)),
+              likedBy: query(collection(firestore, 'users', user.id, 'likedBy'), orderBy('timestamp', 'desc')),
+              iLiked: query(collection(firestore, 'users', user.id, 'likes'), where('isLike', '==', true), orderBy('timestamp', 'desc'))
+          };
+          
+          // Execute all queries in parallel
+          const [mapSnap, hotSnap, newSnap, matchesSnap, likedBySnap, iLikedSnap] = await Promise.all([
+              getDocs(queries.map),
+              getDocs(queries.hot),
+              getDocs(queries.new),
+              getDocs(queries.matches),
+              getDocs(queries.likedBy),
+              getDocs(queries.iLiked)
+          ]);
+
+          // Process results
+          const mapUsers = [user, ...mapSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id)];
+          const hotUsers = hotSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id);
+          const newUsers = newSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id);
+          const matches = matchesSnap.docs.map(d => d.data() as Match);
+
+          // Fetch user profiles for like lists
+          const likedByIds = likedBySnap.docs.map(d => d.data().likerId);
+          const iLikedIds = iLikedSnap.docs.map(d => d.data().likeeId);
+          
+          const [peopleWhoLikedMe, peopleILiked] = await Promise.all([
+              fetchUsersByIds(firestore, likedByIds),
+              fetchUsersByIds(firestore, iLikedIds)
+          ]);
+
+          // Order liked users based on original timestamp order
+          const orderedLikedBy = likedByIds.map(id => peopleWhoLikedMe.find(u => u.id === id)).filter(Boolean) as User[];
+          const orderedILiked = iLikedIds.map(id => peopleILiked.find(u => u.id === id)).filter(Boolean) as User[];
+          
+          setAppData({
+              mapUsers,
+              hotUsers,
+              newUsers,
+              matches,
+              peopleWhoLikedMe: orderedLikedBy,
+              peopleILiked: orderedILiked,
+          });
+
+      } catch (error) {
+          console.error("Error fetching initial app data:", error);
+      } finally {
+          setIsAppDataLoading(false);
+      }
+
+  }, [user, firestore]);
+
+  useEffect(() => {
+    if (user) {
+      fetchInitialData();
+    }
+  }, [user, fetchInitialData]);
 
   // Load settings from localStorage once on mount
   useEffect(() => {
     try {
       const storedSettings = localStorage.getItem('notificationSettings');
-      if (storedSettings) {
-        setNotificationSettings(JSON.parse(storedSettings));
-      }
+      if (storedSettings) setNotificationSettings(JSON.parse(storedSettings));
       const storedFilters = localStorage.getItem('userFilters');
-      if (storedFilters) {
-        setFilters(JSON.parse(storedFilters));
-      }
+      if (storedFilters) setFilters(JSON.parse(storedFilters));
     } catch (error) {
       console.error("Failed to parse data from localStorage", error);
     }
   }, []);
 
-  const matchesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !user.id) return null;
-    return query(collection(firestore, 'matches'), where('users', 'array-contains', user.id));
-  }, [firestore, user]);
-
-  const { data: matches } = useCollection<Match>(matchesQuery);
-
-  const totalUnreadCount = (matches || []).reduce((acc, match) => {
+  const totalUnreadCount = (appData.matches || []).reduce((acc, match) => {
     if (user && user.id && match.unreadCounts) {
       return acc + (match.unreadCounts[user.id] || 0);
     }
@@ -198,7 +280,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     
-    // Check if this is the initial profile creation
     if (newUserData.createdAt) {
       dataToSave.createdAt = serverTimestamp();
     }
@@ -207,7 +288,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     setUser(prevUser => {
       const updatedUser = { ...(prevUser || {}), ...dataToSave } as User;
-      // Don't set createdAt on local user object as it's a server value
       if (newUserData.createdAt) {
         delete (updatedUser as Partial<User>).createdAt;
       }
@@ -265,7 +345,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     let targetPhoneNumber = phoneNumberOverride || phoneNumber;
     if (recaptchaVerifier && targetPhoneNumber) {
       
-      // Format number to E.164 for Firebase
       if (targetPhoneNumber.startsWith('0')) {
         targetPhoneNumber = `+82${targetPhoneNumber.substring(1)}`;
       }
@@ -276,7 +355,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const confirmation = await signInWithPhoneNumber(auth, targetPhoneNumber, recaptchaVerifier);
         setConfirmationResult(confirmation);
         setReauthVerificationId(confirmation.verificationId);
-        if(!phoneNumberOverride) { // Don't redirect on re-auth
+        if(!phoneNumberOverride) {
             router.push('/signup/otp');
         }
         return confirmation.verificationId;
@@ -294,7 +373,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setIsVerifyingOtp(true);
       try {
         await confirmationResult.confirm(otp);
-        // Auth state change will be handled by the main listener
         router.push('/signup/profile');
       } catch (error) {
         console.error("OTP 인증 실패:", error);
@@ -349,6 +427,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     },
     isSignupFlowActive,
     setIsSignupFlowActive,
+    appData,
+    isAppDataLoading,
+    fetchInitialData,
   };
 
   return (

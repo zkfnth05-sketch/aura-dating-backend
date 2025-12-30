@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Button } from './ui/button';
 
 interface MapClientProps {
   users: User[];
@@ -107,7 +106,15 @@ export default function MapClient({ users, currentUser }: MapClientProps) {
   const router = useRouter();
   
   const [zoom, setZoom] = useState(11);
-  const [center] = useState({ lat: currentUser.lat, lng: currentUser.lng });
+  const [center, setCenter] = useState({ lat: currentUser.lat, lng: currentUser.lng });
+
+  useEffect(() => {
+    // Update center if currentUser's location changes
+    if (currentUser.lat && currentUser.lng) {
+      setCenter({ lat: currentUser.lat, lng: currentUser.lng });
+    }
+  }, [currentUser.lat, currentUser.lng]);
+
 
   const handleMarkerClick = (userId: string) => {
     if(userId === currentUser.id) {

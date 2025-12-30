@@ -4,58 +4,12 @@ import MapClient from '@/components/map-client';
 import Header from '@/components/layout/header';
 import { useUser } from '@/contexts/user-context';
 import { APIProvider } from '@vis.gl/react-google-maps';
-import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit, where } from 'firebase/firestore';
-import type { User } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
 
 export default function MapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
-  const firestore = useFirestore();
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (!currentUser || !firestore) {
-        setIsLoading(false);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        let usersQuery;
-        if (currentUser.gender === '남성') {
-            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), limit(100));
-        } else if (currentUser.gender === '여성') {
-            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(100));
-        } else {
-            // '기타' 성별이거나 성별 정보가 없을 경우, 모든 성별을 100명까지 가져옴 (본인 제외)
-            usersQuery = query(collection(firestore, 'users'), where('id', '!=', currentUser.id), limit(100));
-        }
-        
-        const usersSnapshot = await getDocs(usersQuery);
-        const fetchedUsers = usersSnapshot.docs.map(doc => doc.data() as User);
-
-        // Ensure current user is always on the map
-        const finalUsers = [currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)];
-        
-        setUsers(finalUsers);
-
-      } catch (error) {
-        console.error("Error fetching users for map:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (isUserLoaded) {
-        fetchUsers();
-    }
-  }, [currentUser, firestore, isUserLoaded]);
-
-
+  const { user: currentUser, isLoaded, isAppDataLoading, appData } = useUser();
+  
   if (!apiKey) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -78,9 +32,9 @@ export default function MapPage() {
     );
   }
 
-  if (isLoading || !isUserLoaded || !currentUser) {
+  if (!isLoaded || isAppDataLoading || !currentUser) {
       return (
-        <div className="flex flex-col h-screen">
+        <div className="flex flex-col min-h-screen">
             <Header />
             <main className="flex-1 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -94,7 +48,7 @@ export default function MapPage() {
       <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-1 flex flex-col">
-            <MapClient users={users} currentUser={currentUser} />
+            <MapClient users={appData.mapUsers} currentUser={currentUser} />
         </main>
       </div>
     </APIProvider>
