@@ -180,7 +180,6 @@ export default function UserProfilePage() {
       timestamp: serverTimestamp(),
     };
   
-    // Non-blocking write to own 'likes' subcollection.
     setDocumentNonBlocking(likeRef, likeData);
   
     router.back();
