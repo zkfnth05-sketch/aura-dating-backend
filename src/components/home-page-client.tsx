@@ -43,27 +43,11 @@ export default function HomePageClient() {
     let usersQuery: Query<DocumentData>;
     const baseUsersRef = collection(firestore, 'users');
     
-    let genderFilter: ('남성' | '여성' | '기타')[] = [];
-    if (filters.gender.length > 0) {
-      genderFilter = filters.gender;
-    } else if (currentUser.gender === '남성') {
-      genderFilter = ['여성'];
-    } else if (currentUser.gender === '여성') {
-      genderFilter = ['남성'];
-    }
-
-    if (genderFilter.length > 0) {
-        usersQuery = query(
-            baseUsersRef, 
-            where('gender', 'in', genderFilter), 
-            orderBy('createdAt', 'desc')
-        );
-    } else {
-        usersQuery = query(
-            baseUsersRef,
-            orderBy('createdAt', 'desc')
-        );
-    }
+    // Query without gender filter to avoid composite index requirement
+    usersQuery = query(
+        baseUsersRef,
+        orderBy('createdAt', 'desc')
+    );
 
     // Add pagination
     if (lastVisibleDoc) {
@@ -78,9 +62,20 @@ export default function HomePageClient() {
             .map(doc => doc.data() as User)
             .filter(user => user.id !== currentUser.id);
         
-        // Simple client-side filter for age range and tags
         const applySimpleFilters = (users: User[]): User[] => {
             return users.filter(user => {
+                // Gender Filter (client-side)
+                let genderFilter: ('남성' | '여성' | '기타')[] = [];
+                if (filters.gender.length > 0) {
+                    genderFilter = filters.gender;
+                } else if (currentUser.gender === '남성') {
+                    genderFilter = ['여성'];
+                } else if (currentUser.gender === '여성') {
+                    genderFilter = ['남성'];
+                }
+                if (genderFilter.length > 0 && !genderFilter.includes(user.gender)) return false;
+                
+                // Other filters
                 if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
                 
                 const checkTags = (userTags: string[] = [], filterTags: string[]) => {
@@ -117,9 +112,9 @@ export default function HomePageClient() {
   useEffect(() => {
     // Initial fetch
     if(isLoaded && currentUser) {
-      fetchUsers();
+      fetchUsers(null);
     }
-  }, [isLoaded, currentUser, filters]); // Re-fetch when filters change
+  }, [isLoaded, currentUser, filters, fetchUsers]);
 
 
   const activeUser = displayedUsers[currentIndex];
@@ -276,5 +271,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
