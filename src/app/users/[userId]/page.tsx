@@ -27,48 +27,45 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
 
 const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User, potentialMatch: User }) => {
   const [aiReason, setAiReason] = useState<string | null>(null);
-  const [isAiReasonLoading, setIsAiReasonLoading] = useState(false);
+  const [isAiReasonLoading, setIsAiReasonLoading] = useState(true);
 
   useEffect(() => {
-    if (currentUser && potentialMatch && !aiReason) {
-      const fetchReason = async () => {
-        setIsAiReasonLoading(true);
-        try {
-          const potentialMatchWithDefaults = {
-            ...potentialMatch,
-            hobbies: potentialMatch.hobbies || [],
-            interests: potentialMatch.interests || [],
-            values: potentialMatch.values || [],
-            communication: potentialMatch.communication || [],
-            lifestyle: potentialMatch.lifestyle || [],
-          };
-          const currentUserWithDefaults = {
-            ...currentUser,
-            hobbies: currentUser.hobbies || [],
-            interests: currentUser.interests || [],
-            values: currentUser.values || [],
-            communication: currentUser.communication || [],
-            lifestyle: currentUser.lifestyle || [],
-          };
-          
-          delete (potentialMatchWithDefaults as Partial<User>).createdAt;
-          delete (currentUserWithDefaults as Partial<User>).createdAt;
+    const fetchReason = async () => {
+      try {
+        const potentialMatchWithDefaults = {
+          ...potentialMatch,
+          hobbies: potentialMatch.hobbies || [],
+          interests: potentialMatch.interests || [],
+          values: potentialMatch.values || [],
+          communication: potentialMatch.communication || [],
+          lifestyle: potentialMatch.lifestyle || [],
+        };
+        const currentUserWithDefaults = {
+          ...currentUser,
+          hobbies: currentUser.hobbies || [],
+          interests: currentUser.interests || [],
+          values: currentUser.values || [],
+          communication: currentUser.communication || [],
+          lifestyle: currentUser.lifestyle || [],
+        };
+        
+        delete (potentialMatchWithDefaults as Partial<User>).createdAt;
+        delete (currentUserWithDefaults as Partial<User>).createdAt;
 
-          const result = await getAIRecommendationReason({ 
-              currentUser: currentUserWithDefaults, 
-              potentialMatch: potentialMatchWithDefaults 
-          });
-          setAiReason(result.reason);
-        } catch (error) {
-          console.error("Failed to get AI recommendation reason:", error);
-          setAiReason("추천 이유를 불러오는 데 실패했습니다.");
-        } finally {
-          setIsAiReasonLoading(false);
-        }
+        const result = await getAIRecommendationReason({ 
+            currentUser: currentUserWithDefaults, 
+            potentialMatch: potentialMatchWithDefaults 
+        });
+        setAiReason(result.reason);
+      } catch (error) {
+        console.error("Failed to get AI recommendation reason:", error);
+        setAiReason("추천 이유를 불러오는 데 실패했습니다.");
+      } finally {
+        setIsAiReasonLoading(false);
       }
-      fetchReason();
     }
-  }, [currentUser, potentialMatch, aiReason]);
+    fetchReason();
+  }, [currentUser, potentialMatch]);
 
   return (
     <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4 min-h-[120px] flex flex-col relative">
@@ -116,7 +113,6 @@ export default function UserProfilePage() {
     const targetUserId = user.id;
 
     if (action === 'message') {
-      // Optimized query to find a specific match between two users
       const matchQuery = query(
         collection(firestore, 'matches'),
         where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
@@ -128,7 +124,6 @@ export default function UserProfilePage() {
       if (existingMatchDoc) {
         router.push(`/chat/${existingMatchDoc.id}`);
       } else {
-        // Create a new match
         const newMatchRef = doc(collection(firestore, 'matches'));
         const matchData = {
           id: newMatchRef.id,
@@ -141,7 +136,7 @@ export default function UserProfilePage() {
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),
           unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
-          callStatus: 'idle',
+          callStatus: 'idle' as const,
           callerId: null,
         };
 
@@ -180,7 +175,6 @@ export default function UserProfilePage() {
       return;
     }
 
-    // --- Like or Dislike action ---
     const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
     const likeData = {
       likerId: currentUser.id,

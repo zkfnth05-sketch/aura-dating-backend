@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult, PhoneAuthProvider, PhoneAuthCredential } from 'firebase/auth';
-import { useUser as useAuthUser, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp, collection, query, where, getDoc } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -78,7 +78,7 @@ const initialFilters: FilterSettings = {
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const { user: authUser, isUserLoading } = useAuthUser();
+  const { user: authUser, isUserLoading } = useAuthUserHook();
   const firestore = useFirestore();
   const auth = useAuth();
   const router = useRouter();
@@ -100,26 +100,30 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Load user data from Firestore
   useEffect(() => {
+    let isMounted = true;
     const fetchUser = async () => {
         if (authUser && firestore) {
             const userRef = doc(firestore, 'users', authUser.uid);
             try {
                 const userSnap = await getDoc(userRef);
-                if (userSnap.exists()) {
-                    setUser(userSnap.data() as User);
-                } else {
-                    setUser(null);
+                if (isMounted) {
+                    if (userSnap.exists()) {
+                        setUser(userSnap.data() as User);
+                    } else {
+                        setUser(null);
+                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch user document:", error);
-                setUser(null);
+                if (isMounted) setUser(null);
             }
-        } else if (!isUserLoading) {
+        } else if (!isUserLoading && isMounted) {
             setUser(null);
         }
     };
     
     fetchUser();
+    return () => { isMounted = false };
 }, [authUser, firestore, isUserLoading]);
 
   // Load settings from localStorage once on mount
@@ -140,6 +144,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Determine overall loading state
   useEffect(() => {
+      // isContextLoaded is true once the initial auth state check is complete.
       if (!isUserLoading) {
           setIsContextLoaded(true);
       }
@@ -172,7 +177,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Check if this is the initial profile creation
     if (newUserData.createdAt) {
       dataToSave.createdAt = serverTimestamp();
-      setIsSignupFlowActive(true); // Activate signup flow flag
     }
   
     setDocumentNonBlocking(userRef, dataToSave, { merge: true });
@@ -249,6 +253,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setConfirmationResult(confirmation);
         setReauthVerificationId(confirmation.verificationId);
         if(!phoneNumberOverride) { // Don't redirect on re-auth
+            setIsSignupFlowActive(true);
             router.push('/signup/otp');
         }
         return confirmation.verificationId;

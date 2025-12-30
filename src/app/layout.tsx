@@ -18,6 +18,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
   const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
+  
+  // Show BottomNav only if the user is authenticated and has a complete profile.
   const showBottomNav = !!(authUser && user);
 
   if (isAdminPage) {

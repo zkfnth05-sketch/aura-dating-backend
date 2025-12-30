@@ -22,13 +22,20 @@ export default function PhonePage() {
   const [recaptchaContainer, setRecaptchaContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
+    // This container is where the invisible reCAPTCHA will be rendered.
+    const container = document.getElementById('recaptcha-container');
+    if (container) {
+      setRecaptchaContainer(container);
+    }
+  }, []);
+
+  useEffect(() => {
     if (recaptchaContainer) {
       setupRecaptcha(recaptchaContainer);
     }
   }, [recaptchaContainer, setupRecaptcha]);
 
   const handleSendCode = async () => {
-    // Basic validation for Korean phone number format
     if (!/^010[0-9]{8}$/.test(phoneNumber)) {
         alert("유효한 전화번호를 입력해주세요. (예: 01012345678)");
         return;
@@ -75,8 +82,8 @@ export default function PhonePage() {
         </Button>
       </footer>
       
-      {/* Container for reCAPTCHA */}
-      <div id="recaptcha-container" ref={setRecaptchaContainer}></div>
+      {/* This div is essential for the invisible reCAPTCHA */}
+      <div id="recaptcha-container"></div>
     </div>
   );
 }

@@ -14,7 +14,7 @@ import type { User } from '@/lib/types';
 export default function CreateProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, updateUser, authUser, isLoaded, isSignupFlowActive } = useUser();
+  const { user, updateUser, authUser, isLoaded, isSignupFlowActive, setIsSignupFlowActive } = useUser();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
@@ -22,24 +22,18 @@ export default function CreateProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // This is a protected route. If auth state is loaded and there's no authenticated user,
-    // redirect to the start of the signup flow.
     if (isLoaded && !authUser) {
       router.replace('/signup');
       return;
     }
     
-    // If the user profile ALREADY exists and we are NOT in an active signup flow,
-    // it means they have completed signup. Send them to the main app.
     if (isLoaded && authUser && user && !isSignupFlowActive) {
         router.replace('/');
         return;
     }
 
-    // Pre-fill form if authUser exists (they've passed OTP) but no full profile yet.
     if (authUser) {
       setName(prev => prev || authUser.displayName || '');
-      // We don't pre-fill from `user` object here because its existence means they should be redirected.
     }
   }, [isLoaded, authUser, user, router, isSignupFlowActive]);
 
@@ -62,6 +56,7 @@ export default function CreateProfilePage() {
     }
 
     setIsSubmitting(true);
+    setIsSignupFlowActive(true); // Explicitly keep the flow active
 
     const userData: Partial<User> & { createdAt: any } = {
       name,
@@ -80,7 +75,9 @@ export default function CreateProfilePage() {
       likeCount: 0,
     };
     
-    updateUser(userData).catch(error => {
+    updateUser(userData).then(() => {
+        router.push('/signup/photo');
+    }).catch(error => {
       console.error("Failed to update user:", error);
       toast({
         variant: "destructive",
@@ -88,14 +85,11 @@ export default function CreateProfilePage() {
         description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
       });
       setIsSubmitting(false);
+      setIsSignupFlowActive(false); // Reset flow on error
     });
-
-    router.push('/signup/photo');
   };
 
   if (!isLoaded || !authUser || (user && !isSignupFlowActive)) {
-    // While loading, or if no authUser (will be redirected), or if user exists (will be redirected),
-    // show a loader to prevent content flash.
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
