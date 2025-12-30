@@ -227,8 +227,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [auth, recaptchaVerifier]);
 
   const sendVerificationCode = useCallback(async (phoneNumberOverride?: string) => {
-    const targetPhoneNumber = phoneNumberOverride || phoneNumber;
+    let targetPhoneNumber = phoneNumberOverride || phoneNumber;
     if (recaptchaVerifier && targetPhoneNumber) {
+      
+      // Format number to E.164 for Firebase
+      if (targetPhoneNumber.startsWith('0')) {
+        targetPhoneNumber = `+82${targetPhoneNumber.substring(1)}`;
+      }
+
       setIsSendingOtp(true);
       try {
         const { signInWithPhoneNumber } = require('firebase/auth');

@@ -28,9 +28,9 @@ export default function PhonePage() {
   }, [recaptchaContainer, setupRecaptcha]);
 
   const handleSendCode = async () => {
-    // Basic validation for phone number format
-    if (!/^\+?[0-9]{10,14}$/.test(phoneNumber)) {
-        alert("유효한 전화번호를 입력해주세요. (예: +821012345678)");
+    // Basic validation for Korean phone number format
+    if (!/^010[0-9]{8}$/.test(phoneNumber)) {
+        alert("유효한 전화번호를 입력해주세요. (예: 01012345678)");
         return;
     }
     await sendVerificationCode();
@@ -54,7 +54,7 @@ export default function PhonePage() {
               type="tel"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="국가번호 포함 (예: +8210...)"
+              placeholder="전화번호를 입력하세요 (예: 01012345678)"
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
               disabled={isSendingOtp}
             />
