@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult, PhoneAuthProvider, PhoneAuthCredential } from 'firebase/auth';
 import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, collection, query, where, getDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, query, where, getDoc, updateDoc } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -51,8 +51,6 @@ interface UserContextType {
   isLoaded: boolean;
   totalUnreadCount: number;
   phoneAuth: PhoneAuthState;
-  isSignupFlowActive: boolean;
-  setIsSignupFlowActive: (isActive: boolean) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -86,7 +84,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isContextLoaded, setIsContextLoaded] = useState(false);
-  const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
 
 
   // Phone Auth State
@@ -125,6 +122,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
     fetchUser();
     return () => { isMounted = false };
 }, [authUser, firestore, isUserLoading]);
+
+useEffect(() => {
+    if (authUser && firestore && user) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                const userRef = doc(firestore, 'users', authUser.uid);
+                updateDoc(userRef, {
+                    lat: latitude,
+                    lng: longitude,
+                    lastSeen: new Date().toISOString(),
+                });
+                setUser(prevUser => prevUser ? {...prevUser, lat: latitude, lng: longitude} : null);
+            },
+            (error) => {
+                console.warn("Could not get user location:", error.message);
+                // If we can't get location, just update lastSeen
+                const userRef = doc(firestore, 'users', authUser.uid);
+                updateDoc(userRef, { lastSeen: new Date().toISOString() });
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+}, [authUser, firestore, user?.id]); // Rerun when user ID is available
+
 
   // Load settings from localStorage once on mount
   useEffect(() => {
@@ -253,7 +275,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setConfirmationResult(confirmation);
         setReauthVerificationId(confirmation.verificationId);
         if(!phoneNumberOverride) { // Don't redirect on re-auth
-            setIsSignupFlowActive(true);
             router.push('/signup/otp');
         }
         return confirmation.verificationId;
@@ -324,8 +345,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       isSendingOtp,
       isVerifyingOtp,
     },
-    isSignupFlowActive,
-    setIsSignupFlowActive,
   };
 
   return (
