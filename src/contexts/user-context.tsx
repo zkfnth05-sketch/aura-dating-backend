@@ -1,10 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { User as AuthUser } from 'firebase/auth';
-import { useUser as useAuthUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
+import { useUser as useAuthUser, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp, collection, query, where, getDoc } from 'firebase/firestore';
 import type { User, Match } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 interface NotificationSettings {
   all: boolean;
@@ -25,6 +26,18 @@ export interface FilterSettings {
     interests: string[];
 }
 
+interface PhoneAuthState {
+  phoneNumber: string;
+  setPhoneNumber: (phone: string) => void;
+  confirmationResult: ConfirmationResult | null;
+  recaptchaVerifier: RecaptchaVerifier | null;
+  setupRecaptcha: (container: HTMLElement) => void;
+  sendVerificationCode: () => Promise<void>;
+  verifyOtp: (otp: string) => Promise<void>;
+  isSendingOtp: boolean;
+  isVerifyingOtp: boolean;
+}
+
 interface UserContextType {
   user: User | null;
   authUser: AuthUser | null;
@@ -36,6 +49,7 @@ interface UserContextType {
   resetFilters: () => void;
   isLoaded: boolean;
   totalUnreadCount: number;
+  phoneAuth: PhoneAuthState;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -63,10 +77,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const { user: authUser, isUserLoading } = useAuthUser();
   const firestore = useFirestore();
+  const auth = useAuth();
+  const router = useRouter();
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isContextLoaded, setIsContextLoaded] = useState(false);
+
+  // Phone Auth State
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
 
   // Load user data from Firestore
   useEffect(() => {
@@ -78,14 +102,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 if (userSnap.exists()) {
                     setUser(userSnap.data() as User);
                 } else {
-                    setUser(null); // User exists in Auth but not in Firestore (mid-signup)
+                    setUser(null);
                 }
             } catch (error) {
                 console.error("Failed to fetch user document:", error);
                 setUser(null);
             }
         } else if (!isUserLoading) {
-            setUser(null); // No authenticated user or firestore not ready
+            setUser(null);
         }
     };
     
@@ -110,13 +134,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Determine overall loading state
   useEffect(() => {
-      // The context is "loaded" when the initial authentication check is complete.
       if (!isUserLoading) {
           setIsContextLoaded(true);
       }
   }, [isUserLoading]);
 
-  // --- Unread count logic ---
   const matchesQuery = useMemoFirebase(() => {
     if (!firestore || !user || !user.id) return null;
     return query(collection(firestore, 'matches'), where('users', 'array-contains', user.id));
@@ -130,7 +152,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
     return acc;
   }, 0);
-  // --- End unread count logic ---
 
   const updateUser = useCallback(async (newUserData: Partial<User>) => {
     if (!authUser || !firestore) {
@@ -140,27 +161,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     const userRef = doc(firestore, 'users', authUser.uid);
   
-    const dataToSave: any = { ...newUserData };
-    // Don't overwrite the ID if it's already there from the user object
-    if (!dataToSave.id) {
-      dataToSave.id = authUser.uid;
-    }
+    const dataToSave: any = { ...newUserData, id: authUser.uid };
     
-    // This is specifically for the initial user creation during signup.
     if ((newUserData as any).createdAt === 'serverTimestamp') {
         dataToSave.createdAt = serverTimestamp();
     }
   
-    // Use the non-blocking update function
     setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   
-    // Optimistically update the local state
     setUser(prevUser => {
       const updatedUser = { ...(prevUser || {}), ...dataToSave } as User;
-      // 'createdAt' is a server value, so we don't want to keep the local 'serverTimestamp' string
       if ((newUserData as any).createdAt === 'serverTimestamp') {
-        // We can't know the real timestamp yet, so we remove it or set it to null
-        // For now, removing it is fine as it's not critical for the UI immediately after creation.
         delete (updatedUser as Partial<User>).createdAt;
       }
       return updatedUser;
@@ -202,7 +213,52 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const value = {
+  // --- Phone Auth Logic ---
+  const setupRecaptcha = useCallback((container: HTMLElement) => {
+    if (auth && !recaptchaVerifier) {
+      const { RecaptchaVerifier } = require('firebase/auth');
+      const verifier = new RecaptchaVerifier(auth, container, {
+        size: 'invisible',
+      });
+      setRecaptchaVerifier(verifier);
+    }
+  }, [auth, recaptchaVerifier]);
+
+  const sendVerificationCode = useCallback(async () => {
+    if (recaptchaVerifier && phoneNumber) {
+      setIsSendingOtp(true);
+      try {
+        const { signInWithPhoneNumber } = require('firebase/auth');
+        const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+        setConfirmationResult(confirmation);
+        router.push('/signup/otp');
+      } catch (error) {
+        console.error("SMS 전송 실패:", error);
+        alert("인증 코드 전송에 실패했습니다. 전화번호를 확인하고 다시 시도해주세요.");
+      } finally {
+        setIsSendingOtp(false);
+      }
+    }
+  }, [auth, phoneNumber, recaptchaVerifier, router]);
+
+  const verifyOtp = useCallback(async (otp: string) => {
+    if (confirmationResult && otp) {
+      setIsVerifyingOtp(true);
+      try {
+        await confirmationResult.confirm(otp);
+        // Auth state change will be handled by the main listener
+        router.push('/signup/profile');
+      } catch (error) {
+        console.error("OTP 인증 실패:", error);
+        alert("인증 코드가 잘못되었습니다. 다시 확인해주세요.");
+      } finally {
+        setIsVerifyingOtp(false);
+      }
+    }
+  }, [confirmationResult, router]);
+  // --- End Phone Auth Logic ---
+
+  const value: UserContextType = {
     user,
     authUser,
     updateUser,
@@ -213,6 +269,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     resetFilters,
     isLoaded: isContextLoaded,
     totalUnreadCount,
+    phoneAuth: {
+      phoneNumber,
+      setPhoneNumber,
+      confirmationResult,
+      recaptchaVerifier,
+      setupRecaptcha,
+      sendVerificationCode,
+      verifyOtp,
+      isSendingOtp,
+      isVerifyingOtp,
+    }
   };
 
   return (

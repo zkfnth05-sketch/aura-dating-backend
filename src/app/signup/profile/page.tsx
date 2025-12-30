@@ -23,11 +23,9 @@ export default function CreateProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // If loading is done and there's no authenticated user, redirect to signup.
     if (isLoaded && !authUser) {
       router.replace('/signup');
     }
-    // Pre-fill form if authUser or user profile data exists.
     if (authUser) {
       setName(prev => prev || user?.name || authUser.displayName || '');
       setAge(prev => prev || user?.age?.toString() || '');
@@ -61,9 +59,9 @@ export default function CreateProfilePage() {
       age: parseInt(age, 10),
       location: city,
       gender,
+      phoneNumber: authUser.phoneNumber || '',
     };
 
-    // Only add creation-specific fields if the user profile doesn't exist yet
     if (!user) {
       userData.id = authUser.uid;
       userData.email = authUser.email || '';
@@ -76,23 +74,19 @@ export default function CreateProfilePage() {
       userData.likeCount = 0;
     }
     
-    // Do not wait for the update to finish. Navigate immediately.
     updateUser(userData).catch(error => {
-      // Still log errors if the background update fails.
       console.error("Failed to update user:", error);
       toast({
         variant: "destructive",
         title: "오류",
         description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
       });
-      setIsSubmitting(false); // Re-enable button on error
+      setIsSubmitting(false);
     });
 
     router.push('/signup/photo');
   };
 
-  // Show a global loader only if the auth state is still loading.
-  // Once auth is loaded, we can render the form, even if the user profile is still fetching.
   if (isLoaded === false) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
