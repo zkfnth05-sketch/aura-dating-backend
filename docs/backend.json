@@ -149,19 +149,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Like",
       "type": "object",
-      "description": "Represents a user's like or dislike of another user.",
+      "description": "Represents a user's like or dislike action towards another user.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the like."
-        },
         "likerId": {
           "type": "string",
-          "description": "Reference to the user who is liking. (Relationship: UserProfile 1:N Like)"
+          "description": "The ID of the user who is performing the like action."
         },
         "likeeId": {
           "type": "string",
-          "description": "Reference to the user who is being liked. (Relationship: UserProfile 1:N Like)"
+          "description": "The ID of the user who is being liked."
         },
         "isLike": {
           "type": "boolean",
@@ -174,31 +170,9 @@
         }
       },
       "required": [
-        "id",
         "likerId",
         "likeeId",
         "isLike",
-        "timestamp"
-      ]
-    },
-    "LikedBy": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LikedBy",
-      "type": "object",
-      "description": "Represents a record of a user being liked by another.",
-      "properties": {
-        "likerId": {
-          "type": "string",
-          "description": "ID of the user who performed the like."
-        },
-        "timestamp": {
-          "type": "string",
-          "description": "Timestamp of when the like was recorded.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "likerId",
         "timestamp"
       ]
     }
@@ -217,29 +191,17 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profile data. Path-based ownership ensures only the user can access their own profile.",
-          "subcollections": [
-            {
-              "path": "likes",
-              "definition": {
-                "entityName": "Like",
-                "schema": {
-                  "$ref": "#/backend/entities/Like"
-                },
-                "description": "Stores the likes/dislikes that this user has sent to other users. The document ID can be the ID of the 'likee'."
-              }
-            },
-            {
-              "path": "likedBy",
-              "definition": {
-                "entityName": "LikedBy",
-                "schema": {
-                  "$ref": "#/backend/entities/LikedBy"
-                },
-                "description": "Stores records of other users who have liked this user. The document ID can be the ID of the 'liker'."
-              }
-            }
-          ]
+          "description": "Stores user profile data. Path-based ownership ensures only the user can access their own profile."
+        }
+      },
+      {
+        "path": "/likes/{likeId}",
+        "definition": {
+          "entityName": "Like",
+          "schema": {
+            "$ref": "#/backend/entities/Like"
+          },
+          "description": "Top-level collection to store all like/dislike actions. This avoids writing to other users' subcollections, thus preventing permission issues."
         }
       },
       {
@@ -249,7 +211,7 @@
           "schema": {
             "$ref": "#/backend/entities/Match"
           },
-          "description": "Stores match data between two users. Includes denormalized 'user1Id' and 'user2Id' for authorization independence.",
+          "description": "Stores match data between two users. Includes denormalized 'users' array for simple participant authorization.",
           "subcollections": [
             {
               "path": "messages",
@@ -265,6 +227,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the core features of the GoldChic Dating app, focusing on user profiles, matching, likes, and real-time chat. The design emphasizes authorization independence and efficient data retrieval, adhering to the core design principles.\n\n*   **UserProfile:** User profiles are stored in `/users/{userId}`. This path-based ownership ensures that only the user can read and write their profile data.\n*   **Likes & LikedBy (Subcollections):** To manage relationships efficiently, two subcollections are used under each user's profile:\n    *   `/users/{userId}/likes`: This stores all the 'like' or 'dislike' actions performed by the user. It makes it easy to query for all the people a user has swiped on.\n    *   `/users/{userId}/likedBy`: This stores who has liked the current user. This allows the 'Who liked me' feature to be implemented with a simple collection query, which is highly efficient.\n*   **Matches:** Matches are stored in a top-level `/matches/{matchId}` collection to keep the data structure flat. Each match document contains a `users` array with the UIDs of the two matched users. This design allows for efficient querying of all matches for a given user (e.g., `where('users', 'array-contains', currentUserId)`).\n*   **Chat Messages:** Chat messages are a subcollection of a match (`/matches/{matchId}/messages/{messageId}`). This structure logically groups all messages for a conversation and allows security rules to easily grant access only to the participants of the parent match document.\n\nThis structure promotes security, scalability, and debuggability by minimizing hierarchical dependencies and clearly defining ownership and access rights."
+    "reasoning": "The Firestore data structure has been redesigned for improved security and scalability, particularly for the 'like' functionality. Instead of storing 'likes' in subcollections under each user, a top-level `likes` collection is now used. Each document in `/likes` represents a single like action and contains both `likerId` and `likeeId`. This change is critical because it eliminates the need for one user to write to another user's document tree, which was causing 'permission-denied' errors with the previous security rules. This new structure allows for simple, indexed queries to find 'who I liked' (`where('likerId', '==', currentUserId)`) and 'who liked me' (`where('likeeId', '==', currentUserId)`) without complex security rule workarounds. The rest of the structure for users and matches remains the same, as it is already optimized for ownership-based security and efficient data retrieval."
   }
 }

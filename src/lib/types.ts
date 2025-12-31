@@ -18,7 +18,6 @@ export type User = {
   communication?: string[];
   lifestyle?: string[];
   lastSeen?: 'Online' | string; // 'Online' or ISO 8601 date string
-  likeCount: number;
   createdAt?: Timestamp;
   phoneNumber?: string;
 };
@@ -50,6 +49,8 @@ export type Like = {
     timestamp: Timestamp;
 };
 
+// This type is no longer used with the new top-level 'likes' collection.
+// It can be removed if no other part of the app depends on it.
 export type LikedBy = {
     id: string;
     likerId: string;

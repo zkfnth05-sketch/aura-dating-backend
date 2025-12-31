@@ -105,7 +105,6 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
         id: newUserRef.id,
         ...values,
         createdAt: serverTimestamp(),
-        likeCount: 0,
         photoUrls: [photoUrlToSave],
         bio: '새로운 만남을 기다립니다!',
         hobbies: ['독서', '영화 감상'],

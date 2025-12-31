@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, collectionGroup, documentId, orderBy, limit } from 'firebase/firestore';
-import type { User, Match, LikedBy } from '@/lib/types';
+import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, collectionGroup, documentId, orderBy, limit, addDoc } from 'firebase/firestore';
+import type { User, Match, Like } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
 interface NotificationSettings {
@@ -188,26 +188,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
       try {
           const oppositeGender = user.gender === '남성' ? '여성' : '남성';
           const usersCollection = collection(firestore, 'users');
+          const likesCollection = collection(firestore, 'likes');
 
           const queries = {
               map: query(usersCollection, where('gender', '==', oppositeGender), limit(100)),
-              hot: query(usersCollection, orderBy('likeCount', 'desc'), limit(40)),
+              hot: query(usersCollection, orderBy('createdAt', 'desc'), limit(40)),
               new: query(usersCollection, orderBy('createdAt', 'desc'), limit(40)),
               matches: query(collection(firestore, 'matches'), where('users', 'array-contains', user.id)),
-              likedBy: query(collection(firestore, 'users', user.id, 'likedBy'), orderBy('timestamp', 'desc')),
-              iLiked: query(collection(firestore, 'users', user.id, 'likes'), where('isLike', '==', true))
+              iLiked: query(likesCollection, where('likerId', '==', user.id)),
+              likedBy: query(likesCollection, where('likeeId', '==', user.id)),
           };
           
-          const [mapSnap, hotSnap, newSnap, matchesSnap, likedBySnap, iLikedSnap] = await Promise.all([
+          const [mapSnap, hotSnap, newSnap, matchesSnap, iLikedSnap, likedBySnap] = await Promise.all([
               getDocs(queries.map),
               getDocs(queries.hot),
               getDocs(queries.new),
               getDocs(queries.matches),
+              getDocs(queries.iLiked),
               getDocs(queries.likedBy),
-              getDocs(queries.iLiked)
           ]);
 
           const mapUsers = [user, ...mapSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id)];
+          
           const hotUsersRaw = hotSnap.docs.map(d => d.data() as User);
           const hotUsers = hotUsersRaw.filter(u => u.id !== user.id && u.gender === oppositeGender).slice(0, 20);
 
@@ -216,16 +218,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
           
           const matches = matchesSnap.docs.map(d => d.data() as Match);
 
-          const likedByIds = likedBySnap.docs.map(d => d.data().likerId);
           const iLikedIds = iLikedSnap.docs.map(d => d.data().likeeId);
+          const likedByIds = likedBySnap.docs.map(d => d.data().likerId);
           
-          const [peopleWhoLikedMe, peopleILiked] = await Promise.all([
-              fetchUsersByIds(firestore, likedByIds),
-              fetchUsersByIds(firestore, iLikedIds)
+          const [peopleILiked, peopleWhoLikedMe] = await Promise.all([
+              fetchUsersByIds(firestore, iLikedIds),
+              fetchUsersByIds(firestore, likedByIds)
           ]);
           
-          const orderedLikedBy = likedByIds.map(id => peopleWhoLikedMe.find(u => u.id === id)).filter(Boolean) as User[];
           const orderedILiked = iLikedIds.map(id => peopleILiked.find(u => u.id === id)).filter(Boolean) as User[];
+          const orderedLikedBy = likedByIds.map(id => peopleWhoLikedMe.find(u => u.id === id)).filter(Boolean) as User[];
 
           setAppData({
               mapUsers,

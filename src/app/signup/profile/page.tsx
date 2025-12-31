@@ -74,7 +74,6 @@ export default function CreateProfilePage() {
       lat: 37.5665,
       lng: 126.9780,
       createdAt: "serverTimestamp", // Special marker for the context
-      likeCount: 0,
     };
     
     updateUser(userData).then(() => {

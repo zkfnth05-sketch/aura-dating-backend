@@ -11,8 +11,8 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
 import { getAIRecommendationReason } from '@/app/actions/ai-actions';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc, writeBatch, increment } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 
@@ -95,7 +95,7 @@ export default function UserProfilePage() {
   const source = searchParams.get('from');
   const firestore = useFirestore();
 
-  const { user: currentUser, isLoaded } = useUser();
+  const { user: currentUser, isLoaded, fetchInitialData } = useUser();
   
   const userRef = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
@@ -175,15 +175,32 @@ export default function UserProfilePage() {
       return;
     }
 
-    const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
     const likeData = {
       likerId: currentUser.id,
       likeeId: targetUserId,
       isLike: action === 'like',
       timestamp: serverTimestamp(),
     };
-  
-    setDocumentNonBlocking(likeRef, likeData);
+    
+    const likesCollection = collection(firestore, 'likes');
+
+    // Non-blocking write to the new top-level 'likes' collection
+    addDoc(likesCollection, likeData).catch(e => {
+      if (e.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+          operation: 'create',
+          path: 'likes',
+          requestResourceData: likeData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      } else {
+        console.error("Failed to record like:", e);
+      }
+    });
+
+    if (action === 'like') {
+      fetchInitialData();
+    }
   
     router.back();
   };

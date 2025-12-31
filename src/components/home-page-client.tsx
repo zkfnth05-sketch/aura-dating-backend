@@ -7,8 +7,8 @@ import ProfileCard from '@/components/profile-card';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, addDoc, writeBatch, documentId, Query, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, addDoc, Query, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -187,15 +187,28 @@ export default function HomePageClient() {
     const direction = action === 'dislike' ? 'left' : 'right';
     setSwipeState(direction);
   
-    const likeRef = doc(firestore, 'users', currentUser.id, 'likes', targetUserId);
     const likeData = {
       likerId: currentUser.id,
       likeeId: targetUserId,
       isLike: action === 'like',
       timestamp: serverTimestamp(),
     };
-  
-    setDocumentNonBlocking(likeRef, likeData);
+
+    const likesCollection = collection(firestore, 'likes');
+
+    // Non-blocking write to the new top-level 'likes' collection
+    addDoc(likesCollection, likeData).catch(e => {
+      if (e.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+          operation: 'create',
+          path: 'likes',
+          requestResourceData: likeData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      } else {
+        console.error("Failed to record like:", e);
+      }
+    });
 
     if (action === 'like') {
       fetchInitialData();
@@ -235,7 +248,6 @@ export default function HomePageClient() {
               <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
               <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
                <Button onClick={() => fetchUsers()} className="mt-6">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 다시 시도
               </Button>
             </div>

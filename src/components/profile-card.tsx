@@ -81,12 +81,6 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
             <h2 className="text-3xl font-bold">
               {potentialMatch.name}, <span className="font-light">{potentialMatch.age}, {potentialMatch.gender}</span>
             </h2>
-            {potentialMatch.likeCount !== undefined && (
-              <div className="flex items-center gap-1 text-white/90">
-                <Heart className="w-5 h-5 fill-red-500 text-red-500" />
-                <span className="font-semibold text-lg">{potentialMatch.likeCount}</span>
-              </div>
-            )}
           </div>
           <p className="text-white/80 mt-1 line-clamp-2">{potentialMatch.bio}</p>
           <div className="flex flex-wrap gap-2 mt-4">
@@ -105,5 +99,3 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
 ProfileCard.displayName = 'ProfileCard';
 
 export default ProfileCard;
-
-    
