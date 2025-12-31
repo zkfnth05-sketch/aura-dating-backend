@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, collectionGroup, documentId, orderBy, limit, addDoc } from 'firebase/firestore';
@@ -54,9 +54,10 @@ interface UserContextType {
   isSignupFlowActive: boolean;
   setIsSignupFlowActive: (isActive: boolean) => void;
   matches: Match[] | null;
-  likes: Like[] | null;
-  isLikesLoading: boolean;
   isMatchesLoading: boolean;
+  peopleILiked: User[] | null;
+  peopleWhoLikedMe: User[] | null;
+  isLikesLoading: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -80,6 +81,22 @@ const initialFilters: FilterSettings = {
     interests: [],
 }
 
+async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
+    if (userIds.length === 0) return [];
+    const users: User[] = [];
+    // Firestore 'in' query supports a maximum of 30 elements
+    const CHUNK_SIZE = 30;
+    for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
+        const chunk = userIds.slice(i, i + CHUNK_SIZE);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
+            const userDocs = await getDocs(usersQuery);
+            users.push(...userDocs.docs.map(d => d.data() as User));
+        }
+    }
+    return users;
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const { user: authUser, isUserLoading: isAuthLoading } = useAuthUserHook();
@@ -89,7 +106,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
 
   // Phone Auth State
@@ -99,7 +116,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [reauthVerificationId, setReauthVerificationId] = useState<string | null>(null);
-
+  
+  // State for liked users
+  const [peopleILiked, setPeopleILiked] = useState<User[] | null>(null);
+  const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[] | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -108,7 +128,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       if (isAuthLoading) return;
       if (!authUser) {
         setUser(null);
-        setIsLoaded(true);
+        setIsDataLoaded(true);
         return;
       }
 
@@ -138,7 +158,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      if (isMounted) setIsLoaded(true);
+      if (isMounted) setIsDataLoaded(true);
     };
 
     manageUserFlow();
@@ -162,12 +182,47 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return query(collection(firestore, "matches"), where("users", "array-contains", user.id));
   }, [user?.id, firestore]);
   const { data: matches, isLoading: isMatchesLoading } = useCollection<Match>(matchesQuery);
+  
+  const myLikesQuery = useMemoFirebase(() => {
+    if (!user?.id || !firestore) return null;
+    return query(collection(firestore, 'likes'), where('likerId', '==', user.id));
+  }, [user?.id, firestore]);
+  const { data: myLikes } = useCollection<Like>(myLikesQuery);
 
-  const likesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "likes"));
-  }, [firestore]);
-  const { data: likes, isLoading: isLikesLoading } = useCollection<Like>(likesQuery);
+  const likesToMeQuery = useMemoFirebase(() => {
+      if (!user?.id || !firestore) return null;
+      return query(collection(firestore, 'likes'), where('likeeId', '==', user.id));
+  }, [user?.id, firestore]);
+  const { data: likesToMe } = useCollection<Like>(likesToMeQuery);
+
+  const isLikesLoading = myLikes === null || likesToMe === null;
+
+  useEffect(() => {
+    const processLikes = async () => {
+        if (isLikesLoading || !firestore) return;
+
+        const iLikedIds = (myLikes || []).map(l => l.likeeId);
+        const likedMeIds = (likesToMe || []).map(l => l.likerId);
+
+        try {
+            const [iLikedUsers, likedMeUsers] = await Promise.all([
+                fetchUsersByIds(firestore, iLikedIds),
+                fetchUsersByIds(firestore, likedMeIds)
+            ]);
+
+            // De-duplicate users to ensure each user appears only once
+            const uniqueILiked = Array.from(new Map(iLikedUsers.map(u => [u.id, u])).values());
+            const uniqueLikedMe = Array.from(new Map(likedMeUsers.map(u => [u.id, u])).values());
+
+            setPeopleILiked(uniqueILiked);
+            setPeopleWhoLikedMe(uniqueLikedMe);
+        } catch (error) {
+            console.error("Error fetching liked user profiles:", error);
+        }
+    }
+    processLikes();
+  }, [myLikes, likesToMe, isLikesLoading, firestore]);
+
 
   const totalUnreadCount = (matches || []).reduce((acc, match) => {
     if (user && user.id && match.unreadCounts) {
@@ -317,7 +372,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     filters,
     updateFilters,
     resetFilters,
-    isLoaded,
+    isLoaded: isDataLoaded && !isAuthLoading,
     totalUnreadCount,
     phoneAuth: {
       phoneNumber,
@@ -334,9 +389,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     isSignupFlowActive,
     setIsSignupFlowActive,
     matches,
-    likes,
-    isLikesLoading,
     isMatchesLoading,
+    peopleILiked,
+    peopleWhoLikedMe,
+    isLikesLoading,
   };
 
   return (

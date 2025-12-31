@@ -6,67 +6,11 @@ import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { Loader2 } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, documentId } from 'firebase/firestore';
-import type { User, Like } from '@/lib/types';
-
-async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
-    if (userIds.length === 0) return [];
-    const users: User[] = [];
-    const CHUNK_SIZE = 30;
-    for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
-        const chunk = userIds.slice(i, i + CHUNK_SIZE);
-        if (chunk.length > 0) {
-            const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
-            const userDocs = await getDocs(usersQuery);
-            users.push(...userDocs.docs.map(d => d.data() as User));
-        }
-    }
-    return users;
-}
-
 
 export default function MatchesPage() {
-  const { user: currentUser, isLoaded, matches, isMatchesLoading, likes, isLikesLoading } = useUser();
-  const firestore = useFirestore();
+  const { user: currentUser, isLoaded, matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading } = useUser();
 
-  const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[]>([]);
-  const [peopleILiked, setPeopleILiked] = useState<User[]>([]);
-  const [isLikedUsersLoading, setIsLikedUsersLoading] = useState(true);
-
-  useEffect(() => {
-    const processLikes = async () => {
-        if (!likes || !currentUser || !firestore) return;
-        
-        setIsLikedUsersLoading(true);
-
-        const iLikedIds = likes.filter(l => l.likerId === currentUser.id).map(l => l.likeeId);
-        const likedByIds = likes.filter(l => l.likeeId === currentUser.id).map(l => l.likerId);
-        
-        try {
-            const [iLikedUsers, likedByUsers] = await Promise.all([
-                fetchUsersByIds(firestore, iLikedIds),
-                fetchUsersByIds(firestore, likedByIds)
-            ]);
-
-            const orderedILiked = iLikedIds.map(id => iLikedUsers.find(u => u.id === id)).filter(Boolean) as User[];
-            const orderedLikedBy = likedByIds.map(id => likedByUsers.find(u => u.id === id)).filter(Boolean) as User[];
-
-            setPeopleILiked(orderedILiked);
-            setPeopleWhoLikedMe(orderedLikedBy);
-        } catch(error) {
-            console.error("Error fetching liked user profiles:", error);
-        } finally {
-            setIsLikedUsersLoading(false);
-        }
-    }
-
-    if (!isLikesLoading) {
-        processLikes();
-    }
-  }, [likes, isLikesLoading, currentUser, firestore]);
-
-  const isLoading = !isLoaded || isMatchesLoading || isLikedUsersLoading;
+  const isLoading = !isLoaded || isMatchesLoading || isLikesLoading;
 
   if (!currentUser) {
     return (
@@ -109,10 +53,10 @@ export default function MatchesPage() {
             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <MatchList matches={matches || []} />}
           </TabsContent>
           <TabsContent value="liked-me" className="mt-0 p-4">
-             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleWhoLikedMe} />}
+             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleWhoLikedMe || []} />}
           </TabsContent>
           <TabsContent value="i-liked" className="mt-0 p-4">
-            {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleILiked} />}
+            {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleILiked || []} />}
           </TabsContent>
             
         </Tabs>
