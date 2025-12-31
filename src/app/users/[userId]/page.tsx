@@ -128,10 +128,7 @@ export default function UserProfilePage() {
         const matchData = {
           id: newMatchRef.id,
           users: [currentUser.id, targetUserId],
-          participants: [
-            { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen || null },
-            { id: user.id, name: user.name, photoUrls: user.photoUrls, lastSeen: user.lastSeen || null },
-          ],
+          participants: [currentUser, user],
           matchDate: serverTimestamp(),
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),

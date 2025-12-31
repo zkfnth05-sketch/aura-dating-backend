@@ -148,16 +148,13 @@ export default function HomePageClient() {
         const matchData = {
           id: newMatchRef.id,
           users: [currentUser.id, targetUserId],
-          participants: [
-            { id: currentUser.id, name: currentUser.name, photoUrls: currentUser.photoUrls, lastSeen: currentUser.lastSeen || null },
-            { id: activeUser.id, name: activeUser.name, photoUrls: activeUser.photoUrls, lastSeen: activeUser.lastSeen || null },
-          ],
+          participants: [currentUser, activeUser],
           matchDate: serverTimestamp(),
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),
           unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
-          callStatus: 'idle',
-          callerId: null
+          callStatus: 'idle' as const,
+          callerId: null,
         };
   
         setDoc(newMatchRef, matchData).then(() => {

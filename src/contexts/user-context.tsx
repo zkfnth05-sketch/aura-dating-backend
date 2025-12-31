@@ -227,14 +227,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
           ]);
           
           const orderedILiked = iLikedIds.map(id => peopleILiked.find(u => u.id === id)).filter(Boolean) as User[];
-          const orderedLikedBy = likedByIds.map(id => peopleWhoLikedMe.find(u => u.id === id)).filter(Boolean) as User[];
+          
+          const peopleWhoLikedMeWithFullData = likedByIds.map(id => {
+              return peopleWhoLikedMe.find(u => u.id === id);
+          }).filter((u): u is User => !!u);
+
 
           setAppData({
               mapUsers,
               hotUsers,
               newUsers,
               matches,
-              peopleWhoLikedMe: orderedLikedBy,
+              peopleWhoLikedMe: peopleWhoLikedMeWithFullData,
               peopleILiked: orderedILiked,
           });
 
