@@ -4,10 +4,12 @@ import ChatInterface from '@/components/chat-interface';
 import { useDoc, useMemoFirebase, useFirestore, useUser } from '@/firebase';
 import type { Match, User } from '@/lib/types';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, collection, CollectionReference } from 'firebase/firestore';
+import { doc, collection, CollectionReference, updateDoc } from 'firebase/firestore';
 import { Loader2, UserX, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 
 export default function ChatPage() {
@@ -41,6 +43,28 @@ export default function ChatPage() {
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
   }, [firestore, matchId]);
   
+  useEffect(() => {
+    if (otherUser && currentUser && match) {
+      // Update the other user's lastSeen timestamp in the match participants array
+      const matchRef = doc(firestore, 'matches', match.id);
+      const participantsUpdate = match.participants.map(p => 
+        p.id === otherUser.id ? { ...p, lastSeen: new Date().toISOString() } : p
+      );
+      
+      updateDoc(matchRef, { participants: participantsUpdate })
+        .catch(e => {
+            if (e.code === 'permission-denied') {
+              const contextualError = new FirestorePermissionError({
+                operation: 'update',
+                path: matchRef.path,
+                requestResourceData: { participants: participantsUpdate },
+              });
+              errorEmitter.emit('permission-error', contextualError);
+            }
+        });
+    }
+  }, [currentUser, otherUser, firestore, match]);
+
   const isLoading = isMatchLoading || !currentUser || isOtherUserLoading;
 
   if (isLoading) {

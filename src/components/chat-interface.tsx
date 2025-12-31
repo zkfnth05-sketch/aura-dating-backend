@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -85,7 +87,16 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
         if (matchSnap.exists()) {
             const currentMatchData = matchSnap.data() as Match;
             if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
-                await updateDoc(matchRef, { callStatus: 'idle', callerId: null });
+                updateDoc(matchRef, { callStatus: 'idle', callerId: null }).catch(e => {
+                  if (e.code === 'permission-denied') {
+                    const contextualError = new FirestorePermissionError({
+                      operation: 'update',
+                      path: matchRef.path,
+                      requestResourceData: { callStatus: 'idle', callerId: null },
+                    });
+                    errorEmitter.emit('permission-error', contextualError);
+                  }
+                });
             }
         }
     };
@@ -97,7 +108,16 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
         [currentUser.id]: 0,
     };
     if (match.unreadCounts[currentUser.id] > 0) {
-        updateDoc(matchRef, { unreadCounts: newUnreadCounts });
+        updateDoc(matchRef, { unreadCounts: newUnreadCounts }).catch(e => {
+          if (e.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+              operation: 'update',
+              path: matchRef.path,
+              requestResourceData: { unreadCounts: newUnreadCounts },
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          }
+        });
     }
 
     const unsubscribe = onSnapshot(matchRef, (doc) => {
@@ -158,9 +178,9 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     );
   }
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === '') return;
+    if (newMessage.trim() === '' || !firestore) return;
 
     const batch = writeBatch(firestore);
     const otherUserId = otherUser.id!;
@@ -176,18 +196,30 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
 
     // 2. Update the last message and unread count on the parent match document
     const matchRef = doc(firestore, 'matches', match.id);
-    batch.update(matchRef, {
+    const matchUpdateData = {
       lastMessage: newMessage,
       lastMessageTimestamp: serverTimestamp(),
       [`unreadCounts.${otherUserId}`]: increment(1)
+    };
+    batch.update(matchRef, matchUpdateData);
+
+    batch.commit().catch(error => {
+      if (error.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+          operation: 'write', // Batch write can be complex to pinpoint
+          path: `matches/${match.id} and /messages subcollection`,
+          requestResourceData: { message: messageData, matchUpdate: matchUpdateData },
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      }
     });
 
-    await batch.commit();
     setNewMessage('');
     setSuggestions([]);
   };
 
-  const handleSendAudio = async (audioUrl: string) => {
+  const handleSendAudio = (audioUrl: string) => {
+    if (!firestore) return;
     const batch = writeBatch(firestore);
     const otherUserId = otherUser.id!;
 
@@ -202,13 +234,23 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
 
     // 2. Update last message on match document
     const matchRef = doc(firestore, 'matches', match.id);
-    batch.update(matchRef, {
+    const matchUpdateData = {
         lastMessage: '음성 메시지',
         lastMessageTimestamp: serverTimestamp(),
         [`unreadCounts.${otherUserId}`]: increment(1)
-    });
+    };
+    batch.update(matchRef, matchUpdateData);
 
-    await batch.commit();
+    batch.commit().catch(error => {
+      if (error.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+          operation: 'write',
+          path: `matches/${match.id} and /messages subcollection`,
+          requestResourceData: { message: messageData, matchUpdate: matchUpdateData },
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      }
+    });
   };
 
 
@@ -293,56 +335,82 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     stopRecording();
   };
 
-  const handleInitiateCall = async () => {
+  const handleInitiateCall = () => {
     if(!currentUser || !firestore) return;
     const matchRef = doc(firestore, 'matches', match.id);
+    const callData = {
+        callStatus: 'ringing',
+        callerId: currentUser.id,
+    };
 
-    try {
-        await updateDoc(matchRef, {
-            callStatus: 'ringing',
-            callerId: currentUser.id,
-        });
+    updateDoc(matchRef, callData)
+        .then(() => {
+            toast({
+                title: '통화 연결 중...',
+                description: `${otherUser.name}님에게 영상 통화를 요청했습니다.`,
+            });
 
-        toast({
-            title: '통화 연결 중...',
-            description: `${otherUser.name}님에게 영상 통화를 요청했습니다.`,
-        });
-
-        // Set a timeout to revert the call status if not answered
-        setTimeout(async () => {
-            const currentMatchSnap = await getDoc(matchRef);
-            if (currentMatchSnap.exists()) {
-                const currentMatchData = currentMatchSnap.data() as Match;
-                // If the call is still ringing after 20 seconds, reset it.
-                if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
-                    await updateDoc(matchRef, {
-                        callStatus: 'idle',
-                        callerId: null,
-                    });
-                    toast({
-                        variant: 'destructive',
-                        title: '응답 없음',
-                        description: `${otherUser.name}님이 전화를 받지 않습니다.`,
-                    });
+            // Set a timeout to revert the call status if not answered
+            setTimeout(async () => {
+                const currentMatchSnap = await getDoc(matchRef);
+                if (currentMatchSnap.exists()) {
+                    const currentMatchData = currentMatchSnap.data() as Match;
+                    // If the call is still ringing after 20 seconds, reset it.
+                    if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
+                        const resetData = { callStatus: 'idle', callerId: null };
+                        updateDoc(matchRef, resetData).catch(e => {
+                            if (e.code === 'permission-denied') {
+                                const contextualError = new FirestorePermissionError({
+                                    operation: 'update',
+                                    path: matchRef.path,
+                                    requestResourceData: resetData,
+                                });
+                                errorEmitter.emit('permission-error', contextualError);
+                            }
+                        });
+                        toast({
+                            variant: 'destructive',
+                            title: '응답 없음',
+                            description: `${otherUser.name}님이 전화를 받지 않습니다.`,
+                        });
+                    }
                 }
+            }, 20000); // 20 seconds timeout
+        })
+        .catch(error => {
+            if (error.code === 'permission-denied') {
+              const contextualError = new FirestorePermissionError({
+                operation: 'update',
+                path: matchRef.path,
+                requestResourceData: callData,
+              });
+              errorEmitter.emit('permission-error', contextualError);
+            } else {
+                console.error("Failed to initiate call:", error);
+                toast({
+                    variant: "destructive",
+                    title: "통화 실패",
+                    description: "영상통화 요청에 실패했습니다. 다시 시도해주세요."
+                });
             }
-        }, 20000); // 20 seconds timeout
-
-    } catch (error) {
-        console.error("Failed to initiate call:", error);
-        toast({
-            variant: "destructive",
-            title: "통화 실패",
-            description: "영상통화 요청에 실패했습니다. 다시 시도해주세요."
         });
-    }
   }
 
-  const handleEndCall = async () => {
+  const handleEndCall = () => {
       const matchRef = doc(firestore, 'matches', match.id);
-      await updateDoc(matchRef, {
+      const endCallData = {
           callStatus: 'idle',
           callerId: null,
+      };
+      updateDoc(matchRef, endCallData).catch(e => {
+          if (e.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+              operation: 'update',
+              path: matchRef.path,
+              requestResourceData: endCallData,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          }
       });
       setIsCallActive(false);
   }
