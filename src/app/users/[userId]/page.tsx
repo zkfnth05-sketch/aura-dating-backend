@@ -95,7 +95,7 @@ export default function UserProfilePage() {
   const source = searchParams.get('from');
   const firestore = useFirestore();
 
-  const { user: currentUser, isLoaded, fetchInitialData } = useUser();
+  const { user: currentUser, isLoaded } = useUser();
   
   const userRef = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
@@ -196,7 +196,7 @@ export default function UserProfilePage() {
     });
 
     if (action === 'like') {
-      fetchInitialData();
+      // No need to fetchInitialData, context will update automatically
     }
   
     router.back();
