@@ -70,32 +70,25 @@ service cloud.firestore {
       allow create: if isSignedIn(); 
       allow update: if isSignedIn();
       allow delete: if isSignedIn();
-
-      /**
-       * @description A user can only manage their own 'likes' subcollection.
-       * The document ID must be the ID of the person being liked.
-       */
-      match /likes/{likeeId} {
-        allow read, write: if isOwner(userId);
-      }
-      
-      /**
-       * @description A user can read who has liked them. Writes are restricted.
-       * The document ID must be the ID of the person performing the like.
-       */
-      match /likedBy/{likerId} {
-        allow read: if isOwner(userId);
-        // This should ideally be handled by a server-side function to prevent spoofing.
-        // For client-side prototyping, this rule is problematic and a source of errors.
-        // We are disabling client-side creation to enforce a more secure pattern.
-        allow create: if false; 
-        allow update, delete: if false; // prevent modification
-      }
     }
-
+    
     // --------------------------------
     // Shared Data Collections
     // --------------------------------
+
+    /**
+     * @description Rules for the top-level 'likes' collection.
+     */
+    match /likes/{likeId} {
+        // Anyone signed in can read the likes, necessary for querying.
+        allow read: if isSignedIn();
+        // A user can only create a like document if the 'likerId' in the document
+        // is their own user ID. This prevents spoofing.
+        allow create: if isSignedIn() && request.resource.data.likerId == request.auth.uid;
+        // Likes are immutable, they cannot be updated or deleted by clients.
+        allow update, delete: if false;
+    }
+
 
     /**
      * @description Match documents can be read by participants. Creation is handled client-side for prototype.
