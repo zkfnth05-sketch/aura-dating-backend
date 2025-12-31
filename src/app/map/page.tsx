@@ -1,15 +1,48 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import MapClient from '@/components/map-client';
 import Header from '@/components/layout/header';
 import { useUser } from '@/contexts/user-context';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { Loader2 } from 'lucide-react';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
+import type { User } from '@/lib/types';
+
 
 export default function MapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const { user: currentUser, isLoaded, isAppDataLoading, appData } = useUser();
+  const { user: currentUser, isLoaded } = useUser();
+  const firestore = useFirestore();
+  const [mapUsers, setMapUsers] = useState<User[]>([]);
+  const [isMapUsersLoading, setIsMapUsersLoading] = useState(true);
   
+  useEffect(() => {
+    const fetchMapUsers = async () => {
+      if (!currentUser || !firestore) return;
+      setIsMapUsersLoading(true);
+      try {
+        const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
+        const usersQuery = query(
+          collection(firestore, 'users'),
+          where('gender', '==', oppositeGender),
+          limit(100)
+        );
+        const snapshot = await getDocs(usersQuery);
+        const fetchedUsers = snapshot.docs.map(d => d.data() as User);
+        setMapUsers([currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)]);
+      } catch (error) {
+        console.error("Error fetching map users:", error);
+      } finally {
+        setIsMapUsersLoading(false);
+      }
+    };
+    if (isLoaded && currentUser) {
+      fetchMapUsers();
+    }
+  }, [currentUser, firestore, isLoaded]);
+
   if (!apiKey) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -32,7 +65,9 @@ export default function MapPage() {
     );
   }
 
-  if (!isLoaded || isAppDataLoading || !currentUser) {
+  const isLoading = !isLoaded || isMapUsersLoading || !currentUser;
+
+  if (isLoading) {
       return (
         <div className="flex flex-col h-screen">
             <Header />
@@ -47,9 +82,8 @@ export default function MapPage() {
     <APIProvider apiKey={apiKey}>
       <div className="flex flex-col h-screen w-full">
         <Header />
-        {/* The main content area takes up the remaining space */}
         <main style={{ height: 'calc(100vh - 56px)' }}>
-            <MapClient users={appData.mapUsers} currentUser={currentUser} />
+            <MapClient users={mapUsers} currentUser={currentUser} />
         </main>
       </div>
     </APIProvider>

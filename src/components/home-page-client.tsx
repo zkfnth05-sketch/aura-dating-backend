@@ -17,7 +17,7 @@ import { Button } from './ui/button';
 const FETCH_LIMIT = 10;
 
 export default function HomePageClient() {
-  const { user: currentUser, filters, isLoaded, fetchInitialData } = useUser();
+  const { user: currentUser, filters, isLoaded } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
 
@@ -163,7 +163,16 @@ export default function HomePageClient() {
             senderId: 'system',
             text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
             timestamp: serverTimestamp(),
-          });
+          }).catch(e => {
+            if (e.code === 'permission-denied') {
+              const contextualError = new FirestorePermissionError({
+                operation: 'create',
+                path: `matches/${newMatchRef.id}/messages`,
+                requestResourceData: { senderId: 'system', text: '...'},
+              });
+              errorEmitter.emit('permission-error', contextualError);
+            }
+        });
           router.push(`/chat/${newMatchRef.id}`);
         }).catch(e => {
           if (e.code === 'permission-denied') {
@@ -207,10 +216,6 @@ export default function HomePageClient() {
       }
     });
 
-    if (action === 'like') {
-      fetchInitialData();
-    }
-  
     setTimeout(() => {
       if (currentIndex === displayedUsers.length - 1 && hasMoreUsers) {
         fetchUsers(lastDoc);

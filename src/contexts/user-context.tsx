@@ -39,15 +39,6 @@ interface PhoneAuthState {
   isVerifyingOtp: boolean;
 }
 
-interface AppDataType {
-    mapUsers: User[];
-    hotUsers: User[];
-    newUsers: User[];
-    peopleWhoLikedMe: User[];
-    peopleILiked: User[];
-    matches: Match[];
-}
-
 interface UserContextType {
   user: User | null;
   authUser: AuthUser | null;
@@ -62,9 +53,10 @@ interface UserContextType {
   phoneAuth: PhoneAuthState;
   isSignupFlowActive: boolean;
   setIsSignupFlowActive: (isActive: boolean) => void;
-  appData: AppDataType;
-  isAppDataLoading: boolean;
-  fetchInitialData: () => void;
+  matches: Match[] | null;
+  likes: Like[] | null;
+  isLikesLoading: boolean;
+  isMatchesLoading: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -88,32 +80,6 @@ const initialFilters: FilterSettings = {
     interests: [],
 }
 
-const initialAppData: AppDataType = {
-    mapUsers: [],
-    hotUsers: [],
-    newUsers: [],
-    peopleWhoLikedMe: [],
-    peopleILiked: [],
-    matches: [],
-}
-
-
-async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
-    if (userIds.length === 0) return [];
-    const users: User[] = [];
-    // Firestore 'in' query supports up to 30 elements in the array.
-    const CHUNK_SIZE = 30; 
-    for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
-        const chunk = userIds.slice(i, i + CHUNK_SIZE);
-        if (chunk.length > 0) {
-            const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
-            const userDocs = await getDocs(usersQuery);
-            users.push(...userDocs.docs.map(d => d.data() as User));
-        }
-    }
-    return users;
-}
-
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const { user: authUser, isUserLoading: isAuthLoading } = useAuthUserHook();
@@ -125,8 +91,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
-  const [isAppDataLoading, setIsAppDataLoading] = useState(true);
-  const [appData, setAppData] = useState<AppDataType>(initialAppData);
 
   // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -181,81 +145,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => { isMounted = false; };
   }, [authUser, firestore, isAuthLoading]);
 
-  const fetchInitialData = useCallback(async () => {
-      if (!user || !firestore) return;
-      setIsAppDataLoading(true);
-
-      try {
-          const oppositeGender = user.gender === '남성' ? '여성' : '남성';
-          const usersCollection = collection(firestore, 'users');
-          const likesCollection = collection(firestore, 'likes');
-
-          const queries = {
-              map: query(usersCollection, where('gender', '==', oppositeGender), limit(100)),
-              hot: query(usersCollection, orderBy('createdAt', 'desc'), limit(40)),
-              new: query(usersCollection, orderBy('createdAt', 'desc'), limit(40)),
-              matches: query(collection(firestore, 'matches'), where('users', 'array-contains', user.id)),
-              iLiked: query(likesCollection, where('likerId', '==', user.id)),
-              likedBy: query(likesCollection, where('likeeId', '==', user.id)),
-          };
-          
-          const [mapSnap, hotSnap, newSnap, matchesSnap, iLikedSnap, likedBySnap] = await Promise.all([
-              getDocs(queries.map),
-              getDocs(queries.hot),
-              getDocs(queries.new),
-              getDocs(queries.matches),
-              getDocs(queries.iLiked),
-              getDocs(queries.likedBy),
-          ]);
-
-          const mapUsers = [user, ...mapSnap.docs.map(d => d.data() as User).filter(u => u.id !== user.id)];
-          
-          const hotUsersRaw = hotSnap.docs.map(d => d.data() as User);
-          const hotUsers = hotUsersRaw.filter(u => u.id !== user.id && u.gender === oppositeGender).slice(0, 20);
-
-          const newUsersRaw = newSnap.docs.map(d => d.data() as User);
-          const newUsers = newUsersRaw.filter(u => u.id !== user.id && u.gender === oppositeGender).slice(0, 20);
-          
-          const matches = matchesSnap.docs.map(d => d.data() as Match);
-
-          const iLikedIds = iLikedSnap.docs.map(d => d.data().likeeId);
-          const likedByIds = likedBySnap.docs.map(d => d.data().likerId);
-          
-          const [peopleILiked, peopleWhoLikedMe] = await Promise.all([
-              fetchUsersByIds(firestore, iLikedIds),
-              fetchUsersByIds(firestore, likedByIds)
-          ]);
-          
-          const orderedILiked = iLikedIds.map(id => peopleILiked.find(u => u.id === id)).filter(Boolean) as User[];
-          
-          const peopleWhoLikedMeWithFullData = likedByIds.map(id => {
-              return peopleWhoLikedMe.find(u => u.id === id);
-          }).filter((u): u is User => !!u);
-
-
-          setAppData({
-              mapUsers,
-              hotUsers,
-              newUsers,
-              matches,
-              peopleWhoLikedMe: peopleWhoLikedMeWithFullData,
-              peopleILiked: orderedILiked,
-          });
-
-      } catch (error) {
-          console.error("Error fetching initial app data:", error);
-      } finally {
-          setIsAppDataLoading(false);
-      }
-
-  }, [user, firestore]);
-
-  useEffect(() => {
-    if (user) {
-      fetchInitialData();
-    }
-  }, [user, fetchInitialData]);
-
   // Load settings from localStorage once on mount
   useEffect(() => {
     try {
@@ -268,7 +157,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const totalUnreadCount = (appData.matches || []).reduce((acc, match) => {
+  const matchesQuery = useMemoFirebase(() => {
+    if (!user?.id || !firestore) return null;
+    return query(collection(firestore, "matches"), where("users", "array-contains", user.id));
+  }, [user?.id, firestore]);
+  const { data: matches, isLoading: isMatchesLoading } = useCollection<Match>(matchesQuery);
+
+  const likesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "likes"));
+  }, [firestore]);
+  const { data: likes, isLoading: isLikesLoading } = useCollection<Like>(likesQuery);
+
+  const totalUnreadCount = (matches || []).reduce((acc, match) => {
     if (user && user.id && match.unreadCounts) {
       return acc + (match.unreadCounts[user.id] || 0);
     }
@@ -432,9 +333,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     },
     isSignupFlowActive,
     setIsSignupFlowActive,
-    appData,
-    isAppDataLoading,
-    fetchInitialData,
+    matches,
+    likes,
+    isLikesLoading,
+    isMatchesLoading,
   };
 
   return (

@@ -8,6 +8,10 @@ import Link from 'next/link';
 import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useFirestore } from '@/firebase';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+
 
 const UserCard = ({ user }: { user: User }) => {
   return (
@@ -31,12 +35,48 @@ const UserCard = ({ user }: { user: User }) => {
 };
 
 export default function HotPage() {
-  const { user: currentUser, appData, isAppDataLoading, isLoaded } = useUser();
-  const { newUsers, hotUsers } = appData;
+  const { user: currentUser, isLoaded } = useUser();
+  const firestore = useFirestore();
 
-  const isLoading = !isLoaded || isAppDataLoading;
+  const [newUsers, setNewUsers] = useState<User[]>([]);
+  const [hotUsers, setHotUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!currentUser) {
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!currentUser || !firestore) return;
+      setIsLoading(true);
+
+      try {
+        const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
+        const usersCollection = collection(firestore, 'users');
+
+        // Fetch New Users
+        const newUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(20));
+        const newUsersSnap = await getDocs(newUsersQuery);
+        const newUsersData = newUsersSnap.docs.map(d => d.data() as User).filter(u => u.id !== currentUser.id);
+        setNewUsers(newUsersData);
+
+        // Fetch Hot Users
+        const hotUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), limit(20));
+        const hotUsersSnap = await getDocs(hotUsersQuery);
+        const hotUsersData = hotUsersSnap.docs.map(d => d.data() as User).filter(u => u.id !== currentUser.id);
+        setHotUsers(hotUsersData);
+
+      } catch (error) {
+        console.error("Error fetching HOT/NEW users:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isLoaded && currentUser) {
+      fetchUsers();
+    }
+  }, [currentUser, firestore, isLoaded]);
+  
+
+  if (!isLoaded || !currentUser) {
     return (
       <div className="flex flex-col h-screen">
         <Header />
