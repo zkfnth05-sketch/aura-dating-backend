@@ -17,7 +17,7 @@ import { Button } from './ui/button';
 const FETCH_LIMIT = 10;
 
 export default function HomePageClient() {
-  const { user: currentUser, filters, isLoaded } = useUser();
+  const { user: currentUser, filters, isLoaded, fetchInitialData } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
 
@@ -58,12 +58,11 @@ export default function HomePageClient() {
 
     try {
         const snapshot = await getDocs(usersQuery);
-        const newUsers = snapshot.docs
-            .map(doc => doc.data() as User)
-            .filter(user => user.id !== currentUser.id);
         
         const applySimpleFilters = (users: User[]): User[] => {
             return users.filter(user => {
+                if (user.id === currentUser.id) return false;
+
                 // Gender Filter (client-side)
                 let genderFilter: ('남성' | '여성' | '기타')[] = [];
                 if (filters.gender.length > 0) {
@@ -94,6 +93,7 @@ export default function HomePageClient() {
             });
         };
 
+        const newUsers = snapshot.docs.map(doc => doc.data() as User);
         const filteredNewUsers = applySimpleFilters(newUsers);
 
         setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
@@ -114,7 +114,9 @@ export default function HomePageClient() {
     if(isLoaded && currentUser) {
       fetchUsers(null);
     }
-  }, [isLoaded, currentUser, filters, fetchUsers]);
+    // This effect should only run when filters change or user loads, not on fetchUsers change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, currentUser, filters]);
 
 
   const activeUser = displayedUsers[currentIndex];
@@ -194,6 +196,10 @@ export default function HomePageClient() {
     };
   
     setDocumentNonBlocking(likeRef, likeData);
+
+    if (action === 'like') {
+      fetchInitialData();
+    }
   
     setTimeout(() => {
       if (currentIndex === displayedUsers.length - 1 && hasMoreUsers) {
