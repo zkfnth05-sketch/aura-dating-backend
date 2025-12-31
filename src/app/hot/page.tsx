@@ -10,7 +10,7 @@ import { useUser } from '@/contexts/user-context';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 
 const UserCard = ({ user }: { user: User }) => {
@@ -51,16 +51,24 @@ export default function HotPage() {
         const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
         const usersCollection = collection(firestore, 'users');
 
-        // Fetch New Users
-        const newUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(20));
+        // Fetch New Users (ordered by creation time)
+        const newUsersQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(50));
         const newUsersSnap = await getDocs(newUsersQuery);
-        const newUsersData = newUsersSnap.docs.map(d => d.data() as User).filter(u => u.id !== currentUser.id);
+        const newUsersData = newUsersSnap.docs
+            .map(d => d.data() as User)
+            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender)
+            .slice(0, 20);
         setNewUsers(newUsersData);
 
-        // Fetch Hot Users
-        const hotUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), limit(20));
+        // Fetch Hot Users (for simplicity, we'll just get another batch of users)
+        // A real "hot" logic would require a scoring system.
+        const hotUsersQuery = query(usersCollection, limit(50)); // No specific ordering for "hot" yet
         const hotUsersSnap = await getDocs(hotUsersQuery);
-        const hotUsersData = hotUsersSnap.docs.map(d => d.data() as User).filter(u => u.id !== currentUser.id);
+        const hotUsersData = hotUsersSnap.docs
+            .map(d => d.data() as User)
+            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender)
+            .sort(() => 0.5 - Math.random()) // Randomize for "hot" effect for now
+            .slice(0, 20);
         setHotUsers(hotUsersData);
 
       } catch (error) {
