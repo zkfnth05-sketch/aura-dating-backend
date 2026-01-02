@@ -84,6 +84,7 @@ export default function ProfileEditForm() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [tempPhotoUri, setTempPhotoUri] = useState<string | null>(null);
   
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
@@ -146,6 +147,12 @@ export default function ProfileEditForm() {
     updateUser({
         ...profile,
         age: parseInt(profile.age) || currentUser.age,
+    }).then(() => {
+        toast({
+          title: "프로필 저장됨",
+          description: "프로필이 성공적으로 업데이트되었습니다.",
+        });
+        router.push('/profile');
     }).catch((error) => {
         console.error("Failed to update profile:", error);
         toast({
@@ -155,36 +162,35 @@ export default function ProfileEditForm() {
         });
     }).finally(() => {
         setIsSaving(false);
-        toast({
-          title: "프로필 저장됨",
-          description: "프로필이 성공적으로 업데이트되었습니다.",
-        });
-        router.push('/profile');
     });
   };
 
   const processAndAddImage = async (dataUri: string) => {
-    const originalCompressedUri = await compressImage(dataUri);
+    setTempPhotoUri(dataUri);
 
     if (aiEnhancement) {
       setIsEnhancing(true);
       try {
         const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
-        updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
+        await updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
       } catch (error) {
-        console.error("AI enhancement failed:", error);
+        console.error("AI enhancement failed, using original compressed image:", error);
         toast({
           variant: "destructive",
           title: "AI 보정 실패",
-          description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
+          description: "사진 보정에 실패했습니다. 원본 사진이 대신 사용됩니다.",
         });
-        updateUser({ photoUrls: [...photoUrls, originalCompressedUri] });
+        const originalCompressedUri = await compressImage(dataUri);
+        await updateUser({ photoUrls: [...photoUrls, originalCompressedUri] });
       } finally {
         setIsEnhancing(false);
+        setTempPhotoUri(null);
       }
     } else {
-        updateUser({ photoUrls: [...photoUrls, originalCompressedUri] });
+        const compressedUri = await compressImage(dataUri);
+        await updateUser({ photoUrls: [...photoUrls, compressedUri] });
+        setTempPhotoUri(null);
     }
   };
   
@@ -263,11 +269,22 @@ export default function ProfileEditForm() {
               </div>
             ))}
             
-            {photoUrls.length < 9 && (
+            {tempPhotoUri && (
+                <div className="relative aspect-square rounded-lg overflow-hidden bg-zinc-900">
+                    <Image src={tempPhotoUri} alt="Uploading..." fill className="object-cover" />
+                    {isEnhancing && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                            <Loader2 className="animate-spin text-primary" />
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {photoUrls.length < 9 && !tempPhotoUri &&(
               <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
                 <DialogTrigger asChild>
-                  <button className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700">
-                    {isEnhancing ? <Loader2 className="animate-spin text-zinc-500" /> : <Plus className="text-zinc-500" />}
+                  <button className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700" disabled={isEnhancing}>
+                    <Plus className="text-zinc-500" />
                   </button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
