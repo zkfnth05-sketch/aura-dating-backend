@@ -120,15 +120,17 @@ export async function recommendDateCourse(input: DateCourseInput): Promise<DateC
     const textResult = await dateCourseTextFlow(input);
     const season = getSeason(input.date);
 
-    const stepsWithImages = [];
-    for (const step of textResult.steps) {
+    const imagePromises = textResult.steps.map(step => {
         const imagePrompt = `${step.imagePrompt}, young Korean couple in their 20s-30s, ${season}, photorealistic, high quality`;
-        const imageDataUri = await dateCourseImageFlow(imagePrompt);
-        stepsWithImages.push({
-            ...step,
-            imageDataUri: imageDataUri || undefined,
-        });
-    }
+        return dateCourseImageFlow(imagePrompt);
+    });
+
+    const imageDataUris = await Promise.all(imagePromises);
+
+    const stepsWithImages = textResult.steps.map((step, index) => ({
+        ...step,
+        imageDataUri: imageDataUris[index] || undefined,
+    }));
 
     return {
         ...textResult,
