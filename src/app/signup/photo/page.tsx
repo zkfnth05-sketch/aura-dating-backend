@@ -104,7 +104,7 @@ export default function UploadPhotoPage() {
         photoUrls: [photo.uri],
       });
       setIsSignupFlowActive(false); // Signal that the signup flow is now complete
-      router.push('/');
+      router.push('/profile/edit');
     } catch (error) {
       console.error("Failed to complete signup:", error);
       toast({
