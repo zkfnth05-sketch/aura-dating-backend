@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, collectionGroup, documentId, orderBy, limit, addDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, collectionGroup, documentId, orderBy, limit, addDoc, onSnapshot } from 'firebase/firestore';
 import type { User, Match, Like } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -123,9 +123,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-    setIsUserDocLoading(true);
-
-    if (isAuthLoading) return;
+    if (isAuthLoading) {
+      setIsUserDocLoading(true);
+      return;
+    }
     if (!authUser) {
       setUser(null);
       setIsUserDocLoading(false);
@@ -134,35 +135,46 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     if (firestore) {
       const userRef = doc(firestore, 'users', authUser.uid);
-      const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      
+      getDoc(userRef).then(docSnap => {
         if (!isMounted) return;
         
         if (docSnap.exists()) {
-          const userData = docSnap.data() as User;
-          setUser(userData);
-          // Document exists, now it's safe to update.
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude, longitude } = position.coords;
-              updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
-            },
-            () => { 
-              updateDoc(userRef, { lastSeen: new Date().toISOString() }); 
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-          );
+           const userData = docSnap.data() as User;
+           setUser(userData);
+           // Document exists, now it's safe to update.
+           navigator.geolocation.getCurrentPosition(
+             (position) => {
+               const { latitude, longitude } = position.coords;
+               updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
+             },
+             () => { 
+               updateDoc(userRef, { lastSeen: new Date().toISOString() }); 
+             },
+             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+           );
         } else {
           setUser(null);
         }
         setIsUserDocLoading(false);
-      }, (error) => {
-        console.error("Failed to listen to user document:", error);
-        if(isMounted) {
-            setUser(null);
-            setIsUserDocLoading(false);
+      }).catch(error => {
+        console.error("Failed to fetch user document:", error);
+        if (isMounted) {
+          setUser(null);
+          setIsUserDocLoading(false);
         }
       });
 
+      // After the initial fetch, set up the real-time listener
+      const unsubscribe = onSnapshot(userRef, (docSnap) => {
+        if (!isMounted) return;
+        if (docSnap.exists()) {
+          setUser(docSnap.data() as User);
+        } else {
+          setUser(null);
+        }
+      });
+      
       return () => {
         isMounted = false;
         unsubscribe();
@@ -415,3 +427,5 @@ export function useUser() {
   }
   return context;
 }
+
+    
