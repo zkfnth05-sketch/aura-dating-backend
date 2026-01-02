@@ -10,6 +10,8 @@ import { MapPin, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
+import Header from '@/components/layout/header';
+
 
 // Helper components for page structure
 const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -36,21 +38,14 @@ export default function ProfilePage() {
     updateNotificationSettings({ [id]: checked });
   };
   
-  // Show loader only if the context is still loading and we have no user data to display at all.
-  if (!isLoaded && !currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  // If after loading, there's still no user, something is wrong (e.g., redirect should have happened).
-  // Show a safe state.
+  // Render immediately if we have user data, otherwise show a loader.
   if (!currentUser) {
-     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>사용자 정보를 불러올 수 없습니다.</p>
+    return (
+      <div className="flex flex-col h-screen">
+        <Header/>
+        <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
       </div>
     );
   }
@@ -65,8 +60,7 @@ export default function ProfilePage() {
   return (
     <>
       <div className="flex flex-col min-h-screen bg-background text-foreground">
-        {/* Remove Header to have full screen control */}
-        {/* <Header /> */}
+        <Header />
         <main className="flex-1">
           <div className="relative w-full aspect-[3/4] max-h-[70vh] cursor-pointer" onClick={() => handleImageClick(0)}>
             {allPhotos[0] && (

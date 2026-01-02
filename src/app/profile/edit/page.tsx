@@ -1,27 +1,28 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import ProfileEditForm from '@/components/profile-edit-form';
 import { Loader2 } from 'lucide-react';
-
-// Dynamically import the form component
-const ProfileEditForm = React.lazy(() => import('@/components/profile-edit-form'));
+import { useUser } from '@/contexts/user-context';
 
 export default function ProfileEditPage() {
+  const { isLoaded } = useUser();
+
+  // Wait for user context to be loaded before rendering the form
+  // to ensure form is pre-filled correctly.
+  if (!isLoaded) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white pb-32">
       <header className="sticky top-0 z-10 p-4 bg-black/80 backdrop-blur-sm">
         <h1 className="text-xl font-bold text-center">프로필 수정</h1>
       </header>
-
-      <Suspense
-        fallback={
-          <div className="flex h-[70vh] items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        }
-      >
-        <ProfileEditForm />
-      </Suspense>
+      <ProfileEditForm />
     </div>
   );
 }
