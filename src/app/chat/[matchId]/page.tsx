@@ -97,8 +97,6 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full">
-        <ChatInterface match={match} messagesColRef={messagesColRef!} />
-    </div>
+    <ChatInterface match={match} messagesColRef={messagesColRef!} />
   );
 }
