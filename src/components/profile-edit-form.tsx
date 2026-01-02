@@ -88,7 +88,7 @@ export default function ProfileEditForm() {
     interests: [] as string[],
   });
 
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [localPhotos, setLocalPhotos] = useState<Photo[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   
   const [aiEnhancement, setAiEnhancement] = useState(true);
@@ -96,9 +96,7 @@ export default function ProfileEditForm() {
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
   const [isReauthDialogOpen, setIsReauthDialogOpen] = useState(false);
 
-
   useEffect(() => {
-    // Pre-fill form only if currentUser is available
     if (currentUser) {
       setProfile({
           name: currentUser.name || '',
@@ -113,7 +111,7 @@ export default function ProfileEditForm() {
           hobbies: currentUser.hobbies || [],
           interests: currentUser.interests || [],
       });
-      setPhotos(
+      setLocalPhotos(
         (currentUser.photoUrls || []).map((url, i) => ({
           id: `ctx-photo-${i}-${Date.now()}`,
           dataUri: url,
@@ -121,20 +119,18 @@ export default function ProfileEditForm() {
         }))
       );
     }
-  }, [currentUser]); // Depend only on currentUser
+  }, [currentUser]);
 
-  // Show loader only if the context is loading AND we have no user data yet.
   if (isLoaded && !currentUser) {
       return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
 
-  // If there's no user data at all after loading, we can't edit.
-  // This might happen if the user navigates here directly without being logged in.
   if (!currentUser) {
       return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
-
-  const isEnhancing = photos.some(p => p.isEnhancing);
+  
+  const isEnhancing = localPhotos.some(p => p.isEnhancing);
+  const photoUrls = currentUser.photoUrls || [];
 
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
     setProfile(prev => {
@@ -160,25 +156,20 @@ export default function ProfileEditForm() {
         return;
     }
     setIsSaving(true);
-    const finalImageUris = photos.map(p => p.dataUri);
     
-    // Non-blocking update
     updateUser({
         ...profile,
         age: parseInt(profile.age) || currentUser.age,
-        photoUrls: finalImageUris,
     }).catch((error) => {
-        // Still handle errors in the background
         console.error("Failed to update profile:", error);
         toast({
           variant: "destructive",
           title: "업데이트 실패",
           description: "프로필을 업데이트하는 데 실패했습니다. 다시 시도해주세요."
         });
-        setIsSaving(false); // Re-enable button on error
+        setIsSaving(false);
     });
     
-    // Optimistic UI update and navigation
     toast({
       title: "프로필 저장됨",
       description: "프로필이 성공적으로 업데이트되었습니다.",
@@ -191,11 +182,11 @@ export default function ProfileEditForm() {
     const compressedUri = await compressImage(dataUri);
 
     if (aiEnhancement) {
-      setPhotos(prev => [...prev, { id: newPhotoId, dataUri: compressedUri, isEnhancing: true }]);
+      setLocalPhotos(prev => [...prev, { id: newPhotoId, dataUri: compressedUri, isEnhancing: true }]);
       try {
         const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: profile.gender });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
-        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: finalCompressedUri, isEnhancing: false } : p));
+        updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
       } catch (error) {
         console.error("AI enhancement failed:", error);
         toast({
@@ -203,10 +194,10 @@ export default function ProfileEditForm() {
           title: "AI 보정 실패",
           description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
         });
-        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, isEnhancing: false } : p)); // Keep original, stop loading
+        updateUser({ photoUrls: [...photoUrls, compressedUri] });
       }
     } else {
-        setPhotos(prev => [...prev, { id: newPhotoId, dataUri: compressedUri, isEnhancing: false }]);
+        updateUser({ photoUrls: [...photoUrls, compressedUri] });
     }
   };
   
@@ -230,8 +221,9 @@ export default function ProfileEditForm() {
     processAndAddImage(dataUri);
   };
   
-  const removeImage = (id: string) => {
-    setPhotos(prev => prev.filter(p => p.id !== id));
+  const removeImage = (urlToRemove: string) => {
+    const newPhotoUrls = photoUrls.filter(url => url !== urlToRemove);
+    updateUser({ photoUrls: newPhotoUrls });
   }
 
   const handleDeleteAccount = async () => {
@@ -269,7 +261,7 @@ export default function ProfileEditForm() {
             <Switch checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {photos.map((photo) => (
+            {localPhotos.map((photo) => (
               <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
                 {photo.dataUri && <Image src={photo.dataUri} alt={`My profile photo`} fill className="object-cover"/>}
                 {photo.isEnhancing && (
@@ -279,7 +271,7 @@ export default function ProfileEditForm() {
                 )}
                 {!photo.isEnhancing && (
                   <div className="absolute top-1 right-1 z-20">
-                    <Button variant="destructive" size="icon" onClick={() => removeImage(photo.id)} className="w-6 h-6 rounded-full bg-black/50">
+                    <Button variant="destructive" size="icon" onClick={() => removeImage(photo.dataUri)} className="w-6 h-6 rounded-full bg-black/50">
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -449,3 +441,5 @@ export default function ProfileEditForm() {
     </>
   );
 }
+
+    
