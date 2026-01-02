@@ -16,11 +16,8 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   const isAdminPage = pathname.startsWith('/admin');
   
-  const noBottomPaddingPaths = ['/profile/edit', '/users', '/filter', '/signup'];
-  const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path)) && !pathname.startsWith('/chat/');
-  
-  // Show BottomNav only if the user is authenticated and has a complete profile.
-  const showBottomNav = !!(authUser && user);
+  const noBottomNavPaths = ['/signup', '/profile/edit', '/users', '/filter', '/chat'];
+  const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
 
   if (isAdminPage) {
     return <>{children}</>;
@@ -28,7 +25,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
-      <main className={`flex-1 flex flex-col ${needsPadding ? 'pb-24' : ''}`}>
+      <main className={`flex-1 flex flex-col ${showBottomNav ? 'pb-24' : ''}`}>
           {children}
       </main>
       {showBottomNav && <BottomNav />}
