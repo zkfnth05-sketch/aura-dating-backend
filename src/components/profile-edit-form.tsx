@@ -194,7 +194,8 @@ export default function ProfileEditForm() {
       setPhotos(prev => [...prev, { id: newPhotoId, dataUri: compressedUri, isEnhancing: true }]);
       try {
         const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: profile.gender });
-        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: result.enhancedPhotoDataUri, isEnhancing: false } : p));
+        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
+        setPhotos(prev => prev.map(p => p.id === newPhotoId ? { ...p, dataUri: finalCompressedUri, isEnhancing: false } : p));
       } catch (error) {
         console.error("AI enhancement failed:", error);
         toast({
