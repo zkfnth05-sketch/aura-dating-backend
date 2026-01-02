@@ -272,22 +272,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     
-    if (newUserData.createdAt) {
+    if (newUserData.createdAt === "serverTimestamp") {
       dataToSave.createdAt = serverTimestamp();
     }
   
-    setDocumentNonBlocking(userRef, dataToSave, { merge: true });
-  
-    setUser(prevUser => {
-      const updatedUser = { ...(prevUser || {}), ...dataToSave } as User;
-      if (newUserData.createdAt) {
-        delete (updatedUser as Partial<User>).createdAt;
-      }
-      return updatedUser;
-    });
-    
-    return Promise.resolve();
+    // Use the non-blocking function but return its promise
+    return setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);
+  
 
   const updateNotificationSettings = useCallback((newSettings: Partial<NotificationSettings>) => {
     setNotificationSettings(prevSettings => {
@@ -440,5 +432,3 @@ export function useUser() {
   }
   return context;
 }
-
-    

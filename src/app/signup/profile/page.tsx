@@ -28,8 +28,13 @@ export default function CreateProfilePage() {
         // Not authenticated, should be on the initial signup page.
         router.replace('/signup');
       } else if (user) {
-        // Authenticated and has a profile, should be on the main page.
-        router.replace('/');
+         // If user object exists but we are not in signup flow, go home.
+        // This can happen on a page refresh if the user object loads first.
+        // But if they are in signup flow, we let them stay.
+        // This part is tricky, let's simplify and control via isSignupFlowActive.
+        if (!isSignupFlowActive) {
+            router.replace('/');
+        }
       } else {
         // Authenticated but no profile, this is the correct page.
         // Mark that we are in the signup flow.
@@ -38,7 +43,7 @@ export default function CreateProfilePage() {
         setName(prev => prev || authUser.displayName || '');
       }
     }
-  }, [isLoaded, authUser, user, router, setIsSignupFlowActive]);
+  }, [isLoaded, authUser, user, router, setIsSignupFlowActive, isSignupFlowActive]);
 
   const handleNext = async () => {
     if (!name || !age || !city) {
@@ -76,9 +81,10 @@ export default function CreateProfilePage() {
       createdAt: "serverTimestamp", // Special marker for the context
     };
     
-    updateUser(userData).then(() => {
-        router.push('/signup/photo');
-    }).catch(error => {
+    try {
+      await updateUser(userData);
+      router.push('/signup/photo');
+    } catch(error) {
       console.error("Failed to update user:", error);
       toast({
         variant: "destructive",
@@ -86,12 +92,12 @@ export default function CreateProfilePage() {
         description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
       });
       setIsSubmitting(false);
-    });
+    }
   };
 
   // Show a loader until the initial auth check is complete.
   // Or if the user should be somewhere else.
-  if (!isLoaded || !authUser || user) {
+  if (!isLoaded || !authUser || user && !isSignupFlowActive) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 

@@ -14,11 +14,13 @@ import {FirestorePermissionError} from '@/firebase/errors';
 
 /**
  * Initiates a setDoc operation for a document reference.
- * Does NOT await the write operation internally.
+ * Does NOT await the write operation internally, but returns the promise.
  */
-export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
+export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions): Promise<void> {
   const operation = options && 'merge' in options ? 'update' : 'create';
-  setDoc(docRef, data, options || {}).catch(error => {
+  const promise = setDoc(docRef, data, options || {});
+  
+  promise.catch(error => {
     // Check if the error is a permission error before creating the custom error
     if (error.code === 'permission-denied') {
         const permissionError = new FirestorePermissionError({
@@ -31,8 +33,9 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
         // Handle other types of errors (e.g., network issues) if necessary
         console.error("Firestore setDoc failed:", error);
     }
-  })
-  // Execution continues immediately
+  });
+
+  return promise;
 }
 
 
