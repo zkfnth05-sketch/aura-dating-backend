@@ -2,7 +2,7 @@
 
 import ChatInterface from '@/components/chat-interface';
 import { useDoc, useMemoFirebase, useFirestore, useUser } from '@/firebase';
-import type { Match, User } from '@/lib/types';
+import type { Match } from '@/lib/types';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, collection, CollectionReference, updateDoc } from 'firebase/firestore';
 import { Loader2, UserX, ArrowLeft } from 'lucide-react';
@@ -26,17 +26,10 @@ export default function ChatPage() {
   
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
-  const otherUserId = useMemo(() => {
+  const otherUser = useMemo(() => {
       if (!match || !currentUser) return null;
-      return match.users.find(id => id !== currentUser.id);
+      return match.participants.find(p => p.id !== currentUser.id);
   }, [match, currentUser]);
-
-  const otherUserRef = useMemoFirebase(() => {
-    if(!otherUserId || !firestore) return null;
-    return doc(firestore, 'users', otherUserId);
-  }, [firestore, otherUserId]);
-
-  const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
 
   const messagesColRef = useMemoFirebase(() => {
     if (!matchId || !firestore) return null;
@@ -44,28 +37,34 @@ export default function ChatPage() {
   }, [firestore, matchId]);
   
   useEffect(() => {
-    if (otherUser && currentUser && match) {
+    if (otherUser && currentUser && match && firestore) {
       // Update the other user's lastSeen timestamp in the match participants array
       const matchRef = doc(firestore, 'matches', match.id);
-      const participantsUpdate = match.participants.map(p => 
-        p.id === otherUser.id ? { ...p, lastSeen: new Date().toISOString() } : p
-      );
       
-      updateDoc(matchRef, { participants: participantsUpdate })
-        .catch(e => {
-            if (e.code === 'permission-denied') {
-              const contextualError = new FirestorePermissionError({
-                operation: 'update',
-                path: matchRef.path,
-                requestResourceData: { participants: participantsUpdate },
-              });
-              errorEmitter.emit('permission-error', contextualError);
-            }
-        });
+      // Find the correct participant to update
+      const participantToUpdate = match.participants.find(p => p.id === otherUser.id);
+      
+      if (participantToUpdate) {
+          const participantsUpdate = match.participants.map(p => 
+            p.id === otherUser.id ? { ...p, lastSeen: new Date().toISOString() } : p
+          );
+          
+          updateDoc(matchRef, { participants: participantsUpdate })
+            .catch(e => {
+                if (e.code === 'permission-denied') {
+                  const contextualError = new FirestorePermissionError({
+                    operation: 'update',
+                    path: matchRef.path,
+                    requestResourceData: { participants: participantsUpdate },
+                  });
+                  errorEmitter.emit('permission-error', contextualError);
+                }
+            });
+        }
     }
   }, [currentUser, otherUser, firestore, match]);
 
-  const isLoading = isMatchLoading || !currentUser || isOtherUserLoading;
+  const isLoading = isMatchLoading || !currentUser;
 
   if (isLoading) {
     return (
