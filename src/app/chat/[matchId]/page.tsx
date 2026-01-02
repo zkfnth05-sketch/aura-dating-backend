@@ -8,9 +8,6 @@ import { doc, collection, CollectionReference, updateDoc, getDoc } from 'firebas
 import { Loader2, UserX, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEffect, useMemo, useState } from 'react';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-
 
 export default function ChatPage() {
   const params = useParams();
@@ -61,34 +58,6 @@ export default function ChatPage() {
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
   }, [firestore, matchId]);
   
-  useEffect(() => {
-    if (otherUser && currentUser && match && firestore) {
-      // Update the other user's lastSeen timestamp in the match participants array
-      const matchRef = doc(firestore, 'matches', match.id);
-      
-      // Find the correct participant to update
-      const participantToUpdate = match.participants.find(p => p.id === otherUser.id);
-      
-      if (participantToUpdate) {
-          const participantsUpdate = match.participants.map(p => 
-            p.id === otherUser.id ? { ...p, lastSeen: new Date().toISOString() } : p
-          );
-          
-          updateDoc(matchRef, { participants: participantsUpdate })
-            .catch(e => {
-                if (e.code === 'permission-denied') {
-                  const contextualError = new FirestorePermissionError({
-                    operation: 'update',
-                    path: matchRef.path,
-                    requestResourceData: { participants: participantsUpdate },
-                  });
-                  errorEmitter.emit('permission-error', contextualError);
-                }
-            });
-        }
-    }
-  }, [currentUser, otherUser, firestore, match]);
-
   const isLoading = isMatchLoading || !currentUser || otherUser === undefined;
 
   if (isLoading) {
@@ -127,5 +96,9 @@ export default function ChatPage() {
     );
   }
 
-  return <ChatInterface match={match} messagesColRef={messagesColRef!} />;
+  return (
+    <div className="flex flex-col h-screen w-full">
+        <ChatInterface match={match} messagesColRef={messagesColRef!} />
+    </div>
+  );
 }
