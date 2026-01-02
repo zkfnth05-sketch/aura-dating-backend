@@ -106,7 +106,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isUserDocLoading, setIsUserDocLoading] = useState(true);
   const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
 
   // Phone Auth State
@@ -123,47 +123,53 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    setIsUserDocLoading(true);
 
-    const manageUserFlow = async () => {
-      if (isAuthLoading) return;
-      if (!authUser) {
-        setUser(null);
-        setIsDataLoaded(true);
-        return;
-      }
+    if (isAuthLoading) return;
+    if (!authUser) {
+      setUser(null);
+      setIsUserDocLoading(false);
+      return;
+    }
 
-      if (firestore) {
-        const userRef = doc(firestore, 'users', authUser.uid);
-        try {
+    if (firestore) {
+      const userRef = doc(firestore, 'users', authUser.uid);
+      const unsubscribe = onSnapshot(userRef, (docSnap) => {
+        if (!isMounted) return;
+        
+        if (docSnap.exists()) {
+          const userData = docSnap.data() as User;
+          setUser(userData);
+          // Document exists, now it's safe to update.
           navigator.geolocation.getCurrentPosition(
             (position) => {
               const { latitude, longitude } = position.coords;
               updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
             },
-            () => { updateDoc(userRef, { lastSeen: new Date().toISOString() }); },
+            () => { 
+              updateDoc(userRef, { lastSeen: new Date().toISOString() }); 
+            },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
           );
-          const userSnap = await getDoc(userRef);
-          if (isMounted) {
-            if (userSnap.exists()) {
-              const userData = userSnap.data() as User;
-              setUser(userData);
-            } else {
-              setUser(null);
-            }
-          }
-        } catch (error) {
-          console.error("Failed to fetch user document:", error);
-          if (isMounted) setUser(null);
+        } else {
+          setUser(null);
         }
-      }
-      
-      if (isMounted) setIsDataLoaded(true);
-    };
+        setIsUserDocLoading(false);
+      }, (error) => {
+        console.error("Failed to listen to user document:", error);
+        if(isMounted) {
+            setUser(null);
+            setIsUserDocLoading(false);
+        }
+      });
 
-    manageUserFlow();
-    return () => { isMounted = false; };
-  }, [authUser, firestore, isAuthLoading]);
+      return () => {
+        isMounted = false;
+        unsubscribe();
+      };
+    }
+  }, [authUser?.uid, firestore, isAuthLoading]);
+
 
   // Load settings from localStorage once on mount
   useEffect(() => {
@@ -372,7 +378,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     filters,
     updateFilters,
     resetFilters,
-    isLoaded: isDataLoaded && !isAuthLoading,
+    isLoaded: !isAuthLoading && !isUserDocLoading,
     totalUnreadCount,
     phoneAuth: {
       phoneNumber,
