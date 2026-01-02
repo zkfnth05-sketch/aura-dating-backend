@@ -44,7 +44,7 @@ export default function MatchList({ matches }: { matches: Match[] }) {
                 <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
             </Link>
-            <Link href={`/chat/${match.id}`} className="flex-1">
+            <Link href={`/chat/${match.id}`} className="flex-1 overflow-hidden">
                 <div className="flex-1">
                     <div className="flex justify-between items-center">
                         <p className={cn("font-semibold", unreadCount > 0 ? "text-foreground" : "text-muted-foreground")}>{otherUser.name}</p>
