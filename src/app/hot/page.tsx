@@ -14,6 +14,12 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 
 const UserCard = ({ user }: { user: User }) => {
+  // Defensive check for photoUrls
+  if (!user.photoUrls || user.photoUrls.length === 0) {
+    // Optionally, render a placeholder or null
+    return null;
+  }
+
   return (
     <Link
       href={`/users/${user.id}`}
@@ -56,7 +62,7 @@ export default function HotPage() {
         const newUsersSnap = await getDocs(newUsersQuery);
         const newUsersData = newUsersSnap.docs
             .map(d => d.data() as User)
-            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender)
+            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender && u.photoUrls && u.photoUrls.length > 0)
             .slice(0, 20);
         setNewUsers(newUsersData);
 
@@ -66,7 +72,7 @@ export default function HotPage() {
         const hotUsersSnap = await getDocs(hotUsersQuery);
         const hotUsersData = hotUsersSnap.docs
             .map(d => d.data() as User)
-            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender)
+            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender && u.photoUrls && u.photoUrls.length > 0)
             .sort(() => 0.5 - Math.random()) // Randomize for "hot" effect for now
             .slice(0, 20);
         setHotUsers(hotUsersData);
