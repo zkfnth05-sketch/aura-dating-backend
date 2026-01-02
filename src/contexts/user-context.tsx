@@ -140,16 +140,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
       // 1. Function to update user's presence (lastSeen, location)
       const updateUserPresence = () => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence with location:", e));
-          },
-          () => { 
-            updateDoc(userRef, { lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence:", e));
-          },
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
+        // Only update if user document still exists
+        getDoc(userRef).then(docSnap => {
+          if (docSnap.exists()) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                const { latitude, longitude } = position.coords;
+                updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence with location:", e));
+              },
+              () => { 
+                updateDoc(userRef, { lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence:", e));
+              },
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+          }
+        });
       };
   
       // 2. Initial fetch and single update
@@ -173,12 +178,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       });
   
-      // 3. Real-time listener for user data (without updates)
+      // 3. Real-time listener for user data
       const unsubscribe = onSnapshot(userRef, (docSnap) => {
         if (!isMounted) return;
         if (docSnap.exists()) {
           setUser(docSnap.data() as User);
         } else {
+          // If the document is deleted (e.g., during account deletion),
+          // immediately set the user state to null. This prevents other
+          // parts of the app from trying to operate on a non-existent user.
           setUser(null);
         }
       });
