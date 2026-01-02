@@ -7,6 +7,8 @@ import BottomNav from '@/components/layout/bottom-nav';
 import { UserProvider, useUser } from '@/contexts/user-context';
 import { IncomingCallToast } from '@/components/incoming-call-toast';
 import { NewLikeToast } from '@/components/new-like-toast';
+import { NewMatchToast } from '@/components/new-match-toast';
+import { NewMessageToast } from '@/components/new-message-toast';
 import { usePathname } from 'next/navigation';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
@@ -65,6 +67,8 @@ export default function RootLayout({
             <Toaster />
             <IncomingCallToast />
             <NewLikeToast />
+            <NewMatchToast />
+            <NewMessageToast />
           </UserProvider>
         </FirebaseClientProvider>
       </body>
