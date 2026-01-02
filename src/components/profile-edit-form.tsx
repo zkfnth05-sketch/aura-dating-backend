@@ -31,12 +31,6 @@ import {
 import ReauthDialog from './reauth-dialog';
 
 
-type Photo = {
-  id: string;
-  dataUri: string;
-  isEnhancing: boolean;
-};
-
 const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
   <div className="py-6">
     <h2 className="text-lg font-semibold text-primary">{title}</h2>
@@ -170,12 +164,12 @@ export default function ProfileEditForm() {
   };
 
   const processAndAddImage = async (dataUri: string) => {
-    setIsEnhancing(true);
-    const compressedUri = await compressImage(dataUri);
+    const originalCompressedUri = await compressImage(dataUri);
 
     if (aiEnhancement) {
+      setIsEnhancing(true);
       try {
-        const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: profile.gender });
+        const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
         updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
       } catch (error) {
@@ -185,12 +179,13 @@ export default function ProfileEditForm() {
           title: "AI 보정 실패",
           description: "사진을 보정하는 데 실패했습니다. 원본 사진이 사용됩니다.",
         });
-        updateUser({ photoUrls: [...photoUrls, compressedUri] });
+        updateUser({ photoUrls: [...photoUrls, originalCompressedUri] });
+      } finally {
+        setIsEnhancing(false);
       }
     } else {
-        updateUser({ photoUrls: [...photoUrls, compressedUri] });
+        updateUser({ photoUrls: [...photoUrls, originalCompressedUri] });
     }
-    setIsEnhancing(false);
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
