@@ -6,9 +6,10 @@ import Header from '@/components/layout/header';
 import { useUser } from '@/contexts/user-context';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { Loader2 } from 'lucide-react';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import type { User } from '@/lib/types';
+import BottomNav from '@/components/layout/bottom-nav';
 
 
 export default function MapPage() {
@@ -23,11 +24,19 @@ export default function MapPage() {
       if (!currentUser || !firestore) return;
       setIsInitialLoading(true);
       try {
-        const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
+        let genderFilter: string[];
+        if (currentUser.gender === '남성') {
+          genderFilter = ['여성'];
+        } else if (currentUser.gender === '여성') {
+          genderFilter = ['남성'];
+        } else {
+          genderFilter = ['남성', '여성', '기타'];
+        }
+
         const usersQuery = query(
           collection(firestore, 'users'),
-          where('gender', '==', oppositeGender),
-          limit(20) // Fetch a smaller batch first for faster initial load
+          where('gender', 'in', genderFilter),
+          limit(20)
         );
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
@@ -45,21 +54,26 @@ export default function MapPage() {
   }, [currentUser, firestore, isLoaded]);
 
   useEffect(() => {
-    // After initial load, fetch the rest of the users in the background
     const fetchMoreUsers = async () => {
         if (!currentUser || !firestore || isInitialLoading) return;
         
         try {
-            const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
+            let genderFilter: string[];
+            if (currentUser.gender === '남성') {
+              genderFilter = ['여성'];
+            } else if (currentUser.gender === '여성') {
+              genderFilter = ['남성'];
+            } else {
+              genderFilter = ['남성', '여성', '기타'];
+            }
             const usersQuery = query(
               collection(firestore, 'users'),
-              where('gender', '==', oppositeGender),
-              limit(100) // Fetch the full list
+              where('gender', 'in', genderFilter),
+              limit(100)
             );
             const snapshot = await getDocs(usersQuery);
             const fetchedUsers = snapshot.docs.map(d => d.data() as User);
             
-            // Combine and de-duplicate users
             setMapUsers(prevUsers => {
                 const allUsers = [...prevUsers, ...fetchedUsers];
                 const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
@@ -113,12 +127,11 @@ export default function MapPage() {
 
   return (
     <APIProvider apiKey={apiKey}>
-      <div className="flex flex-col h-screen w-full">
-        <Header />
-        <main style={{ height: 'calc(100vh - 56px)' }}>
+        <div className="relative h-screen w-full">
+            <Header />
             <MapClient users={mapUsers} currentUser={currentUser} />
-        </main>
-      </div>
+            <BottomNav />
+        </div>
     </APIProvider>
   );
 }

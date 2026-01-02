@@ -16,7 +16,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
   
   const isAdminPage = pathname.startsWith('/admin');
   
-  const noBottomNavPaths = ['/signup', '/profile/edit', '/users', '/filter', '/chat'];
+  const noBottomNavPaths = ['/signup', '/profile/edit', '/users', '/filter', '/chat', '/map'];
   const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
 
   if (isAdminPage) {
