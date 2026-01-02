@@ -132,27 +132,35 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setIsUserDocLoading(false);
       return;
     }
-
+  
     if (firestore) {
       const userRef = doc(firestore, 'users', authUser.uid);
-      
+  
+      // --- Separated Logic ---
+  
+      // 1. Function to update user's presence (lastSeen, location)
+      const updateUserPresence = () => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence with location:", e));
+          },
+          () => { 
+            updateDoc(userRef, { lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence:", e));
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      };
+  
+      // 2. Initial fetch and single update
       getDoc(userRef).then(docSnap => {
         if (!isMounted) return;
         
         if (docSnap.exists()) {
-           const userData = docSnap.data() as User;
-           setUser(userData);
-           // Document exists, now it's safe to update.
-           navigator.geolocation.getCurrentPosition(
-             (position) => {
-               const { latitude, longitude } = position.coords;
-               updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() });
-             },
-             () => { 
-               updateDoc(userRef, { lastSeen: new Date().toISOString() }); 
-             },
-             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-           );
+          const userData = docSnap.data() as User;
+          setUser(userData);
+          // Update presence only once on initial load
+          updateUserPresence();
         } else {
           setUser(null);
         }
@@ -164,8 +172,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
           setIsUserDocLoading(false);
         }
       });
-
-      // After the initial fetch, set up the real-time listener
+  
+      // 3. Real-time listener for user data (without updates)
       const unsubscribe = onSnapshot(userRef, (docSnap) => {
         if (!isMounted) return;
         if (docSnap.exists()) {
@@ -175,9 +183,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       });
       
+      // 4. Update presence on window focus (app becomes active)
+      const handleFocus = () => updateUserPresence();
+      window.addEventListener('focus', handleFocus);
+  
       return () => {
         isMounted = false;
         unsubscribe();
+        window.removeEventListener('focus', handleFocus);
       };
     }
   }, [authUser?.uid, firestore, isAuthLoading]);
