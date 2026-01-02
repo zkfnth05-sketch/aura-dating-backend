@@ -6,7 +6,8 @@ import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function OtpPage() {
   const router = useRouter();
@@ -24,10 +25,14 @@ export default function OtpPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-black text-white px-8 py-12">
-      <header className="flex-shrink-0">
-        <h1 className="text-2xl font-bold text-center">인증 코드 입력</h1>
-        <Progress value={20} className="w-full mt-4 h-1 bg-zinc-800" />
+      <header className="relative flex-shrink-0 flex items-center justify-center">
+        <Link href="/signup/phone" className="absolute left-0 p-2">
+            <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <h1 className="text-xl font-bold text-center">인증 코드 입력</h1>
       </header>
+      <Progress value={20} className="w-full mt-4 h-1 bg-zinc-800" />
+
 
       <main className="flex-grow flex flex-col justify-center mt-8">
         <div className="space-y-8">
