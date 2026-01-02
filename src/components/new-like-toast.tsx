@@ -2,40 +2,40 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
-import type { LikedBy, User } from '@/lib/types';
+import type { Like, User } from '@/lib/types';
 import Link from 'next/link';
 
 export function NewLikeToast() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
 
-  const [lastSeenLikeTimestamp, setLastSeenLikeTimestamp] = useState<any | null>(null);
+  const [lastSeenLikeTimestamp, setLastSeenLikeTimestamp] = useState<Timestamp | null>(null);
 
   const newLikesQuery = useMemoFirebase(() => {
     if (!currentUser?.id || !firestore) {
       return null;
     }
+    // Query the top-level 'likes' collection for likes where the current user is the 'likee'
     return query(
-      collection(firestore, 'users', currentUser.id, 'likedBy'),
+      collection(firestore, 'likes'),
+      where('likeeId', '==', currentUser.id),
+      where('isLike', '==', true), // Only show for likes, not dislikes
       orderBy('timestamp', 'desc'),
       limit(1)
     );
   }, [firestore, currentUser]);
 
-  const { data: newLikes } = useCollection<LikedBy>(newLikesQuery);
+  const { data: newLikes } = useCollection<Like>(newLikesQuery);
 
-  const showToast = useCallback(async (like: LikedBy) => {
-    if (!firestore) return;
-
-    const likerId = like.likerId;
-    if (!likerId) return;
+  const showToast = useCallback(async (like: Like) => {
+    if (!firestore || !like.likerId) return;
 
     try {
-      const userRef = doc(firestore, 'users', likerId);
+      const userRef = doc(firestore, 'users', like.likerId);
       const userSnap = await getDoc(userRef);
 
       if (userSnap.exists()) {
@@ -66,7 +66,7 @@ export function NewLikeToast() {
     if (newLikes && newLikes.length > 0) {
       const latestLike = newLikes[0];
       
-      if (latestLike && (!lastSeenLikeTimestamp || latestLike.timestamp?.seconds > lastSeenLikeTimestamp.seconds)) {
+      if (latestLike && latestLike.timestamp && (!lastSeenLikeTimestamp || latestLike.timestamp.seconds > lastSeenLikeTimestamp.seconds)) {
         showToast(latestLike);
         setLastSeenLikeTimestamp(latestLike.timestamp);
       }

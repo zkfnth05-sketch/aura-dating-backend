@@ -15,8 +15,8 @@ export function NewMessageToast() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Ref to track the state of unread messages to detect changes.
   const unreadCountsRef = useRef<Map<string, number>>(new Map());
+  const isInitialLoad = useRef(true);
 
   const matchesQuery = useMemoFirebase(() => {
     if (!currentUser?.id || !firestore) {
@@ -35,18 +35,19 @@ export function NewMessageToast() {
       return;
     }
 
-    // Initialize or update the reference map on first load or when matches change.
-    const initialLoad = unreadCountsRef.current.size === 0;
+    if (isInitialLoad.current) {
+      matches.forEach(m => unreadCountsRef.current.set(m.id, m.unreadCounts?.[currentUser.id] || 0));
+      isInitialLoad.current = false;
+      return;
+    }
     
     matches.forEach(match => {
       const currentUnreadCount = match.unreadCounts?.[currentUser.id] || 0;
       const previousUnreadCount = unreadCountsRef.current.get(match.id) ?? 0;
 
-      // Don't show toast if user is already in the chat room.
       const isUserInChat = pathname === `/chat/${match.id}`;
 
-      if (!isUserInChat && !initialLoad && currentUnreadCount > previousUnreadCount) {
-        // A new message has arrived.
+      if (!isUserInChat && currentUnreadCount > previousUnreadCount) {
         const sender = match.participants.find(p => p.id !== currentUser.id);
 
         if (sender) {
@@ -71,14 +72,8 @@ export function NewMessageToast() {
         }
       }
 
-      // Update the ref with the latest count.
       unreadCountsRef.current.set(match.id, currentUnreadCount);
     });
-
-    // On first load, just populate the ref without showing toasts.
-    if(initialLoad && matches.length > 0) {
-        matches.forEach(m => unreadCountsRef.current.set(m.id, m.unreadCounts?.[currentUser.id] || 0))
-    }
 
   }, [matches, currentUser, pathname, router, toast]);
 
