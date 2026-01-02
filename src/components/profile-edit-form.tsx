@@ -88,8 +88,8 @@ export default function ProfileEditForm() {
     interests: [] as string[],
   });
 
-  const [localPhotos, setLocalPhotos] = useState<Photo[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
@@ -111,13 +111,6 @@ export default function ProfileEditForm() {
           hobbies: currentUser.hobbies || [],
           interests: currentUser.interests || [],
       });
-      setLocalPhotos(
-        (currentUser.photoUrls || []).map((url, i) => ({
-          id: `ctx-photo-${i}-${Date.now()}`,
-          dataUri: url,
-          isEnhancing: false,
-        }))
-      );
     }
   }, [currentUser]);
 
@@ -128,10 +121,9 @@ export default function ProfileEditForm() {
   if (!currentUser) {
       return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
-  
-  const isEnhancing = localPhotos.some(p => p.isEnhancing);
-  const photoUrls = currentUser.photoUrls || [];
 
+  const photoUrls = currentUser.photoUrls || [];
+  
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
     setProfile(prev => {
         const currentValues = prev[field] as string[];
@@ -167,22 +159,21 @@ export default function ProfileEditForm() {
           title: "업데이트 실패",
           description: "프로필을 업데이트하는 데 실패했습니다. 다시 시도해주세요."
         });
+    }).finally(() => {
         setIsSaving(false);
+        toast({
+          title: "프로필 저장됨",
+          description: "프로필이 성공적으로 업데이트되었습니다.",
+        });
+        router.push('/profile');
     });
-    
-    toast({
-      title: "프로필 저장됨",
-      description: "프로필이 성공적으로 업데이트되었습니다.",
-    });
-    router.push('/profile');
   };
 
   const processAndAddImage = async (dataUri: string) => {
-    const newPhotoId = `new-photo-${Date.now()}`;
+    setIsEnhancing(true);
     const compressedUri = await compressImage(dataUri);
 
     if (aiEnhancement) {
-      setLocalPhotos(prev => [...prev, { id: newPhotoId, dataUri: compressedUri, isEnhancing: true }]);
       try {
         const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: profile.gender });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
@@ -199,6 +190,7 @@ export default function ProfileEditForm() {
     } else {
         updateUser({ photoUrls: [...photoUrls, compressedUri] });
     }
+    setIsEnhancing(false);
   };
   
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -244,11 +236,15 @@ export default function ProfileEditForm() {
       router.push('/signup');
     } catch (error: any) {
       console.error("Failed to delete account:", error);
-      toast({
-        variant: "destructive",
-        title: "오류",
-        description: "계정 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-      });
+      if (error.code === 'auth/requires-recent-login') {
+        setIsReauthDialogOpen(true);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "오류",
+          description: "계정 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        });
+      }
     }
   };
 
@@ -261,56 +257,51 @@ export default function ProfileEditForm() {
             <Switch checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {localPhotos.map((photo) => (
-              <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
-                {photo.dataUri && <Image src={photo.dataUri} alt={`My profile photo`} fill className="object-cover"/>}
-                {photo.isEnhancing && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-white" />
-                  </div>
-                )}
-                {!photo.isEnhancing && (
-                  <div className="absolute top-1 right-1 z-20">
-                    <Button variant="destructive" size="icon" onClick={() => removeImage(photo.dataUri)} className="w-6 h-6 rounded-full bg-black/50">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+            {photoUrls.map((url, index) => (
+              <div key={url + index} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
+                <Image src={url} alt={`My profile photo`} fill className="object-cover"/>
+                <div className="absolute top-1 right-1 z-20">
+                  <Button variant="destructive" size="icon" onClick={() => removeImage(url)} className="w-6 h-6 rounded-full bg-black/50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             ))}
             
-            <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
-              <DialogTrigger asChild>
-                <button className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700">
-                  <Plus className="text-zinc-500" />
-                </button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
-                <DialogHeader>
-                  <DialogTitle>사진 추가</DialogTitle>
-                  <DialogDescription>
-                    프로필에 사진을 추가하는 방법을 선택하세요.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
-                    <Camera className="mr-2 h-4 w-4" />
-                    사진 촬영
-                  </Button>
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    앨범에서 선택
-                  </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept="image/*,image/heic,image/heif"
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
+            {photoUrls.length < 9 && (
+              <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
+                <DialogTrigger asChild>
+                  <button className="flex items-center justify-center aspect-square rounded-lg border-2 border-dashed border-zinc-700">
+                    {isEnhancing ? <Loader2 className="animate-spin text-zinc-500" /> : <Plus className="text-zinc-500" />}
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
+                  <DialogHeader>
+                    <DialogTitle>사진 추가</DialogTitle>
+                    <DialogDescription>
+                      프로필에 사진을 추가하는 방법을 선택하세요.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      사진 촬영
+                    </Button>
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      앨범에서 선택
+                    </Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                      accept="image/*,image/heic,image/heif"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
 
           </div>
            <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
@@ -422,7 +413,7 @@ export default function ProfileEditForm() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>취소</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => setIsReauthDialogOpen(true)} className={cn(buttonVariants({ variant: "destructive" }))}>
+                  <AlertDialogAction onClick={handleDeleteAccount} className={cn(buttonVariants({ variant: "destructive" }))}>
                     회원 탈퇴
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -441,5 +432,3 @@ export default function ProfileEditForm() {
     </>
   );
 }
-
-    
