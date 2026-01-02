@@ -39,16 +39,16 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { totalUnreadCount } = useUser();
 
-  const noNavPaths = ['/signup', '/profile/edit', '/users/', '/admin'];
-
-  const isNavHidden = noNavPaths.some(path => pathname.startsWith(path));
-  if (isNavHidden) {
-    return null;
-  }
+  const isMapPage = pathname === '/map';
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 bg-background border-t border-border/40 z-50">
-      <nav className="flex justify-around items-center h-20 max-w-screen-sm mx-auto">
+    <div className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 max-w-screen-sm mx-auto",
+      isMapPage 
+        ? "bg-background/80 backdrop-blur-sm" 
+        : "bg-background border-t border-border/40"
+    )}>
+      <nav className="flex justify-around items-center h-20">
         {navItems.map((item) => {
           const isActive =
             item.href === '/' ? pathname === item.href : pathname.startsWith(item.href);
