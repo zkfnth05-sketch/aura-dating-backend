@@ -44,25 +44,24 @@ export default function UploadPhotoPage() {
   }, [isLoaded, authUser, user, router]);
 
   const processAndAddImage = async (dataUri: string) => {
+    const newPhotoId = `new-photo-${Date.now()}`;
     if (aiEnhancement) {
-      setPhoto({ uri: dataUri, isEnhancing: true });
-      try {
-        const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: user?.gender || '기타' });
-        // Compress the final enhanced image before setting it
-        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
-        setPhoto({ uri: finalCompressedUri, isEnhancing: false });
-      } catch (error) {
-        console.error("AI enhancement failed, using original image:", error);
-        toast({
-          variant: "destructive",
-          title: "AI 보정 실패",
-          description: "AI 보정에 실패했습니다. 다시 시도해 주세요",
-        });
-        // Reset photo state to allow retry
-        setPhoto({ uri: null, isEnhancing: false });
-      }
+        setPhoto({ uri: dataUri, isEnhancing: true });
+        try {
+            const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: user?.gender || '기타' });
+            const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
+            setPhoto({ uri: finalCompressedUri, isEnhancing: false });
+        } catch (error) {
+            console.error("AI enhancement failed, using original compressed image:", error);
+            toast({
+                variant: "destructive",
+                title: "AI 보정 실패",
+                description: "AI 보정에 실패했습니다. 원본 사진이 대신 사용됩니다.",
+            });
+            const compressedOriginal = await compressImage(dataUri);
+            setPhoto({ uri: compressedOriginal, isEnhancing: false });
+        }
     } else {
-        // Compress the original image if AI enhancement is off
         const compressedUri = await compressImage(dataUri);
         setPhoto({ uri: compressedUri, isEnhancing: false });
     }
@@ -99,13 +98,14 @@ export default function UploadPhotoPage() {
     }
 
     setIsSubmitting(true);
-    setIsSignupFlowActive(false); // Signal that the signup flow is now complete
     
-    // Non-blocking update. Navigate immediately.
-    updateUser({
-      photoUrls: [photo.uri],
-    }).catch((error) => {
-      // Still handle errors in the background
+    try {
+      await updateUser({
+        photoUrls: [photo.uri],
+      });
+      setIsSignupFlowActive(false); // Signal that the signup flow is now complete
+      router.push('/');
+    } catch (error) {
       console.error("Failed to complete signup:", error);
       toast({
         variant: "destructive",
@@ -113,10 +113,7 @@ export default function UploadPhotoPage() {
         description: "프로필을 완성하는 데 실패했습니다. 다시 시도해주세요."
       });
       setIsSubmitting(false); // Re-enable button on error
-      setIsSignupFlowActive(true); // Re-activate signup flow on error
-    });
-
-    router.push('/');
+    }
   };
   
   // While auth state is loading, or user data is missing show a loader to prevent flicker or incorrect redirects.

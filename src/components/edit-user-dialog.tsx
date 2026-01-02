@@ -43,7 +43,8 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(user.photoUrls?.[0] || null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [originalPhotoUri, setOriginalPhotoUri] = useState<string | null>(null);
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +68,9 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
         gender: user.gender,
         location: user.location,
       });
-      setPhotoUrl(user.photoUrls?.[0] || null);
+      const currentPhoto = user.photoUrls?.[0] || null;
+      setPhotoPreview(currentPhoto);
+      setOriginalPhotoUri(currentPhoto);
     }
   }, [user, form]);
 
@@ -78,27 +81,8 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
       reader.onload = async (e) => {
         const dataUri = e.target?.result as string;
         if (!dataUri) return;
-
-        setPhotoUrl(dataUri); // Show original preview immediately
-        
-        if (aiEnhancement) {
-          setIsEnhancing(true);
-          try {
-            const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: form.getValues('gender') });
-            const compressedResult = await compressImage(result.enhancedPhotoDataUri);
-            setPhotoUrl(compressedResult);
-          } catch (error) {
-             console.error("Photo enhancement failed:", error);
-             toast({ variant: "destructive", title: "AI 보정 실패", description: "원본 이미지가 사용됩니다." });
-             const compressedFallback = await compressImage(dataUri);
-             setPhotoUrl(compressedFallback);
-          } finally {
-              setIsEnhancing(false);
-          }
-        } else {
-            const compressedResult = await compressImage(dataUri);
-            setPhotoUrl(compressedResult);
-        }
+        setPhotoPreview(dataUri); // Show original preview immediately
+        setOriginalPhotoUri(dataUri);
       };
       reader.readAsDataURL(file);
     }
@@ -106,47 +90,56 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!firestore || !user) return;
-    if(isEnhancing) {
-        toast({ variant: "destructive", title: "AI 보정 중", description: "사진 보정이 완료될 때까지 기다려주세요." });
-        return;
-    }
-    setIsSubmitting(true);
-
-    const userRef = doc(firestore, 'users', user.id);
     
-    const updatedPayload: Partial<User> = {
-      ...values,
-      photoUrls: photoUrl ? [photoUrl] : user.photoUrls,
-    };
+    setIsSubmitting(true);
+    setIsEnhancing(true);
 
-    updateDoc(userRef, updatedPayload)
-      .then(() => {
+    let finalPhotoUrl = photoPreview;
+
+    try {
+        if (originalPhotoUri && originalPhotoUri !== user.photoUrls?.[0]) { // Only enhance if photo changed
+            if (aiEnhancement) {
+                const result = await getEnhancedPhoto({ photoDataUri: originalPhotoUri, gender: values.gender });
+                finalPhotoUrl = await compressImage(result.enhancedPhotoDataUri);
+            } else {
+                finalPhotoUrl = await compressImage(originalPhotoUri);
+            }
+        }
+
+        const userRef = doc(firestore, 'users', user.id);
+        const updatedPayload: Partial<User> = {
+            ...values,
+            photoUrls: finalPhotoUrl ? [finalPhotoUrl] : user.photoUrls,
+        };
+
+        await updateDoc(userRef, updatedPayload);
+
         toast({
-          title: "사용자 정보 수정됨",
-          description: `${values.name} 님의 정보가 성공적으로 업데이트되었습니다.`,
+            title: "사용자 정보 수정됨",
+            description: `${values.name} 님의 정보가 성공적으로 업데이트되었습니다.`,
         });
         onUserUpdated();
-      })
-      .catch((error) => {
-         if (error.code === 'permission-denied') {
-          const contextualError = new FirestorePermissionError({
-            operation: 'update',
-            path: userRef.path,
-            requestResourceData: updatedPayload,
-          });
-          errorEmitter.emit('permission-error', contextualError);
+
+    } catch (error: any) {
+        if (error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                operation: 'update',
+                path: doc(firestore, 'users', user.id).path,
+                requestResourceData: { /* payload */ },
+            });
+            errorEmitter.emit('permission-error', contextualError);
         } else {
-          console.error("Error updating user:", error);
-          toast({
-            variant: "destructive",
-            title: "오류",
-            description: "사용자 정보를 수정하는 데 실패했습니다.",
-          });
+            console.error("Error updating user:", error);
+            toast({
+                variant: "destructive",
+                title: "오류",
+                description: "사용자 정보를 수정하는 데 실패했습니다.",
+            });
         }
-      })
-      .finally(() => {
+    } finally {
+        setIsEnhancing(false);
         setIsSubmitting(false);
-      });
+    }
   };
   
   if (!user) return null;
@@ -172,12 +165,12 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
                     className="relative w-24 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {photoUrl ? (
-                      <Image src={photoUrl} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
+                    {photoPreview ? (
+                      <Image src={photoPreview} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
                     ) : (
                       <Plus className="w-8 h-8 text-zinc-500" />
                     )}
-                    {isEnhancing && <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg"><Loader2 className="w-6 h-6 animate-spin"/></div>}
+                    {isProcessing && <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg"><Loader2 className="w-6 h-6 animate-spin"/></div>}
                     <input
                       type="file"
                       ref={fileInputRef}

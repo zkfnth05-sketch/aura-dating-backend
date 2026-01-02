@@ -43,6 +43,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
   const firestore = useFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [originalPhotoUri, setOriginalPhotoUri] = useState<string | null>(null);
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,7 +63,9 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
       const file = event.target.files[0];
       const reader = new FileReader();
       reader.onload = (e) => {
-        setPhotoPreview(e.target.result as string);
+        const dataUri = e.target?.result as string;
+        setPhotoPreview(dataUri);
+        setOriginalPhotoUri(dataUri);
       };
       reader.readAsDataURL(file);
     }
@@ -71,6 +74,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
   const resetForm = () => {
     form.reset();
     setPhotoPreview(null);
+    setOriginalPhotoUri(null);
     setAiEnhancement(true);
   }
 
@@ -89,12 +93,12 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
     let photoUrlToSave: string;
 
     try {
-      if (photoPreview) {
+      if (originalPhotoUri) {
         if (aiEnhancement) {
-            const result = await getEnhancedPhoto({ photoDataUri: photoPreview, gender: values.gender });
+            const result = await getEnhancedPhoto({ photoDataUri: originalPhotoUri, gender: values.gender });
             photoUrlToSave = await compressImage(result.enhancedPhotoDataUri);
         } else {
-            photoUrlToSave = await compressImage(photoPreview); // Compress original if enhancement is off
+            photoUrlToSave = await compressImage(originalPhotoUri);
         }
       } else {
         const randomImage = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
