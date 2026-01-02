@@ -426,8 +426,8 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10">
+    <div className="flex flex-col h-screen bg-background">
+      <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10 flex-shrink-0">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -493,7 +493,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
         </div>
       </ScrollArea>
 
-      <footer className="p-4 border-t border-border/40">
+      <footer className="p-4 border-t border-border/40 flex-shrink-0">
         {(isLoadingSuggestions || suggestions.length > 0) && (
             <div className="mb-2 p-2 bg-card rounded-lg">
                 {isLoadingSuggestions ? (
