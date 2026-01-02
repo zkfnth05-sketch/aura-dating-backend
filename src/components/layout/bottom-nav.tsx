@@ -39,12 +39,13 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { totalUnreadCount } = useUser();
 
-  const isMapPage = pathname === '/map';
+  const translucentPages = ['/', '/map', '/hot', '/matches'];
+  const isTranslucent = translucentPages.includes(pathname);
 
   return (
     <div className={cn(
       "fixed bottom-0 left-0 right-0 z-50 max-w-screen-sm mx-auto",
-      isMapPage 
+      isTranslucent
         ? "bg-background/80 backdrop-blur-sm" 
         : "bg-background border-t border-border/40"
     )}>
