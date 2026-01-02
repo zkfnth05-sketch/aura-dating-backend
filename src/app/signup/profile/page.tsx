@@ -14,7 +14,7 @@ import type { User } from '@/lib/types';
 export default function CreateProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user, updateUser, authUser, isLoaded, setIsSignupFlowActive } = useUser();
+  const { user, updateUser, authUser, isLoaded, setIsSignupFlowActive, isSignupFlowActive } = useUser();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
@@ -31,7 +31,6 @@ export default function CreateProfilePage() {
          // If user object exists but we are not in signup flow, go home.
         // This can happen on a page refresh if the user object loads first.
         // But if they are in signup flow, we let them stay.
-        // This part is tricky, let's simplify and control via isSignupFlowActive.
         if (!isSignupFlowActive) {
             router.replace('/');
         }
@@ -97,7 +96,7 @@ export default function CreateProfilePage() {
 
   // Show a loader until the initial auth check is complete.
   // Or if the user should be somewhere else.
-  if (!isLoaded || !authUser || user && !isSignupFlowActive) {
+  if (!isLoaded || !authUser || (user && !isSignupFlowActive)) {
     return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 

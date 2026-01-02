@@ -223,12 +223,12 @@ export default function ProfileEditForm() {
     if (!authUser || !firestore) return;
   
     try {
-      // 1. Delete user document from Firestore
+      // Step 1: Try deleting the user from Firebase Auth
+      await deleteUser(authUser);
+  
+      // Step 2: If successful, delete the user document from Firestore
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await deleteDoc(userDocRef);
-  
-      // 2. Delete user from Firebase Authentication
-      await deleteUser(authUser);
   
       toast({
         title: "계정이 삭제되었습니다.",
@@ -238,6 +238,8 @@ export default function ProfileEditForm() {
     } catch (error: any) {
       console.error("Failed to delete account:", error);
       if (error.code === 'auth/requires-recent-login') {
+        // If re-authentication is required, open the dialog.
+        // The dialog will re-call this function upon success.
         setIsReauthDialogOpen(true);
       } else {
         toast({
