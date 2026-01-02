@@ -16,32 +16,65 @@ export default function MapPage() {
   const { user: currentUser, isLoaded } = useUser();
   const firestore = useFirestore();
   const [mapUsers, setMapUsers] = useState<User[]>([]);
-  const [isMapUsersLoading, setIsMapUsersLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   
   useEffect(() => {
-    const fetchMapUsers = async () => {
+    const fetchInitialUsers = async () => {
       if (!currentUser || !firestore) return;
-      setIsMapUsersLoading(true);
+      setIsInitialLoading(true);
       try {
         const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
         const usersQuery = query(
           collection(firestore, 'users'),
           where('gender', '==', oppositeGender),
-          limit(100)
+          limit(20) // Fetch a smaller batch first for faster initial load
         );
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
         setMapUsers([currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)]);
       } catch (error) {
-        console.error("Error fetching map users:", error);
+        console.error("Error fetching initial map users:", error);
       } finally {
-        setIsMapUsersLoading(false);
+        setIsInitialLoading(false);
       }
     };
+
     if (isLoaded && currentUser) {
-      fetchMapUsers();
+      fetchInitialUsers();
     }
   }, [currentUser, firestore, isLoaded]);
+
+  useEffect(() => {
+    // After initial load, fetch the rest of the users in the background
+    const fetchMoreUsers = async () => {
+        if (!currentUser || !firestore || isInitialLoading) return;
+        
+        try {
+            const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
+            const usersQuery = query(
+              collection(firestore, 'users'),
+              where('gender', '==', oppositeGender),
+              limit(100) // Fetch the full list
+            );
+            const snapshot = await getDocs(usersQuery);
+            const fetchedUsers = snapshot.docs.map(d => d.data() as User);
+            
+            // Combine and de-duplicate users
+            setMapUsers(prevUsers => {
+                const allUsers = [...prevUsers, ...fetchedUsers];
+                const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
+                return uniqueUsers;
+            });
+
+        } catch (error) {
+            console.error("Error fetching more map users:", error);
+        }
+    };
+    
+    if(!isInitialLoading) {
+        fetchMoreUsers();
+    }
+  }, [currentUser, firestore, isInitialLoading]);
 
   if (!apiKey) {
     return (
@@ -65,7 +98,7 @@ export default function MapPage() {
     );
   }
 
-  const isLoading = !isLoaded || isMapUsersLoading || !currentUser;
+  const isLoading = !isLoaded || isInitialLoading || !currentUser;
 
   if (isLoading) {
       return (
