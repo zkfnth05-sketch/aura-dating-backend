@@ -21,7 +21,10 @@ export default function MapPage() {
 
   useEffect(() => {
     if (currentUser) {
-      setCenter({ lat: currentUser.lat, lng: currentUser.lng });
+      // Use a more stable check for valid coordinates
+      if (typeof currentUser.lat === 'number' && typeof currentUser.lng === 'number') {
+        setCenter({ lat: currentUser.lat, lng: currentUser.lng });
+      }
     }
   }, [currentUser]);
 
@@ -75,7 +78,11 @@ export default function MapPage() {
         );
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
-        setMapUsers([currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)]);
+        // Ensure current user is always in the list for their marker
+        const allUsers = [currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)];
+        const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
+        setMapUsers(uniqueUsers);
+
       } catch (error) {
         console.error("Error fetching initial map users:", error);
       } finally {
@@ -163,9 +170,11 @@ export default function MapPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-1 relative">
+      <main>
         <APIProvider apiKey={apiKey}>
+          <div className="relative h-[calc(100svh-136px)] w-full">
             <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
+          </div>
         </APIProvider>
       </main>
     </div>
