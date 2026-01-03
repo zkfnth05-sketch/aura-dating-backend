@@ -225,7 +225,7 @@ export default function HomePageClient() {
       return (
         <div className="flex flex-col h-screen bg-background">
           <Header />
-          <main className="flex-grow flex items-center justify-center">
+          <main className="flex-1 flex items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
           </main>
         </div>
@@ -235,7 +235,7 @@ export default function HomePageClient() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
-      <main className="flex-grow flex flex-col items-center pt-4 overflow-hidden">
+      <main className="flex-1 flex flex-col items-center pt-4">
         <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
           {(!isLoaded || !currentUser) ? (
              <div className="text-center">
