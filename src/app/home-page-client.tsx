@@ -235,60 +235,60 @@ export default function HomePageClient() {
   const hasLiked = peopleILiked?.some(u => u.id === activeUser?.id);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
       <Header />
-      <main className="flex flex-col items-center p-4 flex-1">
-        <div className="flex-1 flex flex-col items-center justify-center w-full">
-            <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
-              {(!isLoaded || !currentUser) ? (
-                 <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                 </div>
-              ) : !activeUser ? (
-                 <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
-                  <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
-                  <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
-                   <Button onClick={() => fetchUsers()} className="mt-6">
-                    다시 시도
-                  </Button>
+      <main className="flex-1 flex flex-col items-center justify-center">
+        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
+            {(!isLoaded || !currentUser) ? (
+                <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : (
+            ) : !activeUser ? (
+                <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
+                <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
+                <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
+                <Button onClick={() => fetchUsers()} className="mt-6">
+                    다시 시도
+                </Button>
+                </div>
+            ) : (
                 <>
-                  {displayedUsers.map((user, index) => {
-                      if (index < currentIndex) return null;
-                      const isTop = index === currentIndex;
-                      return (
-                          <ProfileCard
-                              key={user.id}
-                              currentUser={currentUser}
-                              potentialMatch={user}
-                              isActive={isTop}
-                              swipeState={isTop ? swipeState : null}
-                              zIndex={displayedUsers.length - index}
-                          />
-                      )
-                  })}
-                  {(isLoadingMore) && (
+                {displayedUsers.map((user, index) => {
+                    if (index < currentIndex) return null;
+                    const isTop = index === currentIndex;
+                    return (
+                        <ProfileCard
+                            key={user.id}
+                            currentUser={currentUser}
+                            potentialMatch={user}
+                            isActive={isTop}
+                            swipeState={isTop ? swipeState : null}
+                            zIndex={displayedUsers.length - index}
+                        />
+                    )
+                })}
+                {(isLoadingMore) && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl z-50">
                         <Loader2 className="h-12 w-12 animate-spin text-white" />
                     </div>
-                  )}
+                )}
                 </>
-              )}
-            </div>
-            
-            {activeUser && (
-              <div className="py-6">
-                <ActionButtons
-                  onDislike={() => handleAction('dislike')}
-                  onMessage={() => handleAction('message')}
-                  onLike={() => handleAction('like')}
-                  showLike={!hasLiked}
-                />
-              </div>
             )}
         </div>
       </main>
+
+      {activeUser && (
+        <footer className="fixed bottom-24 left-0 right-0 z-20">
+            <div className="flex justify-center">
+                <ActionButtons 
+                    onDislike={() => handleAction('dislike')}
+                    onMessage={() => handleAction('message')}
+                    onLike={() => handleAction('like')}
+                    showLike={!hasLiked}
+                />
+            </div>
+        </footer>
+      )}
     </div>
   );
 }
