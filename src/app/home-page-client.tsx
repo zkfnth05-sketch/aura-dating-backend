@@ -235,8 +235,8 @@ export default function HomePageClient() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
-      <main className="flex-1 flex flex-col items-center pt-4">
-        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
+      <main className="flex-1 flex flex-col items-center pt-4 overflow-y-auto">
+        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex-shrink-0 flex items-center justify-center">
           {(!isLoaded || !currentUser) ? (
              <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -275,7 +275,7 @@ export default function HomePageClient() {
         </div>
         
         {activeUser && (
-          <div className="absolute bottom-24 z-20">
+          <div className="py-6">
             <ActionButtons
               onDislike={() => handleAction('dislike')}
               onMessage={() => handleAction('message')}

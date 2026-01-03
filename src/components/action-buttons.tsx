@@ -9,7 +9,7 @@ type ActionButtonsProps = {
 
 export default function ActionButtons({ onDislike, onMessage, onLike }: ActionButtonsProps) {
   return (
-    <div className="mt-6 flex items-center justify-center gap-10 z-10">
+    <div className="flex items-center justify-center gap-10 z-10">
       <Button onClick={onDislike} variant="outline" size="icon" className="w-16 h-16 rounded-full bg-button-bg border-0 text-button-dislike hover:bg-button-bg/80">
         <X className="w-10 h-10" />
       </Button>
