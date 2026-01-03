@@ -170,11 +170,9 @@ export default function MapPage() {
   return (
     <div className="flex flex-col h-screen">
       <Header />
-      <main>
-        <APIProvider apiKey={apiKey}>
-          <div className="relative h-[calc(100svh-136px)] w-full">
-            <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
-          </div>
+      <main className="flex-1">
+        <APIProvider apiKey={apiKey} className="h-full w-full relative">
+          <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
         </APIProvider>
       </main>
     </div>
