@@ -17,7 +17,7 @@ import { Button } from './ui/button';
 const FETCH_LIMIT = 10;
 
 export default function HomePageClient() {
-  const { user: currentUser, filters, isLoaded } = useUser();
+  const { user: currentUser, filters, isLoaded, peopleILiked } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
 
@@ -231,12 +231,14 @@ export default function HomePageClient() {
         </div>
       );
   }
+  
+  const hasLiked = peopleILiked?.some(u => u.id === activeUser?.id);
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col min-h-screen bg-background">
       <Header />
-      <main className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
-        <div className="flex-1 relative w-full max-w-sm flex items-center justify-center">
+      <main className="flex flex-col items-center p-4 overflow-hidden">
+        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
           {(!isLoaded || !currentUser) ? (
              <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -280,6 +282,7 @@ export default function HomePageClient() {
               onDislike={() => handleAction('dislike')}
               onMessage={() => handleAction('message')}
               onLike={() => handleAction('like')}
+              showLike={!hasLiked}
             />
           </div>
         )}
