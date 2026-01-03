@@ -24,7 +24,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
     transform: `translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})`,
     transition: 'transform 0.5s ease-in-out',
     zIndex: zIndex,
-    touchAction: 'pan-y', // Allow vertical scrolling/dragging
+    touchAction: 'none', // Prevent all scrolling/dragging on the card itself
   };
 
   const allTags = [
