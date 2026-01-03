@@ -237,7 +237,7 @@ export default function HomePageClient() {
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       <Header />
-      <main className="flex-1 flex flex-col items-center justify-center">
+      <main className="flex-1 flex flex-col items-center pt-4">
         <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
             {(!isLoaded || !currentUser) ? (
                 <div className="text-center">
