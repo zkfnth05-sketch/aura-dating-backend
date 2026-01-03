@@ -3,34 +3,9 @@
 import type { Metadata } from 'next';
 import '@/app/globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import BottomNav from '@/components/layout/bottom-nav';
-import { UserProvider, useUser } from '@/contexts/user-context';
-import { IncomingCallToast } from '@/components/incoming-call-toast';
-import { usePathname } from 'next/navigation';
+import { UserProvider } from '@/contexts/user-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-
-// No metadata export from a 'use client' component. 
-// If you need metadata, you'd move this to a server component parent.
-
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const { isLoaded, authUser, user } = useUser();
-  const noBottomPaddingPaths = ['/chat', '/profile/edit', '/users', '/filter', '/signup'];
-  const needsPadding = !noBottomPaddingPaths.some(path => pathname.startsWith(path));
-
-  const showBottomNav = isLoaded && authUser && user?.photoUrls && user.photoUrls.length > 0;
-
-  return (
-    <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
-      {authUser && <IncomingCallToast />}
-      <main className={`flex-1 ${needsPadding ? 'pb-24' : ''}`}>
-          {children}
-      </main>
-      <Toaster />
-      {showBottomNav && <BottomNav />}
-    </div>
-  );
-}
+import AppLayout from '@/components/layout/app-layout';
 
 
 export default function RootLayout({
@@ -40,9 +15,8 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang="ko" className="dark">
+    <html lang="ko" className="dark" suppressHydrationWarning>
       <head>
-        {/* We can still have a head tag in a client component */}
         <title>Aura - 새로운 만남의 시작</title>
         <meta name="description" content="Aura와 함께 당신의 인연을 찾아보세요." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -55,12 +29,13 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased" suppressHydrationWarning>
         <FirebaseClientProvider>
           <UserProvider>
             <AppLayout>
               {children}
             </AppLayout>
+            <Toaster />
           </UserProvider>
         </FirebaseClientProvider>
       </body>
