@@ -26,7 +26,7 @@ export default function MatchesPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-1">
+      <main>
         <Tabs defaultValue="chats" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 rounded-none h-14">
             <TabsTrigger
@@ -49,13 +49,13 @@ export default function MatchesPage() {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="chats" className="mt-0 p-4">
+          <TabsContent value="chats" className="mt-0 p-4 pb-4">
             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <MatchList matches={matches || []} />}
           </TabsContent>
-          <TabsContent value="liked-me" className="mt-0 p-4">
+          <TabsContent value="liked-me" className="mt-0 p-4 pb-4">
              {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleWhoLikedMe || []} />}
           </TabsContent>
-          <TabsContent value="i-liked" className="mt-0 p-4">
+          <TabsContent value="i-liked" className="mt-0 p-4 pb-4">
             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleILiked || []} />}
           </TabsContent>
             

@@ -74,7 +74,7 @@ export default function AiPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-1 container py-8">
+      <main className="container pt-8 pb-8">
         <Tabs defaultValue="ideal-type" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 border-b border-border/40 rounded-none">
             <TabsTrigger
@@ -90,7 +90,7 @@ export default function AiPage() {
               AI 추천 데이트 코스
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="ideal-type" className="mt-6">
+          <TabsContent value="ideal-type" className="mt-6 pb-8">
             {isLoading ? (
                <div className="flex items-center justify-center pt-20">
                   <Loader2 className="h-8 w-8 animate-spin" />
@@ -99,7 +99,7 @@ export default function AiPage() {
               <AiPageClient recommendedUsers={recommendedUsers} currentUser={currentUser} />
             )}
           </TabsContent>
-          <TabsContent value="date-course" className="mt-6">
+          <TabsContent value="date-course" className="mt-6 pb-8">
             <DateCourseForm />
           </TabsContent>
         </Tabs>

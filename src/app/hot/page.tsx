@@ -104,7 +104,7 @@ export default function HotPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-1">
+      <main>
         <Tabs defaultValue="new" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 rounded-none h-14">
             <TabsTrigger 
@@ -121,7 +121,7 @@ export default function HotPage() {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="new" className="mt-0 p-4">
+          <TabsContent value="new" className="mt-0 p-4 pb-4">
             {isLoading ? (
               <div className="flex items-center justify-center pt-20">
                   <Loader2 className="h-8 w-8 animate-spin" />
@@ -134,7 +134,7 @@ export default function HotPage() {
               </div>
             )}
           </TabsContent>
-          <TabsContent value="hot" className="mt-0 p-4">
+          <TabsContent value="hot" className="mt-0 p-4 pb-4">
             {isLoading ? (
               <div className="flex items-center justify-center pt-20">
                   <Loader2 className="h-8 w-8 animate-spin" />

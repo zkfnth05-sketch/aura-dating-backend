@@ -212,10 +212,6 @@ export default function HomePageClient() {
       }
     });
 
-    if (action === 'like') {
-      // Potentially trigger a refetch of likes data in the context if needed for real-time updates on other screens
-    }
-  
     setTimeout(() => {
       if (currentIndex === displayedUsers.length - 1 && hasMoreUsers) {
         fetchUsers(lastDoc);
@@ -239,7 +235,7 @@ export default function HomePageClient() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <Header />
-      <main className="flex-grow flex flex-col items-center p-4 overflow-hidden">
+      <main className="flex-grow flex flex-col items-center pt-4 overflow-hidden">
         <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
           {(!isLoaded || !currentUser) ? (
              <div className="text-center">
