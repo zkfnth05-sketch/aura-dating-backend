@@ -9,7 +9,6 @@ import { Loader2 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import type { User } from '@/lib/types';
-import BottomNav from '@/components/layout/bottom-nav';
 
 
 export default function MapPage() {
@@ -166,7 +165,6 @@ export default function MapPage() {
         <div className="relative h-screen w-full">
             <Header />
             <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
-            <BottomNav />
         </div>
     </APIProvider>
   );
