@@ -74,7 +74,7 @@ export default function AiPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="container pt-8 pb-8">
+      <main className="container pt-8">
         <Tabs defaultValue="ideal-type" className="w-full">
           <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 border-b border-border/40 rounded-none">
             <TabsTrigger
