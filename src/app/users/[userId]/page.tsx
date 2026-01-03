@@ -238,7 +238,7 @@ export default function UserProfilePage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
         </header>
-        <main className="flex-1">
+        <main className="flex-1 pb-40">
           <div className="relative w-full aspect-[3/4] max-h-[70vh] cursor-pointer" onClick={() => handleImageClick(0)}>
             {allPhotos[0] && (
               <Image
