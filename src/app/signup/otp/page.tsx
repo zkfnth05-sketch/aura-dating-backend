@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -34,7 +35,7 @@ export default function OtpPage() {
       <Progress value={20} className="w-full mt-4 h-1 bg-zinc-800" />
 
 
-      <main className="flex-grow flex flex-col justify-center mt-8">
+      <main className="flex-1 flex flex-col justify-center">
         <div className="space-y-8">
           <div>
             <label htmlFor="otp" className="text-sm font-medium text-zinc-400">
@@ -57,7 +58,7 @@ export default function OtpPage() {
         </div>
       </main>
 
-      <footer className="flex-shrink-0 mt-8">
+      <footer className="flex-shrink-0 pt-8">
         <Button
           onClick={handleVerify}
           disabled={isVerifyingOtp || otp.length !== 6}

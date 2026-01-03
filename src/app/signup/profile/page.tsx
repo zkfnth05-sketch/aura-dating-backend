@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -107,7 +108,7 @@ export default function CreateProfilePage() {
         <Progress value={25} className="w-full mt-4 h-1 bg-zinc-800" />
       </header>
 
-      <main className="flex-grow flex flex-col justify-center mt-8">
+      <main className="flex-1 overflow-y-auto py-8">
         <div className="space-y-8">
           <div>
             <label htmlFor="name" className="text-sm font-medium text-zinc-400">
@@ -188,7 +189,7 @@ export default function CreateProfilePage() {
         </div>
       </main>
 
-      <footer className="flex-shrink-0 mt-8">
+      <footer className="flex-shrink-0 pt-8">
         <Button
           onClick={handleNext}
           disabled={isSubmitting}

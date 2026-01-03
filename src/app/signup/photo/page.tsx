@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -130,67 +131,69 @@ export default function UploadPhotoPage() {
         <Progress value={75} className="w-full mt-4 h-1 bg-zinc-800" />
       </header>
 
-      <main className="flex-grow flex flex-col items-center justify-center text-center mt-8">
-        <p className="text-zinc-400 mb-6">대표 사진을 등록해주세요.</p>
-        
-        <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
-          <DialogTrigger asChild>
-            <div
-              className="relative w-48 h-48 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
-            >
-              {photo.uri ? (
-                <Image src={photo.uri} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
-              ) : (
-                <Plus className="w-10 h-10 text-zinc-500" />
-              )}
-               {photo.isEnhancing && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
-                  <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      <main className="flex-1 overflow-y-auto py-8">
+        <div className="flex flex-col items-center justify-center h-full text-center">
+            <p className="text-zinc-400 mb-6">대표 사진을 등록해주세요.</p>
+            
+            <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
+            <DialogTrigger asChild>
+                <div
+                className="relative w-48 h-48 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
+                >
+                {photo.uri ? (
+                    <Image src={photo.uri} alt="Profile preview" layout="fill" className="object-cover rounded-lg" />
+                ) : (
+                    <Plus className="w-10 h-10 text-zinc-500" />
+                )}
+                {photo.isEnhancing && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                    </div>
+                )}
                 </div>
-              )}
-            </div>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
-            <DialogHeader>
-              <DialogTitle>사진 추가</DialogTitle>
-              <DialogDescription>
-                프로필에 사진을 추가하는 방법을 선택하세요.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
-                <Camera className="mr-2 h-4 w-4" />
-                사진 촬영
-              </Button>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                앨범에서 선택
-              </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept="image/*,image/heic,image/heif"
-              />
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
+                <DialogHeader>
+                <DialogTitle>사진 추가</DialogTitle>
+                <DialogDescription>
+                    프로필에 사진을 추가하는 방법을 선택하세요.
+                </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    사진 촬영
+                </Button>
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    앨범에서 선택
+                </Button>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*,image/heic,image/heif"
+                />
+                </div>
+            </DialogContent>
+            </Dialog>
 
 
-        <div className="flex items-center justify-center gap-4 mt-8">
-          <label htmlFor="ai-enhancement" className="text-sm font-medium text-zinc-400">
-            AI 보정
-          </label>
-          <Switch
-            id="ai-enhancement"
-            checked={aiEnhancement}
-            onCheckedChange={setAiEnhancement}
-          />
+            <div className="flex items-center justify-center gap-4 mt-8">
+            <label htmlFor="ai-enhancement" className="text-sm font-medium text-zinc-400">
+                AI 보정
+            </label>
+            <Switch
+                id="ai-enhancement"
+                checked={aiEnhancement}
+                onCheckedChange={setAiEnhancement}
+            />
+            </div>
         </div>
       </main>
 
-      <footer className="flex-shrink-0 mt-8 flex gap-3">
+      <footer className="flex-shrink-0 pt-8 flex gap-3">
         <Button
             onClick={() => router.back()}
             className="w-full h-14 bg-zinc-800 text-zinc-300 font-bold rounded-full text-lg hover:bg-zinc-700"
