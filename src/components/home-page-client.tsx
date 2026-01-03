@@ -127,22 +127,17 @@ export default function HomePageClient() {
     const targetUserId = activeUser.id;
   
     if (action === 'message') {
-      const allMatchesQuery = query(
+      // More efficient query using 'in' to check for both user ID permutations
+      const matchQuery = query(
         collection(firestore, 'matches'),
-        where('users', 'array-contains', currentUser.id)
+        where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
       );
-      const matchSnapshot = await getDocs(allMatchesQuery);
+
+      const matchSnapshot = await getDocs(matchQuery);
+      const existingMatchDoc = matchSnapshot.docs[0];
   
-      let existingMatch: { id: string } | null = null;
-      matchSnapshot.forEach(doc => {
-        const match = doc.data();
-        if (match.users.includes(targetUserId)) {
-          existingMatch = { id: doc.id, ...match };
-        }
-      });
-  
-      if (existingMatch) {
-        router.push(`/chat/${existingMatch.id}`);
+      if (existingMatchDoc) {
+        router.push(`/chat/${existingMatchDoc.id}`);
       } else {
         const newMatchRef = doc(collection(firestore, 'matches'));
         const matchData = {

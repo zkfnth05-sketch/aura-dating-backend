@@ -31,6 +31,7 @@ const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User,
 
   useEffect(() => {
     const fetchReason = async () => {
+      setIsAiReasonLoading(true);
       try {
         const potentialMatchWithDefaults = {
           ...potentialMatch,
@@ -49,6 +50,7 @@ const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User,
           lifestyle: currentUser.lifestyle || [],
         };
         
+        // Remove non-serializable fields if they exist
         delete (potentialMatchWithDefaults as Partial<User>).createdAt;
         delete (currentUserWithDefaults as Partial<User>).createdAt;
 
@@ -113,6 +115,7 @@ export default function UserProfilePage() {
     const targetUserId = user.id;
 
     if (action === 'message') {
+      // More efficient query using 'in' to check for both user ID permutations
       const matchQuery = query(
         collection(firestore, 'matches'),
         where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
@@ -194,10 +197,6 @@ export default function UserProfilePage() {
         console.error("Failed to record like:", e);
       }
     });
-
-    if (action === 'like') {
-      // No need to fetchInitialData, context will update automatically
-    }
   
     router.back();
   };
