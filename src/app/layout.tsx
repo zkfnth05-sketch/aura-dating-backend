@@ -3,37 +3,9 @@
 import type { Metadata } from 'next';
 import '@/app/globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import BottomNav from '@/components/layout/bottom-nav';
-import { UserProvider, useUser } from '@/contexts/user-context';
-import { IncomingCallToast } from '@/components/incoming-call-toast';
-import { NewLikeToast } from '@/components/new-like-toast';
-import { NewMatchToast } from '@/components/new-match-toast';
-import { NewMessageToast } from '@/components/new-message-toast';
-import { usePathname } from 'next/navigation';
+import { UserProvider } from '@/contexts/user-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-
-function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const { authUser, user } = useUser();
-  
-  const isAdminPage = pathname.startsWith('/admin');
-  
-  const noBottomNavPaths = ['/signup', '/profile/edit', '/users', '/filter', '/chat', '/map'];
-  const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
-
-  if (isAdminPage) {
-    return <>{children}</>;
-  }
-
-  return (
-    <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
-      <main className={`flex-1 flex flex-col ${showBottomNav ? 'pb-24' : ''}`}>
-          {children}
-      </main>
-      {showBottomNav && <BottomNav />}
-    </div>
-  );
-}
+import AppLayout from '@/components/layout/app-layout';
 
 
 export default function RootLayout({
@@ -43,9 +15,8 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang="ko" className="dark">
+    <html lang="ko" className="dark" suppressHydrationWarning>
       <head>
-        {/* We can still have a head tag in a client component */}
         <title>Aura - 새로운 만남의 시작</title>
         <meta name="description" content="Aura와 함께 당신의 인연을 찾아보세요." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -65,10 +36,6 @@ export default function RootLayout({
               {children}
             </AppLayout>
             <Toaster />
-            <IncomingCallToast />
-            <NewLikeToast />
-            <NewMatchToast />
-            <NewMessageToast />
           </UserProvider>
         </FirebaseClientProvider>
       </body>
