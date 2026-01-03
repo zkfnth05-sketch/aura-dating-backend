@@ -12,7 +12,7 @@ import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, addDoc
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 
 const FETCH_LIMIT = 10;
 
