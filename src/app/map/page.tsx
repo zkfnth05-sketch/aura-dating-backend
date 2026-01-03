@@ -18,6 +18,42 @@ export default function MapPage() {
   const firestore = useFirestore();
   const [mapUsers, setMapUsers] = useState<User[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [center, setCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // Default to Seoul
+
+  useEffect(() => {
+    if (currentUser) {
+      setCenter({ lat: currentUser.lat, lng: currentUser.lng });
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    let watchId: number;
+
+    if (navigator.geolocation) {
+      // Watch for position changes
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCenter({ lat: latitude, lng: longitude });
+        },
+        (error) => {
+          console.error("Geolocation watch error:", error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        }
+      );
+    }
+
+    // Cleanup watcher on component unmount
+    return () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, []);
   
   useEffect(() => {
     const fetchInitialUsers = async () => {
@@ -129,7 +165,7 @@ export default function MapPage() {
     <APIProvider apiKey={apiKey}>
         <div className="relative h-screen w-full">
             <Header />
-            <MapClient users={mapUsers} currentUser={currentUser} />
+            <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
             <BottomNav />
         </div>
     </APIProvider>

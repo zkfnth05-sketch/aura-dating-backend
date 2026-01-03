@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 interface MapClientProps {
   users: User[];
   currentUser: User;
+  initialCenter: { lat: number; lng: number };
 }
 
 const mapStyles: google.maps.MapTypeStyle[] = [
@@ -102,18 +103,16 @@ const distanceOptions = [
     { label: '100km', zoom: 8 },
 ];
 
-export default function MapClient({ users, currentUser }: MapClientProps) {
+export default function MapClient({ users, currentUser, initialCenter }: MapClientProps) {
   const router = useRouter();
   
   const [zoom, setZoom] = useState(11);
-  const [center, setCenter] = useState({ lat: currentUser.lat, lng: currentUser.lng });
+  const [center, setCenter] = useState(initialCenter);
 
   useEffect(() => {
-    // Update center if currentUser's location changes
-    if (currentUser.lat && currentUser.lng) {
-      setCenter({ lat: currentUser.lat, lng: currentUser.lng });
-    }
-  }, [currentUser.lat, currentUser.lng]);
+    // Update center when initialCenter prop changes from parent
+    setCenter(initialCenter);
+  }, [initialCenter]);
 
 
   const handleMarkerClick = (userId: string) => {
@@ -150,6 +149,7 @@ export default function MapClient({ users, currentUser }: MapClientProps) {
           disableDefaultUI={true}
           styles={mapStyles}
           gestureHandling={'greedy'}
+          onCenterChanged={(e) => setCenter(e.detail.center)}
         >
           {users.map((user) => (
             <AdvancedMarker
