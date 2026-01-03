@@ -20,10 +20,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
-      <main className={`flex-1 flex flex-col ${showBottomNav ? 'pb-24' : ''}`}>
+      <main className="flex-1 flex flex-col">
           {children}
       </main>
+      
+      {showBottomNav && <div className="pb-24" />}
+      
       {showBottomNav && <BottomNav />}
+      
       <IncomingCallToast />
       <NewLikeToast />
       <NewMatchToast />
