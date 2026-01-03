@@ -14,7 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isAdminPage = pathname.startsWith('/admin');
   
-  const noBottomNavPaths = ['/signup', '/profile/edit', '/users', '/filter', '/chat'];
+  const noBottomNavPaths = ['/signup', '/profile/edit', '/filter', '/chat'];
   const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
 
   if (isAdminPage) {
@@ -23,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-screen">
-      <main className={`flex-1 flex flex-col ${showBottomNav ? 'pb-24' : ''}`}>
+      <main className={`flex-1 flex flex-col pb-24`}>
           {children}
       </main>
       {showBottomNav && <BottomNav />}
