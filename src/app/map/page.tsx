@@ -136,7 +136,7 @@ export default function MapPage() {
     return (
       <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="flex-1 container py-8 text-center">
+        <main className="container py-8 text-center">
           <h1 className="text-2xl font-bold text-destructive">Google Maps API 키가 필요합니다.</h1>
           <p className="mt-4 text-muted-foreground">
             지도 기능을 사용하려면, Google Cloud Platform에서 Google Maps API 키를 발급받아 프로젝트 루트의 <code className="bg-muted px-1 py-0.5 rounded-sm">.env</code> 파일에 추가해야 합니다.
@@ -170,9 +170,9 @@ export default function MapPage() {
   return (
     <div className="flex flex-col h-screen">
       <Header />
-      <main className="flex-1">
+      <main>
         <APIProvider apiKey={apiKey}>
-          <div className="h-full w-full">
+          <div className="relative h-[calc(100svh-136px)] w-full">
             <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
           </div>
         </APIProvider>
