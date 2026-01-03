@@ -253,7 +253,7 @@ export default function ProfileEditForm() {
 
   return (
     <>
-      <main className="container px-4">
+      <main className="container px-4 pb-24">
         <Section title="사진 및 동영상">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm">AI 보정</span>

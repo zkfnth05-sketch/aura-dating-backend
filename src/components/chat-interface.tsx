@@ -9,7 +9,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
-import { cn, formatLastSeen } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
@@ -161,7 +161,26 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
     // This effect runs only on the client, preventing hydration mismatch.
     const updateLastSeen = () => {
       if(otherUser) {
-          setLastSeenText(formatLastSeen(otherUser.lastSeen));
+          const formattedText = (() => {
+            if (!otherUser.lastSeen) {
+                return '오래 전';
+            }
+            if (otherUser.lastSeen === 'Online') {
+                return '온라인';
+            }
+            const now = new Date();
+            const lastSeenDate = new Date(otherUser.lastSeen);
+            const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
+            if (diffInSeconds < 60) return '방금 전';
+            const diffInMinutes = Math.floor(diffInSeconds / 60);
+            if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+            const diffInHours = Math.floor(diffInMinutes / 60);
+            if (diffInHours < 24) return `${diffInHours}시간 전`;
+            const diffInDays = Math.floor(diffInHours / 24);
+            if (diffInDays < 7) return `${diffInDays}일 전`;
+            return lastSeenDate.toLocaleDateString('ko-KR');
+          })();
+          setLastSeenText(formattedText);
       }
     }
     updateLastSeen(); // Initial update
@@ -456,7 +475,7 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
         </Button>
       </header>
 
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
         <div className="space-y-4">
           {areMessagesLoading && <div className="text-center text-muted-foreground">메시지 로딩 중...</div>}
           {messages && messages.map((message) => (

@@ -114,7 +114,7 @@ export default function FilterClient() {
     };
 
     return (
-        <main className="container pb-4 px-4">
+        <main className="container pb-24 px-4">
             <Section title="나이">
                 <div className="flex items-center gap-4">
                     <Input 
