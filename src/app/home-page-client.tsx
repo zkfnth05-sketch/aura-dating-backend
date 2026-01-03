@@ -236,7 +236,7 @@ export default function HomePageClient() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-1 flex flex-col items-center pt-4">
-        <div className="relative w-full max-w-sm h-[calc(100svh-170px)] flex-shrink-0 flex items-center justify-center">
+        <div className="flex-1 relative w-full max-w-sm flex items-center justify-center">
           {(!isLoaded || !currentUser) ? (
              <div className="text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
