@@ -238,7 +238,7 @@ export default function UserProfilePage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
         </header>
-        <main className="flex-1 pb-40">
+        <main className="flex-1">
           <div className="relative w-full aspect-[3/4] max-h-[70vh] cursor-pointer" onClick={() => handleImageClick(0)}>
             {allPhotos[0] && (
               <Image
@@ -344,7 +344,7 @@ export default function UserProfilePage() {
             </div>
           </div>
         </main>
-        <footer className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-gradient-to-t from-black/80 to-transparent">
+        <footer className="fixed bottom-24 left-0 right-0 z-20">
             <div className="flex justify-center">
                 <ActionButtons 
                     onDislike={() => handleAction('dislike')}
