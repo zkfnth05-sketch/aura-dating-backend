@@ -277,7 +277,7 @@ export default function HomePageClient() {
         </div>
         
         {activeUser && (
-          <div className="py-6">
+          <div className="absolute bottom-24 z-20">
             <ActionButtons
               onDislike={() => handleAction('dislike')}
               onMessage={() => handleAction('message')}
