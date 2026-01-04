@@ -60,8 +60,11 @@ export default function HomePageClient() {
         const snapshot = await getDocs(usersQuery);
         
         const applyClientSideFilters = (users: User[]): User[] => {
+            const likedUserIds = new Set((peopleILiked || []).map(u => u.id));
+
             return users.filter(user => {
                 if (user.id === currentUser.id) return false;
+                if (likedUserIds.has(user.id)) return false; // Filter out users I've already liked
 
                 // Gender Filter (client-side)
                 let genderFilter: ('남성' | '여성' | '기타')[] = [];
@@ -107,7 +110,7 @@ export default function HomePageClient() {
         setIsLoadingUsers(false);
         setIsLoadingMore(false);
     }
-  }, [isLoaded, currentUser, firestore, isLoadingMore, filters]);
+  }, [isLoaded, currentUser, firestore, isLoadingMore, filters, peopleILiked]);
 
   useEffect(() => {
     // Initial fetch
