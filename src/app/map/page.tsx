@@ -29,32 +29,23 @@ export default function MapPage() {
   }, [currentUser]);
 
   useEffect(() => {
-    let watchId: number;
-
     if (navigator.geolocation) {
-      // Watch for position changes
-      watchId = navigator.geolocation.watchPosition(
+      // Get the current position once
+      navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           setCenter({ lat: latitude, lng: longitude });
         },
         (error) => {
-          console.error("Geolocation watch error:", error);
+          console.error("Geolocation error:", error);
         },
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 0,
+          maximumAge: 60000, // Allow using a cached position up to 1 minute old
         }
       );
     }
-
-    // Cleanup watcher on component unmount
-    return () => {
-      if (watchId) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
   }, []);
   
   useEffect(() => {
@@ -94,43 +85,6 @@ export default function MapPage() {
       fetchInitialUsers();
     }
   }, [currentUser, firestore, isLoaded]);
-
-  useEffect(() => {
-    const fetchMoreUsers = async () => {
-        if (!currentUser || !firestore || isInitialLoading) return;
-        
-        try {
-            let genderFilter: string[];
-            if (currentUser.gender === '남성') {
-              genderFilter = ['여성'];
-            } else if (currentUser.gender === '여성') {
-              genderFilter = ['남성'];
-            } else {
-              genderFilter = ['남성', '여성', '기타'];
-            }
-            const usersQuery = query(
-              collection(firestore, 'users'),
-              where('gender', 'in', genderFilter),
-              limit(100)
-            );
-            const snapshot = await getDocs(usersQuery);
-            const fetchedUsers = snapshot.docs.map(d => d.data() as User);
-            
-            setMapUsers(prevUsers => {
-                const allUsers = [...prevUsers, ...fetchedUsers];
-                const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
-                return uniqueUsers;
-            });
-
-        } catch (error) {
-            console.error("Error fetching more map users:", error);
-        }
-    };
-    
-    if(!isInitialLoading) {
-        fetchMoreUsers();
-    }
-  }, [currentUser, firestore, isInitialLoading]);
 
   if (!apiKey) {
     return (
