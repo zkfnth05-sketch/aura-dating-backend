@@ -14,7 +14,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '@/components/ui/button';
 
-const FETCH_LIMIT = 10;
+const FETCH_LIMIT = 20;
 
 export default function HomePageClient() {
   const { user: currentUser, filters, isLoaded, peopleILiked } = useUser();
