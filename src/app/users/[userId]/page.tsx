@@ -89,7 +89,7 @@ const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User,
   )
 }
 
-export default function UserProfilePage() {
+function UserProfilePageContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -363,4 +363,13 @@ export default function UserProfilePage() {
       />
     </>
   );
+}
+
+
+export default function UserProfilePage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+      <UserProfilePageContent />
+    </Suspense>
+  )
 }

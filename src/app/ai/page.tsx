@@ -32,20 +32,19 @@ export default function AiPage() {
       setIsLoading(true);
       try {
         let usersQuery;
-        if (currentUser.gender === '남성') {
-            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '여성'), limit(20));
-        } else if (currentUser.gender === '여성') {
-            usersQuery = query(collection(firestore, 'users'), where('gender', '==', '남성'), limit(20));
-        } else {
-            // For '기타' or undefined gender, fetch any gender but not the current user
-            usersQuery = query(collection(firestore, 'users'), where('id', '!=', currentUser.id), limit(20));
-        }
+        const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
 
+        usersQuery = query(
+          collection(firestore, 'users'), 
+          where('gender', '==', oppositeGender), 
+          limit(20)
+        );
+        
         const usersSnapshot = await getDocs(usersQuery);
         const allUsers = usersSnapshot.docs.map(doc => doc.data() as User);
         
         // Final filter to ensure current user is not in the list, although query should handle most cases
-        const filteredUsers = allUsers.filter(user => user.id !== currentUser.id);
+        const filteredUsers = allUsers.filter(user => user.id !== currentUser.id && user.photoUrls && user.photoUrls.length > 0);
 
         setRecommendedUsers(filteredUsers.slice(0, 6));
       } catch (error) {
