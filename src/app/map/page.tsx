@@ -112,7 +112,7 @@ export default function MapPage() {
 
   if (isLoading) {
       return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col flex-1">
             <Header />
             <main className="flex-1 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -124,8 +124,8 @@ export default function MapPage() {
   return (
     <div className="flex flex-col flex-1">
       <Header />
-      <main className="flex-1">
-        <APIProvider apiKey={apiKey} className="h-full w-full relative">
+      <main className="flex-1 relative">
+        <APIProvider apiKey={apiKey} className="absolute inset-0">
           <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
         </APIProvider>
       </main>

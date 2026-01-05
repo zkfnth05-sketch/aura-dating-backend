@@ -14,7 +14,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isAdminPage = pathname.startsWith('/admin');
   
-  // 채팅, 프로필 수정, 필터, 그리고 모든 회원가입 경로에서 하단 네비게이션 숨김
   const noBottomNavPaths = ['/signup', '/profile/edit', '/filter', '/chat'];
   const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
 
