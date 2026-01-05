@@ -110,23 +110,18 @@ export default function MapPage() {
 
   const isLoading = !isLoaded || isInitialLoading || !currentUser;
 
-  if (isLoading) {
-      return (
-        <div className="flex flex-col flex-1">
-            <Header />
-            <main className="flex-1 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </main>
-        </div>
-      );
-  }
-
   return (
     <div className="flex flex-col flex-1">
       <Header />
+      {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+      ) : (
         <APIProvider apiKey={apiKey} className="flex-1 relative">
           <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
         </APIProvider>
+      )}
     </div>
   );
 }
