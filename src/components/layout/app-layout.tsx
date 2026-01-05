@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         The main content area now uses flex-1 to take up all available space, 
         allowing child pages like the map to fill the screen correctly.
       */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col relative">
           {children}
       </main>
       

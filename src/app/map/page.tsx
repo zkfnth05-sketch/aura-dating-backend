@@ -88,7 +88,7 @@ export default function MapPage() {
 
   if (!apiKey) {
     return (
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col flex-1">
         <Header />
         <main className="container py-8 text-center">
           <h1 className="text-2xl font-bold text-destructive">Google Maps API 키가 필요합니다.</h1>
@@ -124,11 +124,9 @@ export default function MapPage() {
   return (
     <div className="flex flex-col flex-1">
       <Header />
-      <main className="flex-1 relative">
-        <APIProvider apiKey={apiKey} className="absolute inset-0">
+        <APIProvider apiKey={apiKey} className="flex-1 relative">
           <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
         </APIProvider>
-      </main>
     </div>
   );
 }
