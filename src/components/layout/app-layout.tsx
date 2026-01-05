@@ -23,7 +23,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto max-w-screen-sm w-full flex flex-col min-h-[100svh]">
+    <div className="mx-auto max-w-screen-sm w-full flex flex-col h-full">
       {/* 
         The main content area now uses flex-1 to take up all available space, 
         allowing child pages like the map to fill the screen correctly.

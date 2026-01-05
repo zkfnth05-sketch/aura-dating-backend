@@ -111,7 +111,7 @@ export default function MapPage() {
   const isLoading = !isLoaded || isInitialLoading || !currentUser;
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex-1 flex flex-col">
       <Header />
       {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
