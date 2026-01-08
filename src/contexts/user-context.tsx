@@ -1,11 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 import type { User as AuthUser, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
-import { useUser as useAuthUserHook, useAuth, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, collectionGroup, documentId, orderBy, limit, addDoc, onSnapshot } from 'firebase/firestore';
+import { useUser as useAuthUserHook, useAuth, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, updateDoc, orderBy, limit, onSnapshot, Query, DocumentData, startAfter, QueryDocumentSnapshot, documentId } from 'firebase/firestore';
 import type { User, Match, Like } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface NotificationSettings {
   all: boolean;
@@ -16,14 +17,14 @@ interface NotificationSettings {
 }
 
 export interface FilterSettings {
-    ageRange: { min: number; max: number };
-    gender: ('남성' | '여성' | '기타')[];
-    relationship: string[];
-    values: string[];
-    communication: string[];
-    lifestyle: string[];
-    hobbies: string[];
-    interests: string[];
+  ageRange: { min: number; max: number };
+  gender: ('남성' | '여성' | '기타')[];
+  relationship: string[];
+  values: string[];
+  communication: string[];
+  lifestyle: string[];
+  hobbies: string[];
+  interests: string[];
 }
 
 interface PhoneAuthState {
@@ -58,43 +59,50 @@ interface UserContextType {
   peopleILiked: User[] | null;
   peopleWhoLikedMe: User[] | null;
   isLikesLoading: boolean;
+  
+  // Home Page Client State
+  recommendedUsers: User[];
+  isRecommendedUsersLoading: boolean;
+  fetchNextRecommendedUsers: () => void;
+  hasMoreRecommendedUsers: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const initialSettings: NotificationSettings = {
-    all: true,
-    newMatch: true,
-    newMessage: true,
-    videoCall: true,
-    locationShared: true,
+  all: true,
+  newMatch: true,
+  newMessage: true,
+  videoCall: true,
+  locationShared: true,
 };
 
 const initialFilters: FilterSettings = {
-    ageRange: { min: 18, max: 99 },
-    gender: [],
-    relationship: [],
-    values: [],
-    communication: [],
-    lifestyle: [],
-    hobbies: [],
-    interests: [],
+  ageRange: { min: 18, max: 99 },
+  gender: [],
+  relationship: [],
+  values: [],
+  communication: [],
+  lifestyle: [],
+  hobbies: [],
+  interests: [],
 }
 
+const FETCH_LIMIT = 20;
+
 async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
-    if (userIds.length === 0) return [];
-    const users: User[] = [];
-    // Firestore 'in' query supports a maximum of 30 elements
-    const CHUNK_SIZE = 30;
-    for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
-        const chunk = userIds.slice(i, i + CHUNK_SIZE);
-        if (chunk.length > 0) {
-            const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
-            const userDocs = await getDocs(usersQuery);
-            users.push(...userDocs.docs.map(d => d.data() as User));
-        }
+  if (userIds.length === 0) return [];
+  const users: User[] = [];
+  const CHUNK_SIZE = 30; 
+  for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
+    const chunk = userIds.slice(i, i + CHUNK_SIZE);
+    if (chunk.length > 0) {
+      const usersQuery = query(collection(firestore, 'users'), where(documentId(), 'in', chunk));
+      const userDocs = await getDocs(usersQuery);
+      users.push(...userDocs.docs.map(d => d.data() as User));
     }
-    return users;
+  }
+  return users;
 }
 
 export function UserProvider({ children }: { children: ReactNode }) {
@@ -109,7 +117,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isUserDocLoading, setIsUserDocLoading] = useState(true);
   const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
 
-  // Phone Auth State
   const [phoneNumber, setPhoneNumber] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
@@ -117,10 +124,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [reauthVerificationId, setReauthVerificationId] = useState<string | null>(null);
   
-  // State for liked users
   const [peopleILiked, setPeopleILiked] = useState<User[] | null>(null);
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[] | null>(null);
+  
+  // --- Recommendation States ---
+  const [recommendedUsers, setRecommendedUsers] = useState<User[]>([]);
+  const [isRecommendedUsersLoading, setIsRecommendedUsersLoading] = useState(true);
+  
+  // Refs for Pagination Stability (Prevents Infinite Loops)
+  const lastVisibleRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const hasMoreRef = useRef(true);
+  const isLoadingMoreRef = useRef(false);
+  const [hasMoreState, setHasMoreState] = useState(true); // For UI consumption
 
+  // User Document Fetching
   useEffect(() => {
     let isMounted = true;
     if (isAuthLoading) {
@@ -135,18 +152,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     if (firestore) {
       const userRef = doc(firestore, 'users', authUser.uid);
-  
-      // --- Separated Logic ---
-  
-      // 1. Function to update user's presence (lastSeen, location)
       const updateUserPresence = () => {
-        // Only update if user document still exists
         getDoc(userRef).then(docSnap => {
           if (docSnap.exists()) {
             navigator.geolocation.getCurrentPosition(
               (position) => {
                 const { latitude, longitude } = position.coords;
-                updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence with location:", e));
+                updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence:", e));
               },
               () => { 
                 updateDoc(userRef, { lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence:", e));
@@ -157,14 +169,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
         });
       };
   
-      // 2. Initial fetch and single update
       getDoc(userRef).then(docSnap => {
         if (!isMounted) return;
-        
         if (docSnap.exists()) {
           const userData = docSnap.data() as User;
           setUser(userData);
-          // Update presence only once on initial load
           updateUserPresence();
         } else {
           setUser(null);
@@ -178,20 +187,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       });
   
-      // 3. Real-time listener for user data
       const unsubscribe = onSnapshot(userRef, (docSnap) => {
         if (!isMounted) return;
         if (docSnap.exists()) {
           setUser(docSnap.data() as User);
         } else {
-          // If the document is deleted (e.g., during account deletion),
-          // immediately set the user state to null. This prevents other
-          // parts of the app from trying to operate on a non-existent user.
           setUser(null);
         }
       });
       
-      // 4. Update presence on window focus (app becomes active)
       const handleFocus = () => updateUserPresence();
       window.addEventListener('focus', handleFocus);
   
@@ -203,8 +207,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [authUser?.uid, firestore, isAuthLoading]);
 
-
-  // Load settings from localStorage once on mount
+  // Load Settings from LocalStorage
   useEffect(() => {
     try {
       const storedSettings = localStorage.getItem('notificationSettings');
@@ -216,6 +219,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // --- Matches & Likes Queries ---
   const matchesQuery = useMemoFirebase(() => {
     if (!user?.id || !firestore) return null;
     return query(collection(firestore, "matches"), where("users", "array-contains", user.id));
@@ -226,41 +230,160 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!user?.id || !firestore) return null;
     return query(collection(firestore, 'likes'), where('likerId', '==', user.id));
   }, [user?.id, firestore]);
-  const { data: myLikes } = useCollection<Like>(myLikesQuery);
+  const { data: myLikes, isLoading: isMyLikesLoading } = useCollection<Like>(myLikesQuery);
 
   const likesToMeQuery = useMemoFirebase(() => {
       if (!user?.id || !firestore) return null;
       return query(collection(firestore, 'likes'), where('likeeId', '==', user.id));
   }, [user?.id, firestore]);
-  const { data: likesToMe } = useCollection<Like>(likesToMeQuery);
+  const { data: likesToMe, isLoading: isLikesToMeLoading } = useCollection<Like>(likesToMeQuery);
 
-  const isLikesLoading = myLikes === null || likesToMe === null;
+  const isLikesLoading = isMyLikesLoading || isLikesToMeLoading;
 
+  // Process Likes Data (Converted to Users)
   useEffect(() => {
-    const processLikes = async () => {
-        if (isLikesLoading || !firestore) return;
+    const fetchLikeUsers = async () => {
+        if (!firestore || isLikesLoading) return;
+        
+        if (!myLikes) setPeopleILiked([]);
+        if (!likesToMe) setPeopleWhoLikedMe([]);
 
-        const iLikedIds = (myLikes || []).map(l => l.likeeId);
-        const likedMeIds = (likesToMe || []).map(l => l.likerId);
-
-        try {
-            const [iLikedUsers, likedMeUsers] = await Promise.all([
-                fetchUsersByIds(firestore, iLikedIds),
-                fetchUsersByIds(firestore, likedMeIds)
-            ]);
-
-            // De-duplicate users to ensure each user appears only once
-            const uniqueILiked = Array.from(new Map(iLikedUsers.map(u => [u.id, u])).values());
-            const uniqueLikedMe = Array.from(new Map(likedMeUsers.map(u => [u.id, u])).values());
-
-            setPeopleILiked(uniqueILiked);
-            setPeopleWhoLikedMe(uniqueLikedMe);
-        } catch (error) {
-            console.error("Error fetching liked user profiles:", error);
+        if (myLikes && myLikes.length > 0) {
+            const ids = myLikes.filter(l => l.isLike).map(l => l.likeeId);
+            const users = await fetchUsersByIds(firestore, ids);
+            setPeopleILiked(users);
         }
+        if (likesToMe && likesToMe.length > 0) {
+            const ids = likesToMe.filter(l => l.isLike).map(l => l.likerId);
+            const users = await fetchUsersByIds(firestore, ids);
+            setPeopleWhoLikedMe(users);
+        }
+    };
+    fetchLikeUsers();
+  }, [myLikes, likesToMe, firestore, isLikesLoading]);
+
+
+  // --- Recommendation Logic (Fixed) ---
+  
+  const fetchNextRecommendedUsers = useCallback(async () => {
+    // Check refs instead of state to avoid dependency loops
+    if (isLoadingMoreRef.current || !hasMoreRef.current || !user || !firestore || !myLikes) {
+      return;
     }
-    processLikes();
-  }, [myLikes, likesToMe, isLikesLoading, firestore]);
+    
+    isLoadingMoreRef.current = true;
+
+    try {
+        const iLikedIds = myLikes.filter(l => l.isLike).map(l => l.likeeId);
+        const interactedUserIds = new Set(iLikedIds);
+        interactedUserIds.add(user.id);
+        
+        let newUsers: User[] = [];
+        let lastDocForNextBatch = lastVisibleRef.current;
+        let keepFetching = true;
+
+        while (newUsers.length < FETCH_LIMIT && keepFetching) {
+            let usersQuery: Query<DocumentData> = query(
+                collection(firestore, 'users'),
+                orderBy('createdAt', 'desc'),
+                limit(FETCH_LIMIT * 2) 
+            );
+
+            if (lastDocForNextBatch) {
+                usersQuery = query(usersQuery, startAfter(lastDocForNextBatch));
+            }
+            
+            const snapshot = await getDocs(usersQuery);
+
+            if (snapshot.empty) {
+                hasMoreRef.current = false;
+                setHasMoreState(false);
+                keepFetching = false;
+                break;
+            }
+
+            lastDocForNextBatch = snapshot.docs[snapshot.docs.length - 1];
+            const potentialUsers = snapshot.docs.map(doc => doc.data() as User);
+            
+            const newlyFilteredUsers = potentialUsers.filter(u => {
+                if (interactedUserIds.has(u.id)) return false;
+                if (recommendedUsers.some(rec => rec.id === u.id)) return false; // Client-side dupe check
+
+                let genderFilter: ('남성' | '여성' | '기타')[] = filters.gender;
+                if (genderFilter.length === 0) {
+                    genderFilter = user.gender === '남성' ? ['여성'] : (user.gender === '여성' ? ['남성'] : []);
+                }
+                if (genderFilter.length > 0 && !genderFilter.includes(u.gender)) return false;
+                if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
+                
+                const checkTags = (userTags: string[] = [], filterTags: string[]) => 
+                    filterTags.length === 0 || filterTags.every(tag => userTags.includes(tag));
+                
+                return (
+                    checkTags(u.relationship, filters.relationship) &&
+                    checkTags(u.values, filters.values) &&
+                    checkTags(u.communication, filters.communication) &&
+                    checkTags(u.lifestyle, filters.lifestyle) &&
+                    checkTags(u.hobbies, filters.hobbies) &&
+                    checkTags(u.interests, filters.interests)
+                );
+            });
+            
+            newUsers = [...newUsers, ...newlyFilteredUsers];
+            
+            // Safety break if we fetched tons but found nothing matching filters
+            if (snapshot.docs.length < FETCH_LIMIT * 2 && newUsers.length === 0) {
+                 // Might want to continue, but usually indicates end of relevant stream
+            }
+        }
+
+        lastVisibleRef.current = lastDocForNextBatch;
+
+        if (newUsers.length > 0) {
+            setRecommendedUsers(prev => {
+                const existingIds = new Set(prev.map(u => u.id));
+                const uniqueNewUsers = newUsers.filter(u => !existingIds.has(u.id));
+                return [...prev, ...uniqueNewUsers];
+            });
+        }
+
+    } catch (e) {
+        console.error("Error fetching more recommended users:", e);
+    } finally {
+        isLoadingMoreRef.current = false;
+    }
+  }, [user, firestore, filters, myLikes, recommendedUsers]); // Note: myLikes is here, but effect below handles triggering
+
+  // Main Effect: Initialize or Reset Recommendations
+  // This runs ONLY when Filters change or User/DB is first loaded.
+  // It does NOT run when 'myLikes' changes (preventing the loop).
+  useEffect(() => {
+    const initializeRecommendations = async () => {
+        if (isLikesLoading || !firestore || !user || !myLikes) {
+            return;
+        }
+
+        setIsRecommendedUsersLoading(true);
+        setRecommendedUsers([]); // Clear list
+        lastVisibleRef.current = null; // Reset cursor
+        hasMoreRef.current = true;
+        setHasMoreState(true);
+        isLoadingMoreRef.current = false;
+
+        // Perform initial fetch
+        await fetchNextRecommendedUsers();
+        
+        setIsRecommendedUsersLoading(false);
+    };
+
+    // Use stringified filters to detect value changes, not reference changes
+    const filterKey = JSON.stringify(filters);
+
+    initializeRecommendations();
+    
+    // Explicitly exclude fetchNextRecommendedUsers and myLikes to prevent loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firestore, user, isLikesLoading, JSON.stringify(filters)]); 
 
 
   const totalUnreadCount = (matches || []).reduce((acc, match) => {
@@ -271,20 +394,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, 0);
 
   const updateUser = useCallback(async (newUserData: Partial<User>) => {
-    if (!authUser || !firestore) {
-      console.error("Auth user or Firestore not available for update.");
-      return Promise.reject(new Error("User not authenticated."));
-    };
-  
+    if (!authUser || !firestore) return Promise.reject(new Error("User not authenticated."));
     const userRef = doc(firestore, 'users', authUser.uid);
-  
     const dataToSave: any = { ...newUserData, id: authUser.uid };
-    
     if (newUserData.createdAt === "serverTimestamp") {
-      dataToSave.createdAt = serverTimestamp();
+        dataToSave.createdAt = serverTimestamp();
     }
-  
-    // Use the non-blocking function but return its promise
     return setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);
   
@@ -295,7 +410,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         try {
             localStorage.setItem('notificationSettings', JSON.stringify(updatedSettings));
         } catch (error) {
-            console.error("Failed to save notification settings to localStorage", error);
+            console.error("Failed to save settings", error);
         }
         return updatedSettings;
     });
@@ -307,7 +422,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         try {
             localStorage.setItem('userFilters', JSON.stringify(updatedFilters));
         } catch (error) {
-            console.error("Failed to save filters to localStorage", error);
+            console.error("Failed to save filters", error);
         }
         return updatedFilters;
     });
@@ -318,112 +433,83 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
         localStorage.setItem('userFilters', JSON.stringify(initialFilters));
     } catch (error) {
-        console.error("Failed to save reset filters to localStorage", error);
+        console.error("Failed to reset filters", error);
     }
   }, []);
 
-  // --- Phone Auth Logic ---
   const setupRecaptcha = useCallback((container: HTMLElement) => {
     if (auth && !recaptchaVerifier) {
-      const { RecaptchaVerifier } = require('firebase/auth');
-      const verifier = new RecaptchaVerifier(auth, container, {
-        size: 'invisible',
-      });
-      setRecaptchaVerifier(verifier);
-    }
+        const { RecaptchaVerifier } = require('firebase/auth');
+        const verifier = new RecaptchaVerifier(auth, container, { size: 'invisible' });
+        setRecaptchaVerifier(verifier);
+      }
   }, [auth, recaptchaVerifier]);
 
   const sendVerificationCode = useCallback(async (phoneNumberOverride?: string) => {
     let targetPhoneNumber = phoneNumberOverride || phoneNumber;
     if (recaptchaVerifier && targetPhoneNumber) {
-      
-      if (targetPhoneNumber.startsWith('0')) {
-        targetPhoneNumber = `+82${targetPhoneNumber.substring(1)}`;
-      }
-
-      setIsSendingOtp(true);
-      try {
-        const { signInWithPhoneNumber } = require('firebase/auth');
-        const confirmation = await signInWithPhoneNumber(auth, targetPhoneNumber, recaptchaVerifier);
-        setConfirmationResult(confirmation);
-        setReauthVerificationId(confirmation.verificationId);
-        if(!phoneNumberOverride) {
-            router.push('/signup/otp');
+        if (targetPhoneNumber.startsWith('0')) {
+            targetPhoneNumber = `+82${targetPhoneNumber.substring(1)}`;
         }
-        return confirmation.verificationId;
-      } catch (error) {
-        console.error("SMS 전송 실패:", error);
-        alert("인증 코드 전송에 실패했습니다. 전화번호를 확인하고 다시 시도해주세요.");
-      } finally {
-        setIsSendingOtp(false);
-      }
+        setIsSendingOtp(true);
+        try {
+            const { signInWithPhoneNumber } = require('firebase/auth');
+            const confirmation = await signInWithPhoneNumber(auth, targetPhoneNumber, recaptchaVerifier);
+            setConfirmationResult(confirmation);
+            setReauthVerificationId(confirmation.verificationId);
+            if(!phoneNumberOverride) router.push('/signup/otp');
+            return confirmation.verificationId;
+        } catch (error) {
+            console.error("SMS Error:", error);
+            alert("인증 코드 전송 실패. 전화번호를 확인해주세요.");
+        } finally {
+            setIsSendingOtp(false);
+        }
     }
   }, [auth, phoneNumber, recaptchaVerifier, router]);
 
   const verifyOtp = useCallback(async (otp: string) => {
     if (confirmationResult && otp) {
-      setIsVerifyingOtp(true);
-      try {
-        await confirmationResult.confirm(otp);
-        router.push('/signup/profile');
-      } catch (error) {
-        console.error("OTP 인증 실패:", error);
-        alert("인증 코드가 잘못되었습니다. 다시 확인해주세요.");
-      } finally {
-        setIsVerifyingOtp(false);
+        setIsVerifyingOtp(true);
+        try {
+          await confirmationResult.confirm(otp);
+          router.push('/signup/profile');
+        } catch (error) {
+          console.error("OTP Error:", error);
+          alert("인증 코드가 잘못되었습니다.");
+        } finally {
+          setIsVerifyingOtp(false);
+        }
       }
-    }
   }, [confirmationResult, router]);
   
   const reauthenticate = useCallback(async (otp: string) => {
-    if (!reauthVerificationId || !otp || !authUser) {
-      throw new Error("인증 정보가 부족합니다.");
-    }
-    setIsVerifyingOtp(true);
-    try {
-        const { PhoneAuthProvider } = require('firebase/auth');
-        const credential = PhoneAuthProvider.credential(reauthVerificationId, otp);
-        const { reauthenticateWithCredential } = require('firebase/auth');
-        await reauthenticateWithCredential(authUser, credential);
-    } catch (error) {
-        console.error("재인증 실패:", error);
-        throw new Error("인증 코드가 잘못되었습니다. 다시 시도해주세요.");
-    } finally {
-        setIsVerifyingOtp(false);
-    }
+    if (!reauthVerificationId || !otp || !authUser) throw new Error("인증 정보 부족");
+      setIsVerifyingOtp(true);
+      try {
+          const { PhoneAuthProvider, reauthenticateWithCredential } = require('firebase/auth');
+          const credential = PhoneAuthProvider.credential(reauthVerificationId, otp);
+          await reauthenticateWithCredential(authUser, credential);
+      } catch (error) {
+          console.error("Reauth Error:", error);
+          throw new Error("인증 실패");
+      } finally {
+          setIsVerifyingOtp(false);
+      }
   }, [reauthVerificationId, authUser]);
-  // --- End Phone Auth Logic ---
 
   const value: UserContextType = {
-    user,
-    authUser,
-    updateUser,
-    notificationSettings,
-    updateNotificationSettings,
-    filters,
-    updateFilters,
-    resetFilters,
-    isLoaded: !isAuthLoading && !isUserDocLoading,
-    totalUnreadCount,
-    phoneAuth: {
-      phoneNumber,
-      setPhoneNumber,
-      confirmationResult,
-      recaptchaVerifier,
-      setupRecaptcha,
-      sendVerificationCode,
-      verifyOtp,
-      reauthenticate,
-      isSendingOtp,
-      isVerifyingOtp,
-    },
-    isSignupFlowActive,
-    setIsSignupFlowActive,
-    matches,
-    isMatchesLoading,
-    peopleILiked,
-    peopleWhoLikedMe,
-    isLikesLoading,
+    user, authUser, updateUser, notificationSettings, updateNotificationSettings,
+    filters, updateFilters, resetFilters, isLoaded: !isAuthLoading && !isUserDocLoading,
+    totalUnreadCount, phoneAuth: { phoneNumber, setPhoneNumber, confirmationResult, recaptchaVerifier, setupRecaptcha, sendVerificationCode, verifyOtp, reauthenticate, isSendingOtp, isVerifyingOtp },
+    isSignupFlowActive, setIsSignupFlowActive,
+    matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading,
+    
+    // Exports for Home Page Client
+    recommendedUsers,
+    isRecommendedUsersLoading,
+    fetchNextRecommendedUsers,
+    hasMoreRecommendedUsers: hasMoreState,
   };
 
   return (
