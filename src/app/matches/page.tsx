@@ -6,11 +6,24 @@ import MatchList from '@/components/match-list';
 import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { Loader2 } from 'lucide-react';
+import type { User } from '@/lib/types';
 
 export default function MatchesPage() {
   const { user: currentUser, isLoaded, matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading } = useUser();
 
   const isLoading = !isLoaded || isMatchesLoading || isLikesLoading;
+
+  // Memoize unique users to prevent re-calculation on every render
+  const uniquePeopleWhoLikedMe = useMemo(() => {
+    if (!peopleWhoLikedMe) return [];
+    return Array.from(new Map(peopleWhoLikedMe.map(user => [user.id, user])).values());
+  }, [peopleWhoLikedMe]);
+
+  const uniquePeopleILiked = useMemo(() => {
+    if (!peopleILiked) return [];
+    return Array.from(new Map(peopleILiked.map(user => [user.id, user])).values());
+  }, [peopleILiked]);
+
 
   if (!currentUser) {
     return (
@@ -53,10 +66,10 @@ export default function MatchesPage() {
             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <MatchList matches={matches || []} />}
           </TabsContent>
           <TabsContent value="liked-me" className="mt-0 p-4 pb-4">
-             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleWhoLikedMe || []} />}
+             {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={uniquePeopleWhoLikedMe} />}
           </TabsContent>
           <TabsContent value="i-liked" className="mt-0 p-4 pb-4">
-            {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={peopleILiked || []} />}
+            {isLoading ? <div className="flex justify-center items-center pt-20"><Loader2 className="h-8 w-8 animate-spin" /></div> : <UserGrid users={uniquePeopleILiked} />}
           </TabsContent>
             
         </Tabs>
