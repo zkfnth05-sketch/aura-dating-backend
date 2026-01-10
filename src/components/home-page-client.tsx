@@ -32,6 +32,7 @@ export default function HomePageClient() {
     user: currentUser, 
     isLoaded,
     peopleILiked,
+    isLikesLoading,
     filters,
   } = useUser();
   
@@ -49,112 +50,73 @@ export default function HomePageClient() {
   const [hasMoreState, setHasMoreState] = useState(true);
 
   const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
+    if (!user || myLikes === null || isLikesLoading) return;
     if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) {
-        return;
-    }
-    if (!currentUser || !firestore || peopleILiked === null) {
-        return;
+      return;
     }
     
     isLoadingMoreRef.current = true;
+    if (isInitial) {
+      setIsRecommendedUsersLoading(true);
+    }
     
     try {
-        const interactedUserIds = new Set(peopleILiked.map(l => l.id));
-        interactedUserIds.add(currentUser.id);
-        
-        let newUsers: User[] = [];
-        let lastDocForNextBatch = isInitial ? null : lastVisibleRef.current;
-        let loopCount = 0;
+        const likedIds = new Set(myLikes.map(l => l.likeeId));
+        likedIds.add(user.id);
 
-        let targetGenders: string[] = filters.gender;
-        if (targetGenders.length === 0) {
-            targetGenders = currentUser.gender === '남성' ? ['여성'] : (currentUser.gender === '여성' ? ['남성'] : []);
+        let baseQuery = collection(firestore, 'users');
+        let constraints = [
+          limit(20)
+        ];
+    
+        if (filters.gender.length > 0) {
+          constraints.push(where('gender', 'in', filters.gender));
         }
-        
-        while (newUsers.length < FETCH_LIMIT && loopCount < 5 && hasMoreRef.current) {
-            loopCount++;
-            
-            let baseQuery: Query<DocumentData> = collection(firestore, 'users');
-            let constraints: any[] = [
-                limit(FETCH_LIMIT * 2) 
-            ];
-
-            if (targetGenders.length > 0) {
-                constraints.push(where('gender', 'in', targetGenders));
-            } else {
-                // If no gender is specified, we might not want any specific ordering.
-                // Or maybe order by something else? For now, we'll keep it simple.
-                 constraints.push(orderBy('createdAt', 'desc'));
-            }
-
-            if (lastDocForNextBatch) {
-                constraints.push(startAfter(lastDocForNextBatch));
-            }
-
-            const usersQuery = query(baseQuery, ...constraints);
-            const snapshot = await getDocs(usersQuery);
-
-            if (snapshot.empty) {
-                hasMoreRef.current = false;
-                setHasMoreState(false);
-                break;
-            }
-            
-            lastDocForNextBatch = snapshot.docs[snapshot.docs.length - 1];
-            
-            const potentialUsers = snapshot.docs
-                .map(doc => doc.data() as User)
-                .filter(u => {
-                    if (interactedUserIds.has(u.id)) return false;
-                    
-                    const { ageRange, relationship, values, communication, lifestyle, hobbies, interests } = filters;
-                    if (u.age < ageRange.min || u.age > ageRange.max) return false;
-
-                    const checkTags = (userTags: string[] = [], filterTags: string[]) => 
-                        filterTags.length === 0 || filterTags.every(tag => userTags.includes(tag));
-                    
-                    return (
-                        checkTags(u.relationship, relationship) &&
-                        checkTags(u.values, values) &&
-                        checkTags(u.communication, communication) &&
-                        checkTags(u.lifestyle, lifestyle) &&
-                        checkTags(u.hobbies, hobbies) &&
-                        checkTags(u.interests, interests)
-                    );
-                });
-            
-            newUsers = [...newUsers, ...potentialUsers];
+    
+        if (!isInitial && lastVisibleRef.current) {
+          constraints.push(startAfter(lastVisibleRef.current));
         }
-
-        lastVisibleRef.current = lastDocForNextBatch;
+    
+        const snapshot = await getDocs(query(baseQuery, ...constraints));
         
-        if (newUsers.length > 0) {
-            setRecommendedUsers(prev => {
-                const existingIds = new Set(prev.map(u => u.id));
-                const uniqueNewUsers = newUsers.filter(u => !existingIds.has(u.id));
-                return isInitial ? uniqueNewUsers : [...prev, ...uniqueNewUsers];
-            });
+        if (snapshot.empty) {
+          hasMoreRef.current = false;
+          return;
         }
+    
+        lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
+
+        const filtered = snapshot.docs
+            .map(d => d.data() as User)
+            .filter(u => !likedIds.has(u.id));
+
+        setRecommendedUsers(prev => {
+            if (isInitial) return filtered;
+            const existingIds = new Set(prev.map(u => u.id));
+            const uniqueNewUsers = filtered.filter(u => !existingIds.has(u.id));
+            return [...prev, ...uniqueNewUsers];
+        });
         
     } catch (e) {
         console.error("Error fetching more recommended users:", e);
     } finally {
         isLoadingMoreRef.current = false;
+        if (isInitial) {
+            setIsRecommendedUsersLoading(false);
+        }
     }
-  }, [currentUser, firestore, JSON.stringify(filters), peopleILiked]);
+  }, [user, myLikes, isLikesLoading, filters, firestore]);
 
-
-  const initializeRecommendations = useCallback(async () => {
+  const initializeRecommendations = useCallback(() => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
 
     setIsRecommendedUsersLoading(true);
+    setRecommendedUsers([]);
     setCurrentIndex(0);
     lastVisibleRef.current = null;
     hasMoreRef.current = true;
     setHasMoreState(true);
-    
-    await fetchNextRecommendedUsers(true);
-    setIsRecommendedUsersLoading(false);
+    fetchNextRecommendedUsers(true);
   }, [isLoaded, currentUser, peopleILiked, fetchNextRecommendedUsers]);
 
   const prevFiltersRef = useRef(JSON.stringify(filters));
@@ -166,11 +128,10 @@ export default function HomePageClient() {
         prevFiltersRef.current = currentFilters;
         initializeRecommendations();
       } else if (recommendedUsers.length === 0 && hasMoreState && !isLoadingMoreRef.current) {
-        fetchNextRecommendedUsers();
+        initializeRecommendations();
       }
     }
-  }, [isLoaded, currentUser, peopleILiked, filters, initializeRecommendations, fetchNextRecommendedUsers, recommendedUsers.length, hasMoreState]);
-
+  }, [isLoaded, currentUser, peopleILiked, filters, initializeRecommendations, recommendedUsers.length, hasMoreState]);
 
   useEffect(() => {
     if (!isRecommendedUsersLoading && hasMoreRef.current && recommendedUsers.length - currentIndex <= PREFETCH_THRESHOLD) {
@@ -180,7 +141,6 @@ export default function HomePageClient() {
 
 
   const visibleCards = useMemo(() => {
-    // Slice only the next two cards to render for performance.
     return recommendedUsers.slice(currentIndex, currentIndex + 2);
   }, [recommendedUsers, currentIndex]);
 
@@ -281,49 +241,54 @@ export default function HomePageClient() {
   };
   
   const isLikedByMe = peopleILiked?.some(u => u.id === activeUser?.id);
+  const isReallyLoading = !isLoaded || isLikesLoading || (isRecommendedUsersLoading && recommendedUsers.length === 0);
+
+  if (isReallyLoading) {
+    return (
+      <div className="flex flex-col h-screen bg-background items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground animate-pulse">최적의 인연을 찾는 중...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden touch-none bg-background">
+    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden touch-none">
       <Header />
-      <main className="relative flex-1 flex items-center justify-center p-4">
+      <main className="flex-1 relative flex items-center justify-center p-4">
         <div className="relative w-full aspect-[3/4.5] max-w-[400px]">
-            {isRecommendedUsersLoading && recommendedUsers.length === 0 ? (
-                <CardSkeleton />
-            ) : visibleCards.length > 0 ? (
-                visibleCards.map((u, index) => {
-                    const isTop = index === 0;
-                    return (
-                        <div
-                            key={u.id}
-                            className={cn(
-                                "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
-                            )}
-                            style={{
-                                pointerEvents: isTop ? 'auto' : 'none',
-                                transform: isTop 
-                                ? `translate3d(0,0,0) rotate(${swipeState === 'left' ? -15 : swipeState === 'right' ? 15 : 0}deg)`
-                                : 'translate3d(0, 15px, 0) scale(0.95)',
-                                opacity: isTop ? 1 : 0.6,
-                                transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
-                                zIndex: visibleCards.length - index,
-                            }}
-                        >
-                            <ProfileCard
-                                currentUser={currentUser!}
-                                potentialMatch={u}
-                                isActive={isTop}
-                                swipeState={isTop ? swipeState : null}
-                            />
-                        </div>
-                    );
-                })
-            ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
-                    <h2 className="text-xl font-bold">주변에 새로운 인연이 없어요.</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">필터를 변경하거나 다시 시도해주세요.</p>
-                    <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
+          {visibleCards.length > 0 ? (
+            visibleCards.map((u, index) => {
+              const isTop = index === 0;
+              return (
+                <div
+                    key={u.id}
+                    className={cn(
+                        "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
+                    )}
+                    style={{
+                        pointerEvents: isTop ? 'auto' : 'none',
+                        transform: `translate3d(0, ${isTop ? 0 : 15}px, 0) scale(${isTop ? 1 : 0.95})`,
+                        opacity: isTop ? 1 : 0.6,
+                        zIndex: visibleCards.length - index,
+                    }}
+                >
+                    <ProfileCard
+                        currentUser={currentUser!}
+                        potentialMatch={u}
+                        isActive={isTop}
+                        swipeState={isTop ? swipeState : null}
+                    />
                 </div>
-            )}
+              );
+            })
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
+                <h2 className="text-xl font-bold">주변에 새로운 인연이 없어요.</h2>
+                <p className="mt-2 text-sm text-muted-foreground">필터를 변경하거나 다시 시도해주세요.</p>
+                <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
+            </div>
+          )}
         </div>
       </main>
 
