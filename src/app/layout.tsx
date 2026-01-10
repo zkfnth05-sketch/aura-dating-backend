@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
 
   return (
-    <html lang="ko" className="dark" suppressHydrationWarning>
+    <html lang="ko" className="dark h-full" suppressHydrationWarning>
       <head>
         <title>Aura - 새로운 만남의 시작</title>
         <meta name="description" content="Aura와 함께 당신의 인연을 찾아보세요." />
@@ -29,7 +29,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="font-body antialiased" suppressHydrationWarning>
+      <body className="font-body antialiased h-full" suppressHydrationWarning>
         <FirebaseClientProvider>
           <UserProvider>
             <AppLayout>
