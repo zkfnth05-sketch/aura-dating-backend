@@ -50,7 +50,7 @@ export default function HomePageClient() {
   const prevFiltersRef = useRef(JSON.stringify(filters));
 
   const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
-    if (isLikesLoading || !firestore || !currentUser || peopleILiked === null) return;
+    if (!firestore || !currentUser || peopleILiked === null) return;
     if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) {
       return;
     }
@@ -110,7 +110,7 @@ export default function HomePageClient() {
             setIsRecommendedUsersLoading(false);
         }
     }
-  }, [currentUser, firestore, peopleILiked, isLikesLoading, JSON.stringify(filters)]);
+  }, [currentUser, firestore, peopleILiked, JSON.stringify(filters)]);
 
   const initializeRecommendations = useCallback(() => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
