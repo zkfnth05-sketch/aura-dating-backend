@@ -227,7 +227,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Process Likes Data (Converted to Users)
   useEffect(() => {
     const fetchLikeUsers = async () => {
-        if (!firestore || isLikesLoading) return;
+        if (!firestore) return;
+        if (isMyLikesLoading) return;
         
         if (!myLikes) {
             setPeopleILiked([]);
@@ -235,7 +236,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const ids = myLikes.map(l => l.likeeId);
             const users = await fetchUsersByIds(firestore, ids);
             setPeopleILiked(users);
+        } else {
+            setPeopleILiked([]);
         }
+    };
+    fetchLikeUsers();
+  }, [myLikes, firestore, isMyLikesLoading]);
+  
+  useEffect(() => {
+    const fetchLikedByUsers = async () => {
+        if (!firestore) return;
+        if (isLikesToMeLoading) return;
 
         if (!likesToMe) {
             setPeopleWhoLikedMe([]);
@@ -243,10 +254,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const ids = likesToMe.map(l => l.likerId);
             const users = await fetchUsersByIds(firestore, ids);
             setPeopleWhoLikedMe(users);
+        } else {
+            setPeopleWhoLikedMe([]);
         }
     };
-    fetchLikeUsers();
-  }, [myLikes, likesToMe, firestore, isLikesLoading]);
+    fetchLikedByUsers();
+  }, [likesToMe, firestore, isLikesToMeLoading]);
 
   const totalUnreadCount = (matches || []).reduce((acc, match) => {
     if (user && user.id && match.unreadCounts) {
@@ -261,11 +274,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     if (newUserData.createdAt === "serverTimestamp") {
         dataToSave.createdAt = serverTimestamp();
-    }
-    // Use non-blocking update for better UX during signup
-    if (newUserData.createdAt === "serverTimestamp") {
-      setDocumentNonBlocking(userRef, dataToSave, { merge: true });
-      return;
     }
     await setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);

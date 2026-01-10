@@ -46,9 +46,13 @@ export default function HomePageClient() {
   const lastVisibleRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
   const hasMoreRef = useRef(true);
   const isLoadingMoreRef = useRef(false);
+  const [hasMoreState, setHasMoreState] = useState(true);
 
-  const fetchNextRecommendedUsers = useCallback(async () => {
-    if (isLoadingMoreRef.current || !hasMoreRef.current || !currentUser || !firestore || peopleILiked === null) {
+  const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
+    if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) {
+        return;
+    }
+    if (!currentUser || !firestore || peopleILiked === null) {
         return;
     }
     
@@ -59,8 +63,7 @@ export default function HomePageClient() {
         interactedUserIds.add(currentUser.id);
         
         let newUsers: User[] = [];
-        let lastDocForNextBatch = lastVisibleRef.current;
-        let keepFetching = true;
+        let lastDocForNextBatch = isInitial ? null : lastVisibleRef.current;
         let loopCount = 0;
 
         let targetGenders: string[] = filters.gender;
@@ -68,7 +71,7 @@ export default function HomePageClient() {
             targetGenders = currentUser.gender === '남성' ? ['여성'] : (currentUser.gender === '여성' ? ['남성'] : []);
         }
         
-        while (newUsers.length < FETCH_LIMIT && keepFetching && loopCount < 5) {
+        while (newUsers.length < FETCH_LIMIT && loopCount < 5 && hasMoreRef.current) {
             loopCount++;
             
             let baseQuery: Query<DocumentData> = collection(firestore, 'users');
@@ -78,6 +81,10 @@ export default function HomePageClient() {
 
             if (targetGenders.length > 0) {
                 constraints.push(where('gender', 'in', targetGenders));
+            } else {
+                // If no gender is specified, we might not want any specific ordering.
+                // Or maybe order by something else? For now, we'll keep it simple.
+                 constraints.push(orderBy('createdAt', 'desc'));
             }
 
             if (lastDocForNextBatch) {
@@ -89,7 +96,7 @@ export default function HomePageClient() {
 
             if (snapshot.empty) {
                 hasMoreRef.current = false;
-                keepFetching = false;
+                setHasMoreState(false);
                 break;
             }
             
@@ -125,7 +132,7 @@ export default function HomePageClient() {
             setRecommendedUsers(prev => {
                 const existingIds = new Set(prev.map(u => u.id));
                 const uniqueNewUsers = newUsers.filter(u => !existingIds.has(u.id));
-                return [...prev, ...uniqueNewUsers];
+                return isInitial ? uniqueNewUsers : [...prev, ...uniqueNewUsers];
             });
         }
         
@@ -136,23 +143,34 @@ export default function HomePageClient() {
     }
   }, [currentUser, firestore, JSON.stringify(filters), peopleILiked]);
 
+
   const initializeRecommendations = useCallback(async () => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
 
     setIsRecommendedUsersLoading(true);
-    setRecommendedUsers([]);
     setCurrentIndex(0);
     lastVisibleRef.current = null;
     hasMoreRef.current = true;
-    isLoadingMoreRef.current = false;
+    setHasMoreState(true);
     
-    await fetchNextRecommendedUsers();
+    await fetchNextRecommendedUsers(true);
     setIsRecommendedUsersLoading(false);
   }, [isLoaded, currentUser, peopleILiked, fetchNextRecommendedUsers]);
 
+  const prevFiltersRef = useRef(JSON.stringify(filters));
+
   useEffect(() => {
-    initializeRecommendations();
-  }, [initializeRecommendations, JSON.stringify(filters)]);
+    const currentFilters = JSON.stringify(filters);
+    if (isLoaded && currentUser && peopleILiked !== null) {
+      if (prevFiltersRef.current !== currentFilters) {
+        prevFiltersRef.current = currentFilters;
+        initializeRecommendations();
+      } else if (recommendedUsers.length === 0 && hasMoreState && !isLoadingMoreRef.current) {
+        fetchNextRecommendedUsers();
+      }
+    }
+  }, [isLoaded, currentUser, peopleILiked, filters, initializeRecommendations, fetchNextRecommendedUsers, recommendedUsers.length, hasMoreState]);
+
 
   useEffect(() => {
     if (!isRecommendedUsersLoading && hasMoreRef.current && recommendedUsers.length - currentIndex <= PREFETCH_THRESHOLD) {
@@ -160,10 +178,11 @@ export default function HomePageClient() {
     }
   }, [currentIndex, recommendedUsers.length, isRecommendedUsersLoading, fetchNextRecommendedUsers]);
 
+
   const visibleCards = useMemo(() => {
-    if (isRecommendedUsersLoading && recommendedUsers.length === 0) return [];
+    // Slice only the next two cards to render for performance.
     return recommendedUsers.slice(currentIndex, currentIndex + 2);
-  }, [recommendedUsers, currentIndex, isRecommendedUsersLoading]);
+  }, [recommendedUsers, currentIndex]);
 
   const activeUser = recommendedUsers[currentIndex];
 
@@ -275,26 +294,26 @@ export default function HomePageClient() {
                     const isTop = index === 0;
                     return (
                         <div
-                        key={u.id}
-                        className={cn(
-                            "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
-                            isTop ? "z-20" : "z-10"
-                        )}
-                        style={{
-                            pointerEvents: isTop ? 'auto' : 'none',
-                            transform: isTop 
-                            ? `translate3d(0,0,0) rotate(${swipeState === 'left' ? -15 : swipeState === 'right' ? 15 : 0}deg)`
-                            : 'translate3d(0, 15px, 0) scale(0.95)',
-                            opacity: isTop ? 1 : 0.6,
-                            transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
-                        }}
+                            key={u.id}
+                            className={cn(
+                                "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
+                            )}
+                            style={{
+                                pointerEvents: isTop ? 'auto' : 'none',
+                                transform: isTop 
+                                ? `translate3d(0,0,0) rotate(${swipeState === 'left' ? -15 : swipeState === 'right' ? 15 : 0}deg)`
+                                : 'translate3d(0, 15px, 0) scale(0.95)',
+                                opacity: isTop ? 1 : 0.6,
+                                transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
+                                zIndex: visibleCards.length - index,
+                            }}
                         >
-                        <ProfileCard
-                            currentUser={currentUser!}
-                            potentialMatch={u}
-                            isActive={isTop}
-                            swipeState={isTop ? swipeState : null}
-                        />
+                            <ProfileCard
+                                currentUser={currentUser!}
+                                potentialMatch={u}
+                                isActive={isTop}
+                                swipeState={isTop ? swipeState : null}
+                            />
                         </div>
                     );
                 })
@@ -321,5 +340,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
