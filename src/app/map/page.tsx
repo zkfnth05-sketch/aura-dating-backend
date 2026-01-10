@@ -13,15 +13,14 @@ import type { User } from '@/lib/types';
 
 export default function MapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const { user: currentUser, isLoaded } = useUser();
+  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const firestore = useFirestore();
   const [mapUsers, setMapUsers] = useState<User[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isFetchingUsers, setIsFetchingUsers] = useState(true);
   const [center, setCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // Default to Seoul
 
   useEffect(() => {
     if (currentUser) {
-      // Use a more stable check for valid coordinates
       if (typeof currentUser.lat === 'number' && typeof currentUser.lng === 'number') {
         setCenter({ lat: currentUser.lat, lng: currentUser.lng });
       }
@@ -30,7 +29,6 @@ export default function MapPage() {
 
   useEffect(() => {
     if (navigator.geolocation) {
-      // Get the current position once
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
@@ -42,7 +40,7 @@ export default function MapPage() {
         {
           enableHighAccuracy: true,
           timeout: 10000,
-          maximumAge: 60000, // Allow using a cached position up to 1 minute old
+          maximumAge: 60000,
         }
       );
     }
@@ -51,7 +49,7 @@ export default function MapPage() {
   useEffect(() => {
     const fetchInitialUsers = async () => {
       if (!currentUser || !firestore) return;
-      setIsInitialLoading(true);
+      setIsFetchingUsers(true);
       try {
         let genderFilter: string[];
         if (currentUser.gender === '남성') {
@@ -65,10 +63,11 @@ export default function MapPage() {
         const usersQuery = query(
           collection(firestore, 'users'),
           where('gender', 'in', genderFilter),
-          limit(20)
+          limit(50) // Fetch more users for better map coverage
         );
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
+        
         // Ensure current user is always in the list for their marker
         const allUsers = [currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)];
         const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
@@ -77,18 +76,24 @@ export default function MapPage() {
       } catch (error) {
         console.error("Error fetching initial map users:", error);
       } finally {
-        setIsInitialLoading(false);
+        setIsFetchingUsers(false);
       }
     };
 
-    if (isLoaded && currentUser) {
+    if (isUserLoaded && currentUser) {
       fetchInitialUsers();
+    } else if (!isUserLoaded) {
+      // Don't fetch if user is not loaded yet
+      setIsFetchingUsers(true);
+    } else {
+      // Handle case where there's no current user
+      setIsFetchingUsers(false);
     }
-  }, [currentUser, firestore, isLoaded]);
+  }, [currentUser, firestore, isUserLoaded]);
 
   if (!apiKey) {
     return (
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 h-full">
         <Header />
         <main className="container py-8 text-center">
           <h1 className="text-2xl font-bold text-destructive">Google Maps API 키가 필요합니다.</h1>
@@ -108,22 +113,21 @@ export default function MapPage() {
     );
   }
 
-  const isLoading = !isLoaded || isInitialLoading || !currentUser;
-
+  // Render the map immediately, markers will be added when `mapUsers` is populated.
   return (
     <div className="h-full flex flex-col">
       <Header />
-      {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-      ) : (
-        <div className="flex-1">
-          <APIProvider apiKey={apiKey} className="w-full h-full">
-            <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
-          </APIProvider>
-        </div>
-      )}
+      <div className="flex-1">
+        {!isUserLoaded ? (
+            <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        ) : (
+            <APIProvider apiKey={apiKey} className="w-full h-full">
+              <MapClient users={mapUsers} currentUser={currentUser} initialCenter={center} />
+            </APIProvider>
+        )}
+      </div>
     </div>
   );
 }

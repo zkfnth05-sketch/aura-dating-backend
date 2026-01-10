@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface MapClientProps {
   users: User[];
-  currentUser: User;
+  currentUser: User | null;
   initialCenter: { lat: number; lng: number };
 }
 
@@ -103,6 +103,37 @@ const distanceOptions = [
     { label: '100km', zoom: 8 },
 ];
 
+const MemoizedAdvancedMarker = React.memo(function MemoizedAdvancedMarker({
+  user,
+  isCurrentUser,
+  onClick,
+}: {
+  user: User;
+  isCurrentUser: boolean;
+  onClick: (userId: string) => void;
+}) {
+  return (
+    <AdvancedMarker
+      position={{ lat: user.lat, lng: user.lng }}
+      onClick={() => onClick(user.id)}
+    >
+      <div 
+        className={cn(
+            "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
+            isCurrentUser ? "border-primary" : "border-transparent"
+        )}
+      >
+        <Image
+          src={user.photoUrls[0]}
+          alt={user.name}
+          fill
+          className="object-cover rounded-full"
+        />
+      </div>
+    </AdvancedMarker>
+  );
+});
+
 export default function MapClient({ users, currentUser, initialCenter }: MapClientProps) {
   const router = useRouter();
   
@@ -110,18 +141,19 @@ export default function MapClient({ users, currentUser, initialCenter }: MapClie
   const [center, setCenter] = useState(initialCenter);
 
   useEffect(() => {
-    // Update center when initialCenter prop changes from parent
     setCenter(initialCenter);
   }, [initialCenter]);
 
 
-  const handleMarkerClick = (userId: string) => {
-    if(userId === currentUser.id) {
+  const handleMarkerClick = useCallback((userId: string) => {
+    if (currentUser && userId === currentUser.id) {
       router.push('/profile');
     } else {
       router.push(`/users/${userId}`);
     }
-  }
+  }, [router, currentUser]);
+  
+  const memoizedUsers = useMemo(() => users, [users]);
 
   return (
     <div className="w-full h-full relative">
@@ -150,26 +182,13 @@ export default function MapClient({ users, currentUser, initialCenter }: MapClie
         gestureHandling={'greedy'}
         onCenterChanged={(e) => setCenter(e.detail.center)}
       >
-        {users.map((user) => (
-          <AdvancedMarker
+        {memoizedUsers.map((user) => (
+          <MemoizedAdvancedMarker
             key={user.id}
-            position={{ lat: user.lat, lng: user.lng }}
-            onClick={() => handleMarkerClick(user.id)}
-          >
-            <div 
-              className={cn(
-                  "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
-                  user.id === currentUser.id ? "border-primary" : "border-transparent"
-              )}
-            >
-              <Image
-                src={user.photoUrls[0]}
-                alt={user.name}
-                fill
-                className="object-cover rounded-full"
-              />
-            </div>
-          </AdvancedMarker>
+            user={user}
+            isCurrentUser={!!currentUser && user.id === currentUser.id}
+            onClick={handleMarkerClick}
+          />
         ))}
       </Map>
     </div>
