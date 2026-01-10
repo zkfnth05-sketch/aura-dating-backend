@@ -65,6 +65,7 @@ interface UserContextType {
   isRecommendedUsersLoading: boolean;
   fetchNextRecommendedUsers: () => void;
   hasMoreRecommendedUsers: boolean;
+  initializeRecommendations: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -136,6 +137,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const hasMoreRef = useRef(true);
   const isLoadingMoreRef = useRef(false);
   const [hasMoreState, setHasMoreState] = useState(true); // For UI consumption
+  const isLoaded = !isAuthLoading && !isUserDocLoading;
 
   // User Document Fetching
   useEffect(() => {
@@ -262,129 +264,97 @@ export function UserProvider({ children }: { children: ReactNode }) {
     fetchLikeUsers();
   }, [myLikes, likesToMe, firestore, isLikesLoading]);
 
-
-  // --- Recommendation Logic (Fixed) ---
+  const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
+    if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) return;
+    if (!user || !firestore || myLikes === null) return;
   
-  const fetchNextRecommendedUsers = useCallback(async () => {
-    // Check refs instead of state to avoid dependency loops
-    if (isLoadingMoreRef.current || !hasMoreRef.current || !user || !firestore || !myLikes) {
-      return;
-    }
-    
     isLoadingMoreRef.current = true;
-
+  
     try {
-        const iLikedIds = myLikes.filter(l => l.isLike).map(l => l.likeeId);
-        const interactedUserIds = new Set(iLikedIds);
-        interactedUserIds.add(user.id);
-        
-        let newUsers: User[] = [];
-        let lastDocForNextBatch = lastVisibleRef.current;
-        let keepFetching = true;
-
-        while (newUsers.length < FETCH_LIMIT && keepFetching) {
-            let usersQuery: Query<DocumentData> = query(
-                collection(firestore, 'users'),
-                orderBy('createdAt', 'desc'),
-                limit(FETCH_LIMIT * 2) 
-            );
-
-            if (lastDocForNextBatch) {
-                usersQuery = query(usersQuery, startAfter(lastDocForNextBatch));
-            }
-            
-            const snapshot = await getDocs(usersQuery);
-
-            if (snapshot.empty) {
-                hasMoreRef.current = false;
-                setHasMoreState(false);
-                keepFetching = false;
-                break;
-            }
-
-            lastDocForNextBatch = snapshot.docs[snapshot.docs.length - 1];
-            const potentialUsers = snapshot.docs.map(doc => doc.data() as User);
-            
-            const newlyFilteredUsers = potentialUsers.filter(u => {
-                if (interactedUserIds.has(u.id)) return false;
-                if (recommendedUsers.some(rec => rec.id === u.id)) return false; // Client-side dupe check
-
-                let genderFilter: ('남성' | '여성' | '기타')[] = filters.gender;
-                if (genderFilter.length === 0) {
-                    genderFilter = user.gender === '남성' ? ['여성'] : (user.gender === '여성' ? ['남성'] : []);
-                }
-                if (genderFilter.length > 0 && !genderFilter.includes(u.gender)) return false;
-                if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
-                
-                const checkTags = (userTags: string[] = [], filterTags: string[]) => 
-                    filterTags.length === 0 || filterTags.every(tag => userTags.includes(tag));
-                
-                return (
-                    checkTags(u.relationship, filters.relationship) &&
-                    checkTags(u.values, filters.values) &&
-                    checkTags(u.communication, filters.communication) &&
-                    checkTags(u.lifestyle, filters.lifestyle) &&
-                    checkTags(u.hobbies, filters.hobbies) &&
-                    checkTags(u.interests, filters.interests)
-                );
-            });
-            
-            newUsers = [...newUsers, ...newlyFilteredUsers];
-            
-            // Safety break if we fetched tons but found nothing matching filters
-            if (snapshot.docs.length < FETCH_LIMIT * 2 && newUsers.length === 0) {
-                 // Might want to continue, but usually indicates end of relevant stream
-            }
+      const interactedUserIds = new Set(myLikes.map(l => l.likeeId));
+      interactedUserIds.add(user.id);
+      
+      let newUsers: User[] = [];
+      let lastDoc = isInitial ? null : lastVisibleRef.current;
+      let loopCount = 0;
+  
+      let targetGenders = filters.gender.length > 0 
+        ? filters.gender 
+        : (user.gender === '남성' ? ['여성'] : (user.gender === '여성' ? ['남성'] : []));
+  
+      while (newUsers.length < FETCH_LIMIT && loopCount < 3) {
+        loopCount++;
+        let constraints: any[] = [orderBy('createdAt', 'desc'), limit(FETCH_LIMIT * 2)];
+        if (lastDoc) constraints.push(startAfter(lastDoc));
+  
+        const snapshot = await getDocs(query(collection(firestore, 'users'), ...constraints));
+        if (snapshot.empty) {
+          hasMoreRef.current = false;
+          setHasMoreState(false);
+          break;
         }
-
-        lastVisibleRef.current = lastDocForNextBatch;
-
-        if (newUsers.length > 0) {
-            setRecommendedUsers(prev => {
-                const existingIds = new Set(prev.map(u => u.id));
-                const uniqueNewUsers = newUsers.filter(u => !existingIds.has(u.id));
-                return [...prev, ...uniqueNewUsers];
-            });
-        }
-
+  
+        lastDoc = snapshot.docs[snapshot.docs.length - 1];
+        const batch = snapshot.docs.map(d => d.data() as User).filter(u => {
+          if (interactedUserIds.has(u.id)) return false;
+          if (targetGenders.length > 0 && !targetGenders.includes(u.gender)) return false;
+          if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
+          
+          const checkTags = (userTags: string[] = [], filterTags: string[]) => 
+            filterTags.length === 0 || filterTags.every(tag => userTags.includes(tag));
+          
+          return (
+              checkTags(u.relationship, filters.relationship) &&
+              checkTags(u.values, filters.values) &&
+              checkTags(u.communication, filters.communication) &&
+              checkTags(u.lifestyle, filters.lifestyle) &&
+              checkTags(u.hobbies, filters.hobbies) &&
+              checkTags(u.interests, filters.interests)
+          );
+        });
+  
+        newUsers = [...newUsers, ...batch];
+      }
+  
+      lastVisibleRef.current = lastDoc;
+      
+      setRecommendedUsers(prev => {
+        if (isInitial) return newUsers;
+        const existingIds = new Set(prev.map(u => u.id));
+        return [...prev, ...newUsers.filter(u => !existingIds.has(u.id))];
+      });
+  
     } catch (e) {
-        console.error("Error fetching more recommended users:", e);
+      console.error(e);
     } finally {
-        isLoadingMoreRef.current = false;
+      isLoadingMoreRef.current = false;
     }
-  }, [user, firestore, filters, myLikes, recommendedUsers]); // Note: myLikes is here, but effect below handles triggering
+  }, [user, firestore, filters, myLikes]);
 
-  // Main Effect: Initialize or Reset Recommendations
-  // This runs ONLY when Filters change or User/DB is first loaded.
-  // It does NOT run when 'myLikes' changes (preventing the loop).
-  useEffect(() => {
-    const initializeRecommendations = async () => {
-        if (isLikesLoading || !firestore || !user || !myLikes) {
-            return;
-        }
-
-        setIsRecommendedUsersLoading(true);
-        setRecommendedUsers([]); // Clear list
-        lastVisibleRef.current = null; // Reset cursor
-        hasMoreRef.current = true;
-        setHasMoreState(true);
-        isLoadingMoreRef.current = false;
-
-        // Perform initial fetch
-        await fetchNextRecommendedUsers();
-        
-        setIsRecommendedUsersLoading(false);
-    };
-
-    // Use stringified filters to detect value changes, not reference changes
-    const filterKey = JSON.stringify(filters);
-
-    initializeRecommendations();
+  const initializeRecommendations = useCallback(async () => {
+    if (!isLoaded || !user || myLikes === null) return;
     
-    // Explicitly exclude fetchNextRecommendedUsers and myLikes to prevent loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore, user, isLikesLoading, JSON.stringify(filters)]); 
-
+    setIsRecommendedUsersLoading(true);
+    lastVisibleRef.current = null;
+    hasMoreRef.current = true;
+    setHasMoreState(true);
+    
+    await fetchNextRecommendedUsers(true);
+    setIsRecommendedUsersLoading(false);
+  }, [isLoaded, user, myLikes, fetchNextRecommendedUsers]);
+  
+  const prevFiltersRef = useRef(JSON.stringify(filters));
+  useEffect(() => {
+    const currentFilters = JSON.stringify(filters);
+    if (isLoaded && user && myLikes !== null) {
+      if (prevFiltersRef.current !== currentFilters) {
+        prevFiltersRef.current = currentFilters;
+        initializeRecommendations();
+      } else if (recommendedUsers.length === 0 && hasMoreRef.current && !isLoadingMoreRef.current) {
+        initializeRecommendations();
+      }
+    }
+  }, [isLoaded, user, myLikes, filters, initializeRecommendations, recommendedUsers.length]);
 
   const totalUnreadCount = (matches || []).reduce((acc, match) => {
     if (user && user.id && match.unreadCounts) {
@@ -400,7 +370,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (newUserData.createdAt === "serverTimestamp") {
         dataToSave.createdAt = serverTimestamp();
     }
-    return setDocumentNonBlocking(userRef, dataToSave, { merge: true });
+    await setDoc(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);
   
 
@@ -500,16 +470,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const value: UserContextType = {
     user, authUser, updateUser, notificationSettings, updateNotificationSettings,
-    filters, updateFilters, resetFilters, isLoaded: !isAuthLoading && !isUserDocLoading,
+    filters, updateFilters, resetFilters, isLoaded,
     totalUnreadCount, phoneAuth: { phoneNumber, setPhoneNumber, confirmationResult, recaptchaVerifier, setupRecaptcha, sendVerificationCode, verifyOtp, reauthenticate, isSendingOtp, isVerifyingOtp },
     isSignupFlowActive, setIsSignupFlowActive,
     matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading,
     
-    // Exports for Home Page Client
     recommendedUsers,
     isRecommendedUsersLoading,
     fetchNextRecommendedUsers,
     hasMoreRecommendedUsers: hasMoreState,
+    initializeRecommendations,
   };
 
   return (
