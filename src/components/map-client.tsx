@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
@@ -133,6 +133,8 @@ const MemoizedAdvancedMarker = React.memo(function MemoizedAdvancedMarker({
     </AdvancedMarker>
   );
 });
+MemoizedAdvancedMarker.displayName = 'MemoizedAdvancedMarker';
+
 
 export default function MapClient({ users, currentUser, initialCenter }: MapClientProps) {
   const router = useRouter();
