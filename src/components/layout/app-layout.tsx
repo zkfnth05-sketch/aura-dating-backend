@@ -1,4 +1,4 @@
-'use client';
+    'use client';
 
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
@@ -16,27 +16,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isAdminPage = pathname.startsWith('/admin');
   
   const noBottomNavPaths = ['/signup', '/profile/edit', '/filter', '/chat'];
+  // 채팅방 상세 페이지('/chat/...')에서는 네비게이션을 숨기지만, 채팅 목록('/chat')에서는 보여야 한다면 로직 확인 필요
+  // 현재 로직은 /chat으로 시작하면 무조건 숨김입니다.
+  
   const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
 
-  // If it's an admin page, it controls its own layout entirely.
   if (isAdminPage) {
     return <>{children}</>;
   }
 
   return (
-    <div className="mx-auto max-w-screen-sm w-full flex flex-col h-full">
+    // h-full 대신 h-[100dvh]를 사용하여 모바일 주소창 높이 변화에 대응
+    <div className="mx-auto max-w-screen-sm w-full flex flex-col h-[100dvh] relative bg-background">
       <main className={cn(
-        "flex-1 flex flex-col",
+        "flex-1 flex flex-col min-h-0 overflow-hidden", // min-h-0: flex 자식 스크롤 버그 방지
       )}>
-        {/* This div is the main scrollable container */}
-        <div className="flex-1 h-full overflow-y-auto">
+        {/* 실제 스크롤 되는 영역 */}
+        <div className={cn(
+            "flex-1 overflow-y-auto", 
+            // BottomNav가 보일 때는 하단에 패딩을 줘서 컨텐츠가 가려지지 않게 함
+            showBottomNav ? "pb-20" : "" 
+        )}>
           {children}
         </div>
       </main>
       
-      {showBottomNav && <BottomNav />}
+      {/* BottomNav는 보통 fixed로 되어 있으므로 흐름 밖에서 렌더링되거나,
+          flex 흐름 안에 있다면 main 아래에 위치합니다. 
+          z-index를 주어 컨텐츠 위에 뜨도록 보장합니다. */}
+      {showBottomNav && (
+        <div className="z-50">
+          <BottomNav />
+        </div>
+      )}
       
-      {/* Toasts are UI overlays and can remain here */}
+      {/* Toasts */}
       <IncomingCallToast />
       <NewLikeToast />
       <NewMatchToast />
