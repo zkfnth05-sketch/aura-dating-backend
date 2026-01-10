@@ -12,31 +12,34 @@ type ProfileCardProps = {
   potentialMatch: User;
   isActive: boolean;
   swipeState: 'left' | 'right' | null;
-  depth: number;
   zIndex: number;
+  depth: number;
 };
 
-const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, depth, zIndex }: ProfileCardProps) => {
+const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex, depth }: ProfileCardProps) => {
   const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
   const cardStyle: React.CSSProperties = {
+    zIndex: zIndex,
     transform: `
       translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
       rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
-      scale(${isActive ? 1 : 0.95})
+      translateY(${depth * 12}px)
+      scale(${1 - (depth * 0.05)})
     `,
-    zIndex: zIndex,
-    top: depth === 0 ? 0 : '15px',
-    transformOrigin: 'bottom center',
-    transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s',
     opacity: depth === 0 ? 1 : 0.6,
-    touchAction: 'none',
+    transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s',
     pointerEvents: isActive ? 'auto' : 'none',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-    willChange: 'transform, opacity',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    willChange: 'transform',
+    touchAction: 'none'
   };
+
 
   const allTags = [
     ...(potentialMatch.relationship || []),
@@ -50,7 +53,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
   return (
     <div
       className={cn(
-        'absolute w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 bg-card border-none'
+        'rounded-2xl overflow-hidden shadow-2xl bg-card border-none'
       )}
       style={cardStyle}
     >
