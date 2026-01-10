@@ -13,7 +13,8 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '@/components/ui/button';
 
-const PREFETCH_THRESHOLD = 3;
+// [최적화] 더 빨리 다음 카드를 로드하기 위해 임계값을 5로 증가
+const PREFETCH_THRESHOLD = 5;
 
 export default function HomePageClient() {
   const { 
@@ -24,6 +25,7 @@ export default function HomePageClient() {
     isRecommendedUsersLoading,
     fetchNextRecommendedUsers,
     hasMoreRecommendedUsers,
+    initializeRecommendations,
   } = useUser();
   
   const router = useRouter();
@@ -34,14 +36,15 @@ export default function HomePageClient() {
 
   // Reset index when recommended list is cleared (e.g., filter change)
   useEffect(() => {
-    if (recommendedUsers.length === 0) {
-        setCurrentIndex(0);
+    if (currentIndex >= recommendedUsers.length && recommendedUsers.length > 0) {
+      setCurrentIndex(recommendedUsers.length - 1);
+    } else if (recommendedUsers.length === 0) {
+      setCurrentIndex(0);
     }
-  }, [recommendedUsers.length]);
+  }, [recommendedUsers.length, currentIndex]);
 
-  // Prefetching Logic
+  // Prefetching Logic (Aggressive)
   useEffect(() => {
-    // Only prefetch if we have data, more data exists, and we aren't already loading
     if (!isRecommendedUsersLoading && hasMoreRecommendedUsers && recommendedUsers.length > 0) {
         const remainingCards = recommendedUsers.length - currentIndex;
         if (remainingCards <= PREFETCH_THRESHOLD) {
@@ -127,90 +130,80 @@ export default function HomePageClient() {
 
     const likesCollection = collection(firestore, 'likes');
 
-    // Add like document
-    if (action === 'like') {
-      addDoc(likesCollection, likeData).catch(e => {
-        if (e.code === 'permission-denied') {
-          const contextualError = new FirestorePermissionError({
-            operation: 'create',
-            path: 'likes',
-            requestResourceData: likeData,
-          });
-          errorEmitter.emit('permission-error', contextualError);
-        } else {
-          console.error("Failed to record like:", e);
-        }
-      });
-    }
+    addDoc(likesCollection, likeData).catch(e => {
+      if (e.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+          operation: 'create',
+          path: 'likes',
+          requestResourceData: likeData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      } else {
+        console.error("Failed to record action:", e);
+      }
+    });
 
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
-    }, 500);
+    }, 500); // Animation time
   };
   
-  // Show full screen loader only if we have NO data and are loading the first batch
-  if (!isLoaded || (isRecommendedUsersLoading && recommendedUsers.length === 0)) {
-      return (
-        <div className="flex flex-col h-screen bg-background">
-          <Header />
-          <main className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </main>
-        </div>
-      );
-  }
-
   const isLiked = peopleILiked?.some(u => u.id === activeUser?.id);
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden touch-none overscroll-none">
       <Header />
-      <main className="flex-1 flex flex-col items-center pt-4">
-        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
-            {!currentUser ? (
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      
+      <main className="flex-1 relative flex items-center justify-center p-4">
+        <div className="relative w-full max-w-[380px] aspect-[3/4.5] max-h-[600px] z-10">
+          {isRecommendedUsersLoading && recommendedUsers.length === 0 ? (
+             <div className="flex items-center justify-center h-full w-full">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+             </div>
+          ) : !activeUser ? (
+             <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
+              <h2 className="text-xl font-bold">새로운 추천이 없어요</h2>
+              <p className="text-sm text-muted-foreground mt-2">필터를 바꾸거나 잠시 후 다시 시도해주세요.</p>
+              <Button onClick={initializeRecommendations} className="mt-4">다시 시도</Button>
+            </div>
+          ) : (
+            recommendedUsers.map((u, index) => {
+              if (index < currentIndex || index > currentIndex + 1) return null;
+
+              const isTop = index === currentIndex;
+              return (
+                <div
+                  key={u.id}
+                  className="absolute inset-0 w-full h-full transform-gpu transition-all duration-300 ease-out"
+                  style={{ 
+                    transform: isTop ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.95)',
+                    opacity: isTop ? 1 : 0.6,
+                    zIndex: recommendedUsers.length - index,
+                    pointerEvents: isTop ? 'auto' : 'none' 
+                  }}
+                >
+                  <ProfileCard
+                    currentUser={currentUser!}
+                    potentialMatch={u}
+                    isActive={isTop}
+                    swipeState={isTop ? swipeState : null}
+                  />
                 </div>
-            ) : !activeUser ? (
-                <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
-                  <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
-                  <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
-                  <Button onClick={() => window.location.reload()} className="mt-6">
-                      다시 시도
-                  </Button>
-                </div>
-            ) : (
-                <>
-                  {recommendedUsers.map((user, index) => {
-                      if (index < currentIndex) return null;
-                      const isTop = index === currentIndex;
-                      return (
-                          <ProfileCard
-                              key={user.id}
-                              currentUser={currentUser}
-                              potentialMatch={user}
-                              isActive={isTop}
-                              swipeState={isTop ? swipeState : null}
-                              zIndex={recommendedUsers.length - index}
-                          />
-                      )
-                  })}
-                </>
-            )}
+              );
+            })
+          )}
         </div>
       </main>
 
       {activeUser && (
-        <footer className="fixed bottom-24 left-0 right-0 z-50">
-            <div className="flex justify-center">
-                <ActionButtons 
-                    onDislike={() => handleAction('dislike')}
-                    onMessage={() => handleAction('message')}
-                    onLike={() => handleAction('like')}
-                    isLiked={isLiked}
-                />
-            </div>
+        <footer className="h-28 flex items-center justify-center pb-6 z-20">
+          <ActionButtons 
+            onDislike={() => handleAction('dislike')}
+            onMessage={() => handleAction('message')}
+            onLike={() => handleAction('like')}
+            isLiked={isLiked}
+          />
         </footer>
       )}
     </div>
