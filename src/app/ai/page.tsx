@@ -10,6 +10,15 @@ import { Loader2 } from 'lucide-react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DateCourseForm from '@/components/date-course-form';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const UserGridSkeleton = () => (
+    <div className="grid grid-cols-2 gap-4">
+        {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="w-full aspect-[3/4] rounded-lg" />
+        ))}
+    </div>
+);
 
 
 export default function AiPage() {
@@ -91,9 +100,7 @@ export default function AiPage() {
           </TabsList>
           <TabsContent value="ideal-type" className="mt-6 pb-8">
             {isLoading ? (
-               <div className="flex items-center justify-center pt-20">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
+               <UserGridSkeleton />
             ) : (
               <AiPageClient recommendedUsers={recommendedUsers} currentUser={currentUser} />
             )}
