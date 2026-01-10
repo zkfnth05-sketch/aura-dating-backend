@@ -21,23 +21,27 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
   const cardStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
     zIndex: zIndex,
+    
+    // translate3d와 translateZ(0px/1px)를 써서 하드웨어 가속 레이어를 분리합니다.
     transform: `
       translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
       rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
-      translateY(${depth * 12}px)
+      translateY(${depth * 10}px)
       scale(${1 - (depth * 0.05)})
+      translateZ(${isActive ? '1px' : '0px'}) 
     `,
-    opacity: depth === 0 ? 1 : 0.6,
-    transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s',
+    
+    // 아래 카드가 위 카드를 뚫고 터치를 가로채는 것을 방지
     pointerEvents: isActive ? 'auto' : 'none',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    willChange: 'transform',
-    touchAction: 'none'
+    
+    opacity: isActive ? 1 : 0.7, // 아래 카드를 조금 더 어둡게 해서 시각적 분리
+    transition: 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), opacity 0.3s',
+    willChange: 'transform, opacity',
+    backfaceVisibility: 'hidden',
+    WebkitBackfaceVisibility: 'hidden',
   };
 
 
