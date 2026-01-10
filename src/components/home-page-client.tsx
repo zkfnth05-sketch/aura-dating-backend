@@ -252,7 +252,7 @@ export default function HomePageClient() {
     setTimeout(() => {
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
-    }, 500); // Animation time
+    }, 400); // Animation time
   };
   
   const isLikedByMe = peopleILiked?.some(u => u.id === activeUser?.id);
