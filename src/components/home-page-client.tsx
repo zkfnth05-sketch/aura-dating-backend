@@ -144,7 +144,7 @@ export default function HomePageClient() {
 
 
   const visibleCards = useMemo(() => {
-    return recommendedUsers.slice(currentIndex, currentIndex + 2).reverse();
+    return recommendedUsers.slice(currentIndex, currentIndex + 2);
   }, [recommendedUsers, currentIndex]);
 
   const activeUser = recommendedUsers[currentIndex];
@@ -265,7 +265,7 @@ export default function HomePageClient() {
         <div className="relative w-full aspect-[3/4.5] max-w-[400px]">
           {visibleCards.length > 0 ? (
             visibleCards.map((user, index) => {
-              const isTop = index === visibleCards.length - 1;
+              const isTop = index === 0;
               return (
                 <ProfileCard
                   key={user.id}
@@ -273,6 +273,7 @@ export default function HomePageClient() {
                   potentialMatch={user}
                   isActive={isTop}
                   swipeState={isTop ? swipeState : null}
+                  depth={index}
                 />
               );
             })

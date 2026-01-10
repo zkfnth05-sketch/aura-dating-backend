@@ -12,9 +12,10 @@ type ProfileCardProps = {
   potentialMatch: User;
   isActive: boolean;
   swipeState: 'left' | 'right' | null;
+  depth: number;
 };
 
-const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState }: ProfileCardProps) => {
+const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, depth }: ProfileCardProps) => {
   const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
@@ -22,13 +23,13 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
     transform: `
       translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
       rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
-      scale(${isActive ? 1 : 0.95})
+      scale(${1 - (depth * 0.05)})
+      translateY(${depth * 15}px)
     `,
     transformOrigin: 'bottom center',
     transition: 'transform 0.5s ease-out, opacity 0.5s',
-    opacity: isActive ? 1 : 0,
-    zIndex: isActive ? 10 : 0,
-    top: isActive ? 0 : '15px',
+    opacity: depth > 1 ? 0 : 1,
+    zIndex: 50 - depth,
     touchAction: 'none',
     userSelect: 'none',
     WebkitUserSelect: 'none'
@@ -56,16 +57,22 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
         draggable={false}
       >
         <div className="relative w-full h-full bg-muted">
-            <Image
-                src={potentialMatch.photoUrls[0]}
-                alt={`Profile of ${potentialMatch.name}`}
-                fill
-                className="object-cover pointer-events-none"
-                data-ai-hint="person portrait"
-                priority={isActive}
-                draggable={false}
-                sizes="(max-width: 768px) 100vw, 400px"
-            />
+            {potentialMatch.photoUrls && potentialMatch.photoUrls.length > 0 ? (
+                <Image
+                    src={potentialMatch.photoUrls[0]}
+                    alt={`Profile of ${potentialMatch.name}`}
+                    fill
+                    className="object-cover pointer-events-none"
+                    data-ai-hint="person portrait"
+                    priority={isActive}
+                    draggable={false}
+                    sizes="(max-width: 768px) 100vw, 400px"
+                />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
+                    <span className="text-muted-foreground">No Photo</span>
+                </div>
+            )}
         </div>
         
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
