@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // h-full 대신 h-[100dvh]를 사용하여 모바일 주소창 높이 변화에 대응
     <div className="mx-auto max-w-screen-sm w-full flex flex-col h-[100dvh] relative bg-background">
       <main className={cn(
-        "flex-1 flex flex-col min-h-0 overflow-hidden", // min-h-0: flex 자식 스크롤 버그 방지
+        "flex-1 flex flex-col min-h-0", // min-h-0: flex 자식 스크롤 버그 방지
       )}>
         {/* 실제 스크롤 되는 영역 */}
         <div className={cn(

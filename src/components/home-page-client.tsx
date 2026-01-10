@@ -271,7 +271,7 @@ export default function HomePageClient() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden touch-none">
+    <div className="flex flex-col h-[100dvh] bg-background">
       <Header />
       <main className="relative flex-1 flex items-center justify-center p-4">
         <div className="relative w-full aspect-[3/4.5] max-w-[400px] perspective-1000">
