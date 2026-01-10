@@ -49,16 +49,16 @@ export default function HomePageClient() {
 
   const fetchNextRecommendedUsers = useCallback(async () => {
     if (isLoadingMoreRef.current || !hasMoreRef.current || !currentUser || !firestore || peopleILiked === null) {
-        return [];
+        return;
     }
     
     isLoadingMoreRef.current = true;
-    let newUsers: User[] = [];
-
+    
     try {
         const interactedUserIds = new Set(peopleILiked.map(l => l.id));
         interactedUserIds.add(currentUser.id);
         
+        let newUsers: User[] = [];
         let lastDocForNextBatch = lastVisibleRef.current;
         let keepFetching = true;
         let loopCount = 0;
@@ -100,9 +100,6 @@ export default function HomePageClient() {
                 .filter(u => {
                     if (interactedUserIds.has(u.id)) return false;
                     
-                    const existingIds = new Set([...recommendedUsers, ...newUsers].map(ru => ru.id));
-                    if (existingIds.has(u.id)) return false;
-
                     const { ageRange, relationship, values, communication, lifestyle, hobbies, interests } = filters;
                     if (u.age < ageRange.min || u.age > ageRange.max) return false;
 
@@ -124,13 +121,20 @@ export default function HomePageClient() {
 
         lastVisibleRef.current = lastDocForNextBatch;
         
+        if (newUsers.length > 0) {
+            setRecommendedUsers(prev => {
+                const existingIds = new Set(prev.map(u => u.id));
+                const uniqueNewUsers = newUsers.filter(u => !existingIds.has(u.id));
+                return [...prev, ...uniqueNewUsers];
+            });
+        }
+        
     } catch (e) {
         console.error("Error fetching more recommended users:", e);
     } finally {
         isLoadingMoreRef.current = false;
     }
-    return newUsers;
-  }, [currentUser, firestore, JSON.stringify(filters), peopleILiked, recommendedUsers]);
+  }, [currentUser, firestore, JSON.stringify(filters), peopleILiked]);
 
   const initializeRecommendations = useCallback(async () => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
@@ -142,22 +146,17 @@ export default function HomePageClient() {
     hasMoreRef.current = true;
     isLoadingMoreRef.current = false;
     
-    const initialUsers = await fetchNextRecommendedUsers();
-    setRecommendedUsers(initialUsers);
+    await fetchNextRecommendedUsers();
     setIsRecommendedUsersLoading(false);
   }, [isLoaded, currentUser, peopleILiked, fetchNextRecommendedUsers]);
 
   useEffect(() => {
     initializeRecommendations();
-  }, [initializeRecommendations]);
+  }, [initializeRecommendations, JSON.stringify(filters)]);
 
   useEffect(() => {
     if (!isRecommendedUsersLoading && hasMoreRef.current && recommendedUsers.length - currentIndex <= PREFETCH_THRESHOLD) {
-      fetchNextRecommendedUsers().then(newUsers => {
-          if (newUsers.length > 0) {
-            setRecommendedUsers(prev => [...prev, ...newUsers]);
-          }
-      });
+      fetchNextRecommendedUsers();
     }
   }, [currentIndex, recommendedUsers.length, isRecommendedUsersLoading, fetchNextRecommendedUsers]);
 
@@ -322,3 +321,5 @@ export default function HomePageClient() {
     </div>
   );
 }
+
+    
