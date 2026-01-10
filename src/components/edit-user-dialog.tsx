@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -98,11 +99,19 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
 
     try {
         if (originalPhotoUri && originalPhotoUri !== user.photoUrls?.[0]) { // Only enhance if photo changed
+            const compressedUri = await compressImage(originalPhotoUri);
             if (aiEnhancement) {
-                const result = await getEnhancedPhoto({ photoDataUri: originalPhotoUri, gender: values.gender });
+                const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: values.gender });
+                if (result.enhancedPhotoDataUri === compressedUri) {
+                    toast({
+                        variant: "destructive",
+                        title: "AI 보정 실패",
+                        description: "AI 보정에 실패하여 원본 사진이 대신 사용됩니다.",
+                    });
+                }
                 finalPhotoUrl = await compressImage(result.enhancedPhotoDataUri);
             } else {
-                finalPhotoUrl = await compressImage(originalPhotoUri);
+                finalPhotoUrl = compressedUri;
             }
         }
 

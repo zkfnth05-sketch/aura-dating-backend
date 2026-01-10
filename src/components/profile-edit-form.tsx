@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -170,26 +171,35 @@ export default function ProfileEditForm() {
     const compressedForUpload = await compressImage(dataUri);
     setTempPhotoUri(compressedForUpload);
 
-    if (aiEnhancement) {
-      setIsEnhancing(true);
-      try {
-        const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: profile.gender });
-        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
-        await updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
-      } catch (error) {
-        console.error("AI enhancement failed, using original compressed image:", error);
+    try {
+        if (aiEnhancement) {
+            setIsEnhancing(true);
+            const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: profile.gender });
+            
+            if (result.enhancedPhotoDataUri === compressedForUpload) {
+                 toast({
+                    variant: "destructive",
+                    title: "AI 보정 실패",
+                    description: "AI 보정에 실패하여 원본 사진이 대신 사용됩니다.",
+                });
+            }
+            
+            const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
+            await updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
+        } else {
+            await updateUser({ photoUrls: [...photoUrls, compressedForUpload] });
+        }
+    } catch (error) {
+         console.error("AI enhancement process failed:", error);
         toast({
           variant: "destructive",
-          title: "AI 보정 실패",
-          description: "사진 보정에 실패했습니다. 원본 사진이 대신 사용됩니다.",
+          title: "사진 추가 실패",
+          description: "사진을 추가하는 중 오류가 발생했습니다.",
         });
+        // In case of any error, use the original compressed image
         await updateUser({ photoUrls: [...photoUrls, compressedForUpload] });
-      } finally {
+    } finally {
         setIsEnhancing(false);
-        setTempPhotoUri(null);
-      }
-    } else {
-        await updateUser({ photoUrls: [...photoUrls, compressedForUpload] });
         setTempPhotoUri(null);
     }
   };

@@ -25,13 +25,10 @@ import {
 export async function getEnhancedPhoto(
     input: EnhancePhotoInput
   ): Promise<EnhancePhotoOutput> {
-    try {
-      const result = await enhancePhoto(input);
-      return result;
-    } catch (error) {
-      console.error('AI Photo Enhancement failed:', error);
-      throw new Error('Failed to get AI photo enhancement.');
-    }
+    // The flow now handles its own errors and falls back, so we don't need a try/catch here.
+    // This simplifies the action and lets the client-side decide what to do with the result.
+    const result = await enhancePhoto(input);
+    return result;
   }
 
 export async function getDateCourse(

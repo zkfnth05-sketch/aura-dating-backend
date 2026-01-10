@@ -57,42 +57,51 @@ const enhancePhotoFlow = ai.defineFlow(
   },
   async (input) => {
     const enhancementPrompt = generateEnhancementPrompt(input.gender);
-    const { media } = await ai.generate({
-        model: googleAI.model('gemini-2.5-flash-image-preview'),
-        prompt: [
-            { text: enhancementPrompt },
-            { media: { url: input.photoDataUri } },
-        ],
-        config: {
-            responseModalities: ['IMAGE'],
-            safetySettings: [
-              {
-                category: 'HARM_CATEGORY_HATE_SPEECH',
-                threshold: 'BLOCK_ONLY_HIGH',
-              },
-              {
-                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                threshold: 'BLOCK_NONE',
-              },
-              {
-                category: 'HARM_CATEGORY_HARASSMENT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-              },
-              {
-                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-              },
+    
+    try {
+        const { media } = await ai.generate({
+            model: googleAI.model('gemini-2.5-flash-image-preview'),
+            prompt: [
+                { text: enhancementPrompt },
+                { media: { url: input.photoDataUri } },
             ],
-        },
-        retries: 3,
-    });
+            config: {
+                responseModalities: ['IMAGE'],
+                safetySettings: [
+                  {
+                    category: 'HARM_CATEGORY_HATE_SPEECH',
+                    threshold: 'BLOCK_ONLY_HIGH',
+                  },
+                  {
+                    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    threshold: 'BLOCK_NONE',
+                  },
+                  {
+                    category: 'HARM_CATEGORY_HARASSMENT',
+                    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                  },
+                  {
+                    category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                  },
+                ],
+            },
+            retries: 3,
+        });
 
-    if (!media || !media.url) {
-        throw new Error('Image enhancement failed to produce an image.');
+        if (media && media.url) {
+            return {
+                enhancedPhotoDataUri: media.url,
+            };
+        }
+    } catch (error) {
+        console.error('Image enhancement flow failed, falling back to original image.', error);
     }
-
+    
+    // Fallback: If enhancement fails, return the original image.
     return {
-        enhancedPhotoDataUri: media.url,
+        enhancedPhotoDataUri: input.photoDataUri,
     };
   }
 );
+

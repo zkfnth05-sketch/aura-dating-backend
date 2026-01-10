@@ -49,20 +49,20 @@ export default function UploadPhotoPage() {
 
     if (aiEnhancement) {
         setPhoto({ uri: compressedForUpload, isEnhancing: true });
-        try {
-            const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: user?.gender || '기타' });
-            const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
-            setPhoto({ uri: finalCompressedUri, isEnhancing: false });
-        } catch (error) {
-            console.error("AI enhancement failed, using original compressed image:", error);
-            toast({
+        const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: user?.gender || '기타' });
+        
+        // If enhancement failed, the original URI is returned.
+        if (result.enhancedPhotoDataUri === compressedForUpload) {
+             toast({
                 variant: "destructive",
                 title: "AI 보정 실패",
                 description: "AI 보정에 실패했습니다. 원본 사진이 대신 사용됩니다.",
             });
-            // Already compressed before upload, so we can use it directly
-            setPhoto({ uri: compressedForUpload, isEnhancing: false });
         }
+        
+        const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
+        setPhoto({ uri: finalCompressedUri, isEnhancing: false });
+
     } else {
         setPhoto({ uri: compressedForUpload, isEnhancing: false });
     }

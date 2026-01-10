@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -90,15 +91,23 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
     const usersCol = collection(firestore, 'users');
     const newUserRef = doc(usersCol);
     
-    let photoUrlToSave: string;
+    let photoUrlToSave: string | undefined;
 
     try {
       if (originalPhotoUri) {
+        const compressedUri = await compressImage(originalPhotoUri);
         if (aiEnhancement) {
-            const result = await getEnhancedPhoto({ photoDataUri: originalPhotoUri, gender: values.gender });
+            const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: values.gender });
+            if(result.enhancedPhotoDataUri === compressedUri) {
+                 toast({
+                    variant: "destructive",
+                    title: "AI 보정 실패",
+                    description: "AI 보정에 실패하여 원본 사진이 대신 사용됩니다.",
+                });
+            }
             photoUrlToSave = await compressImage(result.enhancedPhotoDataUri);
         } else {
-            photoUrlToSave = await compressImage(originalPhotoUri);
+            photoUrlToSave = compressedUri;
         }
       } else {
         const randomImage = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
@@ -109,7 +118,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
         id: newUserRef.id,
         ...values,
         createdAt: serverTimestamp(),
-        photoUrls: [photoUrlToSave],
+        photoUrls: photoUrlToSave ? [photoUrlToSave] : [],
         bio: '새로운 만남을 기다립니다!',
         hobbies: ['독서', '영화 감상'],
         interests: ['맛집 탐방', '여행'],
