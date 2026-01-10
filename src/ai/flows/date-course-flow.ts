@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI-powered date course recommendation flow.
@@ -103,6 +104,7 @@ const dateCourseImageFlow = ai.defineFlow(
   },
   async (prompt) => {
     try {
+      if (!prompt) return '';
       const { media } = await ai.generate({
         model: 'googleai/imagen-4.0-fast-generate-001',
         prompt: prompt,
