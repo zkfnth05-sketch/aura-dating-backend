@@ -47,22 +47,18 @@ export default function HomePageClient() {
   const lastVisibleRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
   const hasMoreRef = useRef(true);
   const isLoadingMoreRef = useRef(false);
-  const [hasMoreState, setHasMoreState] = useState(true);
 
   const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
-    if (!user || myLikes === null || isLikesLoading) return;
+    if (!currentUser || peopleILiked === null || isLikesLoading) return;
     if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) {
       return;
     }
     
     isLoadingMoreRef.current = true;
-    if (isInitial) {
-      setIsRecommendedUsersLoading(true);
-    }
     
     try {
-        const likedIds = new Set(myLikes.map(l => l.likeeId));
-        likedIds.add(user.id);
+        const likedIds = new Set(peopleILiked.map(u => u.id));
+        likedIds.add(currentUser.id);
 
         let baseQuery = collection(firestore, 'users');
         let constraints = [
@@ -101,11 +97,11 @@ export default function HomePageClient() {
         console.error("Error fetching more recommended users:", e);
     } finally {
         isLoadingMoreRef.current = false;
-        if (isInitial) {
+        if(isInitial) {
             setIsRecommendedUsersLoading(false);
         }
     }
-  }, [user, myLikes, isLikesLoading, filters, firestore]);
+  }, [currentUser, peopleILiked, isLikesLoading, filters, firestore]);
 
   const initializeRecommendations = useCallback(() => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
@@ -115,7 +111,7 @@ export default function HomePageClient() {
     setCurrentIndex(0);
     lastVisibleRef.current = null;
     hasMoreRef.current = true;
-    setHasMoreState(true);
+    
     fetchNextRecommendedUsers(true);
   }, [isLoaded, currentUser, peopleILiked, fetchNextRecommendedUsers]);
 
@@ -127,11 +123,11 @@ export default function HomePageClient() {
       if (prevFiltersRef.current !== currentFilters) {
         prevFiltersRef.current = currentFilters;
         initializeRecommendations();
-      } else if (recommendedUsers.length === 0 && hasMoreState && !isLoadingMoreRef.current) {
+      } else if (recommendedUsers.length === 0 && hasMoreRef.current && !isLoadingMoreRef.current) {
         initializeRecommendations();
       }
     }
-  }, [isLoaded, currentUser, peopleILiked, filters, initializeRecommendations, recommendedUsers.length, hasMoreState]);
+  }, [isLoaded, currentUser, peopleILiked, filters, initializeRecommendations, recommendedUsers.length]);
 
   useEffect(() => {
     if (!isRecommendedUsersLoading && hasMoreRef.current && recommendedUsers.length - currentIndex <= PREFETCH_THRESHOLD) {
@@ -255,7 +251,7 @@ export default function HomePageClient() {
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden touch-none">
       <Header />
-      <main className="flex-1 relative flex items-center justify-center p-4">
+      <main className="relative flex-1 flex items-center justify-center p-4">
         <div className="relative w-full aspect-[3/4.5] max-w-[400px]">
           {visibleCards.length > 0 ? (
             visibleCards.map((u, index) => {
@@ -289,6 +285,11 @@ export default function HomePageClient() {
                 <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
             </div>
           )}
+           {isRecommendedUsersLoading && visibleCards.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <CardSkeleton />
+                </div>
+            )}
         </div>
       </main>
 
