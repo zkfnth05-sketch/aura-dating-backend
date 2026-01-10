@@ -3,8 +3,7 @@
 /**
  * @fileOverview AI-powered date course recommendation flow.
  *
- * - recommendDateCourse - A function that takes user preferences and returns a recommended date course.
- * - streamDateCourse - A function that streams the date course recommendation.
+ * - recommendDateCourse - A function that takes user preferences and returns a recommended date course with images.
  * - DateCourseInput - The input type for the recommendDateCourse function.
  * - DateCourseOutput - The return type for the recommendDateCourse function.
  */
@@ -53,36 +52,6 @@ function getSeason(dateString: string): string {
     return 'winter';
 }
 
-export const streamDateCourse = ai.defineFlow(
-  {
-    name: 'streamDateCourse',
-    inputSchema: DateCourseInputSchema,
-  },
-  async function* (input) {
-    const { stream } = await ai.generateStream({
-        model: googleAI.model('gemini-2.5-flash'),
-        prompt: `Based on the user's preferences, create a perfect and detailed date course in Korean, formatted as Markdown.
-User Preferences:
-- Destination/Atmosphere: ${input.destination}
-- People: ${input.partySize}
-- Duration: ${input.duration}
-- Date: ${input.date}
-- Transportation: ${input.transportation}
-- Budget: ${input.cost}
-- Vibe: ${input.dateType}
-The Markdown should include a main title, several steps with time/title/description/directions/cost/tip, a total cost summary, and a final message.`,
-        retries: 3,
-    });
-    
-    for await (const chunk of stream) {
-        if (chunk.text) {
-          yield chunk.text;
-        }
-    }
-  }
-);
-
-// This function is kept for potential non-streaming use or for image generation logic, but the streaming flow is now the primary way.
 const dateCourseTextFlow = ai.defineFlow(
   {
     name: 'dateCourseTextFlow',
@@ -153,4 +122,3 @@ export async function recommendDateCourse(input: DateCourseInput): Promise<DateC
         steps: stepsWithImages,
     };
 }
-
