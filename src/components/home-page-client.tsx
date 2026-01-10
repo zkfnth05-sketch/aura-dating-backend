@@ -110,7 +110,7 @@ export default function HomePageClient() {
             setIsRecommendedUsersLoading(false);
         }
     }
-  }, [currentUser, firestore, peopleILiked, JSON.stringify(filters)]);
+  }, [currentUser, firestore, peopleILiked, filters]);
 
   const initializeRecommendations = useCallback(() => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
@@ -249,9 +249,11 @@ export default function HomePageClient() {
 
   if (isReallyLoading) {
     return (
-      <div className="flex flex-col h-screen bg-background items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground animate-pulse">최적의 인연을 찾는 중...</p>
+      <div className="flex flex-col h-screen bg-background">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </main>
       </div>
     );
   }

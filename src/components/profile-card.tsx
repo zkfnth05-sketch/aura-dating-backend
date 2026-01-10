@@ -48,7 +48,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
         draggable={false}
       >
         {potentialMatch.photoUrls && potentialMatch.photoUrls.length > 0 ? (
-          <div className="relative w-full h-[75%] bg-muted">
+          <div className="relative w-full h-full bg-muted">
             <Image
                 src={potentialMatch.photoUrls[0]}
                 alt={`Profile of ${potentialMatch.name}`}
