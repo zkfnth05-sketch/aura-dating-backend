@@ -278,12 +278,14 @@ export default function HomePageClient() {
           {visibleCards.length > 0 ? (
             visibleCards.map((user, index) => {
               const isTop = index === 0;
+              
               return (
                 <ProfileCard
                   key={user.id}
                   currentUser={currentUser!}
                   potentialMatch={user}
                   isActive={isTop}
+                  zIndex={isTop ? 50 : 25}
                   swipeState={isTop ? swipeState : null}
                   depth={index}
                 />

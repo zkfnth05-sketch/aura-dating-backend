@@ -12,33 +12,30 @@ type ProfileCardProps = {
   potentialMatch: User;
   isActive: boolean;
   swipeState: 'left' | 'right' | null;
-  depth: number; // 추가: 0이면 맨 위, 1이면 다음 카드
+  depth: number;
+  zIndex: number;
 };
 
-const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, depth }: ProfileCardProps) => {
+const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, depth, zIndex }: ProfileCardProps) => {
   const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
   const cardStyle: React.CSSProperties = {
-    // 1. 애니메이션 효과: translate3d를 사용하여 GPU 가속 활용
     transform: `
       translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
       rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
       scale(${isActive ? 1 : 0.95})
     `,
-    // 2. 쌓임 순서: depth가 0(맨 위)일 때 가장 높은 z-index 부여
-    zIndex: depth === 0 ? 20 : 10,
-    // 3. 물리적 위치: 아래 카드는 15px 내려서 입체감 부여
+    zIndex: zIndex,
     top: depth === 0 ? 0 : '15px',
-    
     transformOrigin: 'bottom center',
     transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s',
-    opacity: depth === 0 ? 1 : 0.6, // 다음 카드는 투명도 조절
-    
+    opacity: depth === 0 ? 1 : 0.6,
     touchAction: 'none',
-    pointerEvents: isActive ? 'auto' : 'none', // 아래 카드가 터치를 가로채지 못하게 방지
+    pointerEvents: isActive ? 'auto' : 'none',
     userSelect: 'none',
-    WebkitUserSelect: 'none'
+    WebkitUserSelect: 'none',
+    willChange: 'transform, opacity',
   };
 
   const allTags = [
