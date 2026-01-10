@@ -144,7 +144,7 @@ export default function HomePageClient() {
 
 
   const visibleCards = useMemo(() => {
-    return recommendedUsers.slice(currentIndex, currentIndex + 2);
+    return recommendedUsers.slice(currentIndex, currentIndex + 2).reverse();
   }, [recommendedUsers, currentIndex]);
 
   const activeUser = recommendedUsers[currentIndex];
@@ -264,31 +264,16 @@ export default function HomePageClient() {
       <main className="relative flex-1 flex items-center justify-center p-4">
         <div className="relative w-full aspect-[3/4.5] max-w-[400px]">
           {visibleCards.length > 0 ? (
-            visibleCards.map((u, index) => {
-              const isTop = index === 0;
+            visibleCards.map((user, index) => {
+              const isTop = index === visibleCards.length - 1;
               return (
-                <div
-                    key={u.id}
-                    className={cn(
-                        "absolute inset-0 w-full h-full transition-transform duration-500",
-                         isTop ? "z-30" : "z-10"
-                    )}
-                    style={{
-                        transform: isTop 
-                          ? 'translate3d(0, 0, 0) scale(1)' 
-                          : 'translate3d(0, 15px, 0) scale(0.95)',
-                        opacity: isTop ? 1 : 0.4,
-                        pointerEvents: isTop ? 'auto' : 'none',
-                        visibility: 'visible',
-                    }}
-                >
-                    <ProfileCard
-                        currentUser={currentUser!}
-                        potentialMatch={u}
-                        isActive={isTop}
-                        swipeState={isTop ? swipeState : null}
-                    />
-                </div>
+                <ProfileCard
+                  key={user.id}
+                  currentUser={currentUser!}
+                  potentialMatch={user}
+                  isActive={isTop}
+                  swipeState={isTop ? swipeState : null}
+                />
               );
             })
           ) : (

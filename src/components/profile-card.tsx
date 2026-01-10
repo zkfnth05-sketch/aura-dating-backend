@@ -19,8 +19,16 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
   const cardStyle: React.CSSProperties = {
-    transform: `translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})`,
-    transition: 'transform 0.5s ease-in-out',
+    transform: `
+      translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
+      rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
+      scale(${isActive ? 1 : 0.95})
+    `,
+    transformOrigin: 'bottom center',
+    transition: 'transform 0.5s ease-out, opacity 0.5s',
+    opacity: isActive ? 1 : 0,
+    zIndex: isActive ? 10 : 0,
+    top: isActive ? 0 : '15px',
     touchAction: 'none',
     userSelect: 'none',
     WebkitUserSelect: 'none'
@@ -38,7 +46,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
   return (
     <div
       className={cn(
-        'absolute w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 bg-card border-none'
+        'absolute w-full h-full rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 bg-card border-none will-change-transform'
       )}
       style={cardStyle}
     >
@@ -47,8 +55,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
         className="block w-full h-full"
         draggable={false}
       >
-        {potentialMatch.photoUrls && potentialMatch.photoUrls.length > 0 ? (
-          <div className="relative w-full h-full bg-muted">
+        <div className="relative w-full h-full bg-muted">
             <Image
                 src={potentialMatch.photoUrls[0]}
                 alt={`Profile of ${potentialMatch.name}`}
@@ -59,12 +66,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
                 draggable={false}
                 sizes="(max-width: 768px) 100vw, 400px"
             />
-          </div>
-        ) : (
-          <div className="w-full h-full bg-secondary flex items-center justify-center">
-            <span className="text-muted-foreground">No image</span>
-          </div>
-        )}
+        </div>
         
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
             <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
