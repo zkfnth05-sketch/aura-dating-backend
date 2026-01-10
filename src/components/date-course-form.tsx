@@ -4,9 +4,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState } from 'react';
-import { Loader2, Bus, Car, Plane, Footprints } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Loader2, Bus, Car, Plane, Footprints, Image as ImageIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import Image from 'next/image';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,8 +21,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { streamDateCourse } from '@/app/actions/ai-actions';
-
+import { streamDateCourseAction, getDateCourse } from '@/app/actions/ai-actions';
+import type { DateCourseOutput } from '@/ai/flows/date-course-flow';
+import { Skeleton } from './ui/skeleton';
 
 const formSchema = z.object({
   destination: z.string().min(1, '여행지를 입력해주세요.'),
@@ -49,7 +51,8 @@ const transportationIcons = {
 
 export default function DateCourseForm() {
   const [streamedResult, setStreamedResult] = useState<string | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [fullResult, setFullResult] = useState<DateCourseOutput | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,16 +68,22 @@ export default function DateCourseForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsStreaming(true);
+    setIsLoading(true);
     setStreamedResult('');
+    setFullResult(null);
 
     try {
-        const stream = await streamDateCourse(values);
+        const stream = await streamDateCourseAction(values);
         let content = "";
         for await (const delta of stream) {
             content += delta;
             setStreamedResult(content);
         }
+
+        // Once streaming is done, fetch the full result with images
+        const fullData = await getDateCourse(values);
+        setFullResult(fullData);
+
     } catch (error) {
         toast({
             variant: 'destructive',
@@ -82,11 +91,18 @@ export default function DateCourseForm() {
             description: '데이트 코스를 생성하는 데 실패했습니다. 다시 시도해주세요.',
         });
     } finally {
-        setIsStreaming(false);
+        setIsLoading(false);
     }
   }
+  
+  const handleReset = () => {
+    setStreamedResult(null);
+    setFullResult(null);
+    setIsLoading(false);
+    form.reset();
+  }
 
-  if (isStreaming && streamedResult === '') {
+  if (isLoading && streamedResult === '') {
     return (
         <div className="mt-8 flex flex-col items-center justify-center text-center h-96">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -95,23 +111,83 @@ export default function DateCourseForm() {
     );
   }
 
-  if (streamedResult !== null) {
+  if (streamedResult !== null && !fullResult) {
     return (
       <div className="prose prose-sm dark:prose-invert max-w-none pt-4">
-        <ReactMarkdown>{streamedResult}</ReactMarkdown>
+        <ReactMarkdown
+          components={{
+            h3: ({node, ...props}) => {
+                const title = props.children?.toString() || '';
+                // Add a placeholder for the image after each step's title
+                return (
+                    <div>
+                        <h3 {...props} />
+                        <div className="not-prose my-4">
+                             <Skeleton className="w-full aspect-video rounded-lg flex items-center justify-center bg-muted/50">
+                                <div className="text-center text-muted-foreground">
+                                    <ImageIcon className="h-8 w-8 mx-auto mb-2" />
+                                    <p>이미지 생성 중...</p>
+                                </div>
+                            </Skeleton>
+                        </div>
+                    </div>
+                )
+            }
+          }}
+        >
+            {streamedResult}
+        </ReactMarkdown>
         
-        {isStreaming && (
+        {isLoading && (
             <div className="flex justify-center mt-4">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
         )}
 
-        {!isStreaming && (
-             <Button onClick={() => setStreamedResult(null)} className="w-full mt-8 h-12 text-base font-bold">
+        {!isLoading && (
+             <Button onClick={handleReset} className="w-full mt-8 h-12 text-base font-bold">
                 새로운 코스 추천받기
             </Button>
         )}
     </div>
+    );
+  }
+  
+  if (fullResult) {
+    return (
+        <div className="pt-4">
+            <h1 className="text-3xl font-bold mb-2">{fullResult.title}</h1>
+            
+            {fullResult.steps.map((step, index) => (
+                <div key={index} className="my-6">
+                    <h3 className="text-xl font-semibold text-primary">{step.time} - {step.title}</h3>
+                    
+                    {step.imageDataUri ? (
+                        <div className="relative w-full aspect-video rounded-lg overflow-hidden my-4">
+                            <Image src={step.imageDataUri} alt={step.title} fill className="object-cover" />
+                        </div>
+                    ) : (
+                        <div className="w-full aspect-video rounded-lg my-4 flex items-center justify-center bg-muted/50">
+                            <p className="text-muted-foreground text-sm">이미지 없음</p>
+                        </div>
+                    )}
+                    
+                    <p className="text-sm text-foreground/80 my-2">{step.description}</p>
+                    <p className="text-xs text-muted-foreground"><strong>이동:</strong> {step.directions}</p>
+                    <p className="text-xs text-muted-foreground"><strong>비용:</strong> {step.cost}</p>
+                    <p className="text-xs text-amber-400 mt-2"><strong>💖 Tip:</strong> {step.romanticTip}</p>
+                </div>
+            ))}
+            
+            <div className="mt-8 p-4 bg-card rounded-lg border">
+                <p className="font-bold">총 예상 비용: {fullResult.totalCost}</p>
+                <p className="text-sm mt-2">{fullResult.summaryAndMessage}</p>
+            </div>
+            
+            <Button onClick={handleReset} className="w-full mt-8 h-12 text-base font-bold">
+                새로운 코스 추천받기
+            </Button>
+        </div>
     );
   }
 
@@ -273,8 +349,8 @@ export default function DateCourseForm() {
             )}
           />
 
-          <Button type="submit" disabled={isStreaming} className="w-full h-12 text-base font-bold">
-            {isStreaming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isLoading} className="w-full h-12 text-base font-bold">
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             AI 데이트 코스 추천받기
           </Button>
         </form>

@@ -74,7 +74,6 @@ export async function getAIChatReplySuggestions(
 
 export { streamDateCourse };
 
-// This is now the primary action for the streaming UI.
 export async function streamDateCourseAction(input: DateCourseInput) {
     return streamDateCourse(input);
 }
