@@ -82,16 +82,17 @@ export default function CreateProfilePage() {
     };
     
     try {
-      await updateUser(userData);
+      // Non-blocking update. We navigate away immediately.
+      updateUser(userData);
       router.push('/signup/photo');
     } catch(error) {
-      console.error("Failed to update user:", error);
+      console.error("Failed to start user update:", error);
       toast({
         variant: "destructive",
         title: "오류",
         description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
       });
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Only re-enable if navigation fails
     }
   };
 

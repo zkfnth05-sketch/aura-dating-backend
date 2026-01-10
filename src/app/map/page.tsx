@@ -83,7 +83,7 @@ export default function MapPage() {
     if (isUserLoaded) {
       fetchInitialUsers();
     }
-  }, [currentUser?.id, isUserLoaded, currentUser, firestore, mapUsers]);
+  }, [currentUser?.id, isUserLoaded, firestore, currentUser, mapUsers]);
 
   if (!apiKey) {
     return (

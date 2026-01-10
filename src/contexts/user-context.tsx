@@ -228,11 +228,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchLikeUsers = async () => {
         if (!firestore) return;
-        if (isMyLikesLoading) return;
+        // Don't run if myLikes are still loading.
+        if (myLikes === null) return;
         
-        if (!myLikes) {
-            setPeopleILiked([]);
-        } else if (myLikes.length > 0) {
+        if (myLikes.length > 0) {
             const ids = myLikes.map(l => l.likeeId);
             const users = await fetchUsersByIds(firestore, ids);
             setPeopleILiked(users);
@@ -241,16 +240,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
     };
     fetchLikeUsers();
-  }, [myLikes, firestore, isMyLikesLoading]);
+  }, [myLikes, firestore]);
   
   useEffect(() => {
     const fetchLikedByUsers = async () => {
         if (!firestore) return;
-        if (isLikesToMeLoading) return;
+        if (likesToMe === null) return;
 
-        if (!likesToMe) {
-            setPeopleWhoLikedMe([]);
-        } else if (likesToMe.length > 0) {
+        if (likesToMe.length > 0) {
             const ids = likesToMe.map(l => l.likerId);
             const users = await fetchUsersByIds(firestore, ids);
             setPeopleWhoLikedMe(users);
@@ -259,7 +256,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
     };
     fetchLikedByUsers();
-  }, [likesToMe, firestore, isLikesToMeLoading]);
+  }, [likesToMe, firestore]);
 
   const totalUnreadCount = (matches || []).reduce((acc, match) => {
     if (user && user.id && match.unreadCounts) {
@@ -275,7 +272,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (newUserData.createdAt === "serverTimestamp") {
         dataToSave.createdAt = serverTimestamp();
     }
-    await setDocumentNonBlocking(userRef, dataToSave, { merge: true });
+    // Fire-and-forget: we don't wait for the write to complete to unblock UI
+    setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);
   
 

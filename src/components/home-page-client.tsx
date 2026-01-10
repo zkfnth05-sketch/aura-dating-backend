@@ -47,61 +47,73 @@ export default function HomePageClient() {
   const lastVisibleRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
   const hasMoreRef = useRef(true);
   const isLoadingMoreRef = useRef(false);
+  const prevFiltersRef = useRef(JSON.stringify(filters));
 
   const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
-    if (!currentUser || peopleILiked === null || isLikesLoading) return;
+    // Guard clause: ensure all necessary data is loaded before fetching.
+    if (isLikesLoading || !firestore || !currentUser || peopleILiked === null) return;
     if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) {
       return;
     }
     
     isLoadingMoreRef.current = true;
+    if (isInitial) {
+        setIsRecommendedUsersLoading(true);
+    }
     
     try {
-        const likedIds = new Set(peopleILiked.map(u => u.id));
-        likedIds.add(currentUser.id);
+        const interactedUserIds = new Set(peopleILiked.map(u => u.id));
+        interactedUserIds.add(currentUser.id);
 
-        let baseQuery = collection(firestore, 'users');
-        let constraints = [
-          limit(20)
-        ];
+        let constraints: any[] = [limit(20)];
     
         if (filters.gender.length > 0) {
           constraints.push(where('gender', 'in', filters.gender));
+        } else {
+            // Default gender filter if none is selected
+            const oppositeGender = currentUser.gender === '남성' ? ['여성'] : ['남성'];
+            constraints.push(where('gender', 'in', oppositeGender));
         }
     
         if (!isInitial && lastVisibleRef.current) {
           constraints.push(startAfter(lastVisibleRef.current));
         }
     
-        const snapshot = await getDocs(query(baseQuery, ...constraints));
+        const snapshot = await getDocs(query(collection(firestore, 'users'), ...constraints));
         
         if (snapshot.empty) {
           hasMoreRef.current = false;
-          return;
+        } else {
+            lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
         }
-    
-        lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
 
         const filtered = snapshot.docs
             .map(d => d.data() as User)
-            .filter(u => !likedIds.has(u.id));
+            .filter(u => {
+                if (interactedUserIds.has(u.id)) return false;
+                if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
+                // Other client-side filters can be added here if necessary
+                return true;
+            });
 
-        setRecommendedUsers(prev => {
-            if (isInitial) return filtered;
-            const existingIds = new Set(prev.map(u => u.id));
-            const uniqueNewUsers = filtered.filter(u => !existingIds.has(u.id));
-            return [...prev, ...uniqueNewUsers];
-        });
+        if (filtered.length > 0) {
+            setRecommendedUsers(prev => {
+                if (isInitial) return filtered;
+                const existingIds = new Set(prev.map(u => u.id));
+                const uniqueNewUsers = filtered.filter(u => !existingIds.has(u.id));
+                return [...prev, ...uniqueNewUsers];
+            });
+        }
         
     } catch (e) {
-        console.error("Error fetching more recommended users:", e);
+        console.error("Error fetching recommended users:", e);
     } finally {
         isLoadingMoreRef.current = false;
         if(isInitial) {
             setIsRecommendedUsersLoading(false);
         }
     }
-  }, [currentUser, peopleILiked, isLikesLoading, filters, firestore]);
+  }, [currentUser, firestore, peopleILiked, isLikesLoading, JSON.stringify(filters)]);
 
   const initializeRecommendations = useCallback(() => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
@@ -115,13 +127,11 @@ export default function HomePageClient() {
     fetchNextRecommendedUsers(true);
   }, [isLoaded, currentUser, peopleILiked, fetchNextRecommendedUsers]);
 
-  const prevFiltersRef = useRef(JSON.stringify(filters));
-
   useEffect(() => {
-    const currentFilters = JSON.stringify(filters);
+    const currentFiltersJSON = JSON.stringify(filters);
     if (isLoaded && currentUser && peopleILiked !== null) {
-      if (prevFiltersRef.current !== currentFilters) {
-        prevFiltersRef.current = currentFilters;
+      if (prevFiltersRef.current !== currentFiltersJSON) {
+        prevFiltersRef.current = currentFiltersJSON;
         initializeRecommendations();
       } else if (recommendedUsers.length === 0 && hasMoreRef.current && !isLoadingMoreRef.current) {
         initializeRecommendations();
@@ -237,6 +247,7 @@ export default function HomePageClient() {
   };
   
   const isLikedByMe = peopleILiked?.some(u => u.id === activeUser?.id);
+  
   const isReallyLoading = !isLoaded || isLikesLoading || (isRecommendedUsersLoading && recommendedUsers.length === 0);
 
   if (isReallyLoading) {
@@ -263,10 +274,10 @@ export default function HomePageClient() {
                         "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
                     )}
                     style={{
-                        pointerEvents: isTop ? 'auto' : 'none',
                         transform: `translate3d(0, ${isTop ? 0 : 15}px, 0) scale(${isTop ? 1 : 0.95})`,
                         opacity: isTop ? 1 : 0.6,
                         zIndex: visibleCards.length - index,
+                        pointerEvents: isTop ? 'auto' : 'none',
                     }}
                 >
                     <ProfileCard
@@ -285,7 +296,7 @@ export default function HomePageClient() {
                 <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
             </div>
           )}
-           {isRecommendedUsersLoading && visibleCards.length === 0 && (
+           {(isRecommendedUsersLoading && visibleCards.length === 0) && (
                 <div className="absolute inset-0 flex items-center justify-center">
                     <CardSkeleton />
                 </div>
