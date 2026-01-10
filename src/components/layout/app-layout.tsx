@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         "flex-1 flex flex-col min-h-0",
         showBottomNav && "pb-20"
       )}>
-        <main className="flex-1">
+        <main className="flex-1 flex flex-col">
             {children}
         </main>
       </div>

@@ -141,39 +141,37 @@ export default function MapClient({ users, currentUser, initialCenter }: MapClie
           ))}
         </div>
       </div>
-      <div className="absolute inset-0">
-        <Map
-          center={center}
-          zoom={zoom}
-          mapId={'dating-app-map-style'}
-          disableDefaultUI={true}
-          styles={mapStyles}
-          gestureHandling={'greedy'}
-          onCenterChanged={(e) => setCenter(e.detail.center)}
-        >
-          {users.map((user) => (
-            <AdvancedMarker
-              key={user.id}
-              position={{ lat: user.lat, lng: user.lng }}
-              onClick={() => handleMarkerClick(user.id)}
+      <Map
+        center={center}
+        zoom={zoom}
+        mapId={'dating-app-map-style'}
+        disableDefaultUI={true}
+        styles={mapStyles}
+        gestureHandling={'greedy'}
+        onCenterChanged={(e) => setCenter(e.detail.center)}
+      >
+        {users.map((user) => (
+          <AdvancedMarker
+            key={user.id}
+            position={{ lat: user.lat, lng: user.lng }}
+            onClick={() => handleMarkerClick(user.id)}
+          >
+            <div 
+              className={cn(
+                  "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
+                  user.id === currentUser.id ? "border-primary" : "border-transparent"
+              )}
             >
-              <div 
-                className={cn(
-                    "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
-                    user.id === currentUser.id ? "border-primary" : "border-transparent"
-                )}
-              >
-                <Image
-                  src={user.photoUrls[0]}
-                  alt={user.name}
-                  fill
-                  className="object-cover rounded-full"
-                />
-              </div>
-            </AdvancedMarker>
-          ))}
-        </Map>
-      </div>
+              <Image
+                src={user.photoUrls[0]}
+                alt={user.name}
+                fill
+                className="object-cover rounded-full"
+              />
+            </div>
+          </AdvancedMarker>
+        ))}
+      </Map>
     </div>
   );
 }
