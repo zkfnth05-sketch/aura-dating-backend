@@ -86,7 +86,7 @@ export default function DateCourseForm() {
     }
   }
 
-  if (isStreaming && !streamedResult) {
+  if (isStreaming && streamedResult === '') {
     return (
         <div className="mt-8 flex flex-col items-center justify-center text-center h-96">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

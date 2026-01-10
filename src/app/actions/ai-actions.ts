@@ -74,8 +74,7 @@ export async function getAIChatReplySuggestions(
 
 export { streamDateCourse };
 
-// Keep this for compatibility in case older parts of the code still call it,
-// though they should be updated to use the direct export of streamDateCourse.
+// This is now the primary action for the streaming UI.
 export async function streamDateCourseAction(input: DateCourseInput) {
     return streamDateCourse(input);
 }

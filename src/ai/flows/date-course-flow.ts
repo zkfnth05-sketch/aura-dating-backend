@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { streamFlow } from '@genkit-ai/next/server';
 
 const DateCourseInputSchema = z.object({
   destination: z.string().describe('The desired travel destination or atmosphere.'),
@@ -53,9 +52,11 @@ function getSeason(dateString: string): string {
     return 'winter';
 }
 
-export const streamDateCourse = streamFlow({
+export const streamDateCourse = ai.defineFlow(
+  {
     name: 'streamDateCourse',
     inputSchema: DateCourseInputSchema,
+    outputSchema: z.string(),
   },
   async function* (input) {
     const { stream } = await ai.generateStream({
@@ -97,11 +98,12 @@ Generate the entire course now based on the user's preferences.`,
     });
     
     for await (const chunk of stream) {
-        yield chunk.text;
+        if (chunk.text) {
+          yield chunk.text;
+        }
     }
   }
 );
-
 
 // This function is kept for potential non-streaming use or for image generation logic, but the streaming flow is now the primary way.
 const dateCourseTextFlow = ai.defineFlow(
