@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow for enhancing user profile photos.
@@ -83,6 +84,7 @@ const enhancePhotoFlow = ai.defineFlow(
               },
             ],
         },
+        retries: 3,
     });
 
     if (!media || !media.url) {

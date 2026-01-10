@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -166,12 +167,13 @@ export default function ProfileEditForm() {
   };
 
   const processAndAddImage = async (dataUri: string) => {
-    setTempPhotoUri(dataUri);
+    const compressedForUpload = await compressImage(dataUri);
+    setTempPhotoUri(compressedForUpload);
 
     if (aiEnhancement) {
       setIsEnhancing(true);
       try {
-        const result = await getEnhancedPhoto({ photoDataUri: dataUri, gender: profile.gender });
+        const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: profile.gender });
         const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
         await updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
       } catch (error) {
@@ -181,15 +183,13 @@ export default function ProfileEditForm() {
           title: "AI 보정 실패",
           description: "사진 보정에 실패했습니다. 원본 사진이 대신 사용됩니다.",
         });
-        const originalCompressedUri = await compressImage(dataUri);
-        await updateUser({ photoUrls: [...photoUrls, originalCompressedUri] });
+        await updateUser({ photoUrls: [...photoUrls, compressedForUpload] });
       } finally {
         setIsEnhancing(false);
         setTempPhotoUri(null);
       }
     } else {
-        const compressedUri = await compressImage(dataUri);
-        await updateUser({ photoUrls: [...photoUrls, compressedUri] });
+        await updateUser({ photoUrls: [...photoUrls, compressedForUpload] });
         setTempPhotoUri(null);
     }
   };
