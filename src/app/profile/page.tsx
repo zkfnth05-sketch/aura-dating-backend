@@ -59,9 +59,9 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="flex flex-col min-h-screen bg-background text-foreground">
+      <div className="bg-background text-foreground">
         <Header />
-        <main className="flex-1">
+        <main>
           <div className="relative w-full aspect-[3/4] max-h-[70vh] cursor-pointer" onClick={() => handleImageClick(0)}>
             {allPhotos[0] && (
               <Image

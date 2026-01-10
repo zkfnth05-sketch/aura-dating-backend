@@ -7,6 +7,7 @@ import { IncomingCallToast } from '@/components/incoming-call-toast';
 import { NewLikeToast } from '@/components/new-like-toast';
 import { NewMatchToast } from '@/components/new-match-toast';
 import { NewMessageToast } from '@/components/new-message-toast';
+import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -24,18 +25,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col h-full">
-      {/* 
-        The main content area now uses flex-1 to take up all available space, 
-        allowing child pages like the map to fill the screen correctly.
-      */}
-      <main className="flex-1 flex flex-col relative">
+      <main className={cn(
+        "flex-1 overflow-y-auto",
+        showBottomNav && "pb-20"
+      )}>
           {children}
       </main>
       
-      {/* 
-        The bottom nav is a sibling to the main content area, not inside it.
-        It is fixed to the bottom and will not interfere with the main content's layout.
-      */}
       {showBottomNav && <BottomNav />}
       
       {/* Toasts are UI overlays and can remain here */}
