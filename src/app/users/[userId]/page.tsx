@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
@@ -97,7 +97,7 @@ function UserProfilePageContent() {
   const source = searchParams.get('from');
   const firestore = useFirestore();
 
-  const { user: currentUser, isLoaded } = useUser();
+  const { user: currentUser, isLoaded, matches, peopleILiked } = useUser();
   
   const userRef = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
@@ -109,13 +109,29 @@ function UserProfilePageContent() {
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
+  const isAlreadyMatched = useMemo(() => {
+    if (!matches || !user) return null;
+    return matches.find(m => m.users.includes(user.id)) || null;
+  }, [matches, user]);
+
+  const hasLiked = useMemo(() => {
+    if (!peopleILiked || !user) return false;
+    return peopleILiked.some(u => u.id === user.id);
+  }, [peopleILiked, user]);
+
+
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!user || !currentUser || !firestore) return;
 
     const targetUserId = user.id;
 
     if (action === 'message') {
-      // More efficient query using 'in' to check for both user ID permutations
+      if (isAlreadyMatched) {
+        router.push(`/chat/${isAlreadyMatched.id}`);
+        return;
+      }
+
+      // Fallback query if isAlreadyMatched is not yet available or stale
       const matchQuery = query(
         collection(firestore, 'matches'),
         where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
@@ -350,6 +366,7 @@ function UserProfilePageContent() {
                     onDislike={() => handleAction('dislike')}
                     onMessage={() => handleAction('message')}
                     onLike={() => handleAction('like')}
+                    isLiked={hasLiked}
                 />
             </div>
         </footer>

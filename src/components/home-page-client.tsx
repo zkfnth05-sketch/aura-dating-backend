@@ -31,6 +31,7 @@ export default function HomePageClient() {
   const { 
     user: currentUser, 
     isLoaded,
+    matches,
     peopleILiked,
     isLikesLoading,
     filters,
@@ -149,12 +150,23 @@ export default function HomePageClient() {
 
   const activeUser = recommendedUsers[currentIndex];
 
+  const isAlreadyMatched = useMemo(() => {
+    if (!matches || !activeUser) return null;
+    return matches.find(m => m.users.includes(activeUser.id)) || null;
+  }, [matches, activeUser]);
+
+
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || !activeUser || !firestore || swipeState) return;
   
     const targetUserId = activeUser.id;
   
     if (action === 'message') {
+      if (isAlreadyMatched) {
+        router.push(`/chat/${isAlreadyMatched.id}`);
+        return;
+      }
+      
       const matchQuery = query(
         collection(firestore, 'matches'),
         where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
