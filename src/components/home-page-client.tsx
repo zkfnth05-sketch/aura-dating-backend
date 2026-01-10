@@ -130,7 +130,7 @@ export default function HomePageClient() {
         isLoadingMoreRef.current = false;
     }
     return newUsers;
-  }, [currentUser, firestore, filters, peopleILiked, recommendedUsers]);
+  }, [currentUser, firestore, JSON.stringify(filters), peopleILiked, recommendedUsers]);
 
   const initializeRecommendations = useCallback(async () => {
     if (!isLoaded || !currentUser || peopleILiked === null) return;
@@ -149,7 +149,7 @@ export default function HomePageClient() {
 
   useEffect(() => {
     initializeRecommendations();
-  }, [JSON.stringify(filters), initializeRecommendations]);
+  }, [initializeRecommendations]);
 
   useEffect(() => {
     if (!isRecommendedUsersLoading && hasMoreRef.current && recommendedUsers.length - currentIndex <= PREFETCH_THRESHOLD) {
