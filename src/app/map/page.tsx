@@ -49,47 +49,41 @@ export default function MapPage() {
   useEffect(() => {
     const fetchInitialUsers = async () => {
       if (!currentUser || !firestore) return;
-      setIsFetchingUsers(true);
+      
+      // 이미 데이터가 충분히 있다면 스킵 (캐싱 효과)
+      if (mapUsers.length > 0 && mapUsers.some(u => u.id === currentUser.id)) {
+        setIsFetchingUsers(false);
+        return;
+      }
+  
       try {
-        let genderFilter: string[];
-        if (currentUser.gender === '남성') {
-          genderFilter = ['여성'];
-        } else if (currentUser.gender === '여성') {
-          genderFilter = ['남성'];
-        } else {
-          genderFilter = ['남성', '여성', '기타'];
-        }
-
+        let genderFilter = currentUser.gender === '남성' ? ['여성'] : 
+                           currentUser.gender === '여성' ? ['남성'] : ['남성', '여성', '기타'];
+  
         const usersQuery = query(
           collection(firestore, 'users'),
           where('gender', 'in', genderFilter),
-          limit(50) // Fetch more users for better map coverage
+          limit(30) // 50개는 모바일에서 다소 무거울 수 있으므로 30개로 조정
         );
+        
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
         
-        // Ensure current user is always in the list for their marker
-        const allUsers = [currentUser, ...fetchedUsers.filter(u => u.id !== currentUser.id)];
-        const uniqueUsers = Array.from(new Map(allUsers.map(u => [u.id, u])).values());
-        setMapUsers(uniqueUsers);
-
+        // 중복 제거 및 내 정보 포함 로직 최적화
+        const otherUsers = fetchedUsers.filter(u => u.id !== currentUser.id);
+        setMapUsers([currentUser, ...otherUsers]);
+  
       } catch (error) {
-        console.error("Error fetching initial map users:", error);
+        console.error("Error:", error);
       } finally {
         setIsFetchingUsers(false);
       }
     };
-
-    if (isUserLoaded && currentUser) {
+  
+    if (isUserLoaded) {
       fetchInitialUsers();
-    } else if (!isUserLoaded) {
-      // Don't fetch if user is not loaded yet
-      setIsFetchingUsers(true);
-    } else {
-      // Handle case where there's no current user
-      setIsFetchingUsers(false);
     }
-  }, [currentUser, firestore, isUserLoaded]);
+  }, [currentUser?.id, isUserLoaded, currentUser, firestore, mapUsers]);
 
   if (!apiKey) {
     return (
