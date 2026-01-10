@@ -50,7 +50,6 @@ export default function HomePageClient() {
   const prevFiltersRef = useRef(JSON.stringify(filters));
 
   const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
-    // Guard clause: ensure all necessary data is loaded before fetching.
     if (isLikesLoading || !firestore || !currentUser || peopleILiked === null) return;
     if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) {
       return;
@@ -70,7 +69,6 @@ export default function HomePageClient() {
         if (filters.gender.length > 0) {
           constraints.push(where('gender', 'in', filters.gender));
         } else {
-            // Default gender filter if none is selected
             const oppositeGender = currentUser.gender === '남성' ? ['여성'] : ['남성'];
             constraints.push(where('gender', 'in', oppositeGender));
         }
@@ -92,7 +90,6 @@ export default function HomePageClient() {
             .filter(u => {
                 if (interactedUserIds.has(u.id)) return false;
                 if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
-                // Other client-side filters can be added here if necessary
                 return true;
             });
 
@@ -271,13 +268,16 @@ export default function HomePageClient() {
                 <div
                     key={u.id}
                     className={cn(
-                        "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
+                        "absolute inset-0 w-full h-full transition-transform duration-500",
+                         isTop ? "z-30" : "z-10"
                     )}
                     style={{
-                        transform: `translate3d(0, ${isTop ? 0 : 15}px, 0) scale(${isTop ? 1 : 0.95})`,
-                        opacity: isTop ? 1 : 0.6,
-                        zIndex: visibleCards.length - index,
+                        transform: isTop 
+                          ? 'translate3d(0, 0, 0) scale(1)' 
+                          : 'translate3d(0, 15px, 0) scale(0.95)',
+                        opacity: isTop ? 1 : 0.4,
                         pointerEvents: isTop ? 'auto' : 'none',
+                        visibility: 'visible',
                     }}
                 >
                     <ProfileCard
