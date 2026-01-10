@@ -51,10 +51,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
       
       {/* Toasts */}
-      <IncomingCallToast />
-      <NewLikeToast />
-      <NewMatchToast />
-      <NewMessageToast />
+      <div className="absolute top-0 left-0 right-0 z-50">
+        <IncomingCallToast />
+        <NewLikeToast />
+        <NewMatchToast />
+        <NewMessageToast />
+      </div>
     </div>
   );
 }
