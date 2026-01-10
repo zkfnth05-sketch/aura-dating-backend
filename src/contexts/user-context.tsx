@@ -59,13 +59,6 @@ interface UserContextType {
   peopleILiked: User[] | null;
   peopleWhoLikedMe: User[] | null;
   isLikesLoading: boolean;
-  
-  // Home Page Client State
-  recommendedUsers: User[];
-  isRecommendedUsersLoading: boolean;
-  fetchNextRecommendedUsers: () => void;
-  hasMoreRecommendedUsers: boolean;
-  initializeRecommendations: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -88,8 +81,6 @@ const initialFilters: FilterSettings = {
   hobbies: [],
   interests: [],
 }
-
-const FETCH_LIMIT = 20;
 
 async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
   if (userIds.length === 0) return [];
@@ -128,15 +119,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [peopleILiked, setPeopleILiked] = useState<User[] | null>(null);
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[] | null>(null);
   
-  // --- Recommendation States ---
-  const [recommendedUsers, setRecommendedUsers] = useState<User[]>([]);
-  const [isRecommendedUsersLoading, setIsRecommendedUsersLoading] = useState(true);
-  
-  // Refs for Pagination Stability (Prevents Infinite Loops)
-  const lastVisibleRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const hasMoreRef = useRef(true);
-  const isLoadingMoreRef = useRef(false);
-  const [hasMoreState, setHasMoreState] = useState(true); // For UI consumption
   const isLoaded = !isAuthLoading && !isUserDocLoading;
 
   // User Document Fetching
@@ -247,119 +229,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const fetchLikeUsers = async () => {
         if (!firestore || isLikesLoading) return;
         
-        if (!myLikes) setPeopleILiked([]);
-        if (!likesToMe) setPeopleWhoLikedMe([]);
-
-        if (myLikes && myLikes.length > 0) {
-            const ids = myLikes.filter(l => l.isLike).map(l => l.likeeId);
+        if (!myLikes) {
+            setPeopleILiked([]);
+        } else if (myLikes.length > 0) {
+            const ids = myLikes.map(l => l.likeeId);
             const users = await fetchUsersByIds(firestore, ids);
             setPeopleILiked(users);
         }
-        if (likesToMe && likesToMe.length > 0) {
-            const ids = likesToMe.filter(l => l.isLike).map(l => l.likerId);
+
+        if (!likesToMe) {
+            setPeopleWhoLikedMe([]);
+        } else if (likesToMe.length > 0) {
+            const ids = likesToMe.map(l => l.likerId);
             const users = await fetchUsersByIds(firestore, ids);
             setPeopleWhoLikedMe(users);
         }
     };
     fetchLikeUsers();
   }, [myLikes, likesToMe, firestore, isLikesLoading]);
-
-  const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
-    if (((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) || !user || !firestore || !myLikes) {
-        return;
-    }
-    
-    isLoadingMoreRef.current = true;
-    if (isInitial) {
-        setIsRecommendedUsersLoading(true);
-    }
-
-    try {
-        let baseQuery = collection(firestore, 'users');
-        let constraints = [
-            limit(20) 
-        ];
-
-        let targetGenders = filters.gender;
-        if (targetGenders.length === 0 && user) {
-            targetGenders = user.gender === '남성' ? ['여성'] : (user.gender === '여성' ? ['남성'] : []);
-        }
-
-        if (targetGenders.length > 0) {
-            constraints.push(where('gender', 'in', targetGenders));
-        }
-
-        if (!isInitial && lastVisibleRef.current) {
-            constraints.push(startAfter(lastVisibleRef.current));
-        }
-
-        const snapshot = await getDocs(query(baseQuery, ...constraints));
-
-        if (snapshot.empty) {
-            hasMoreRef.current = false;
-            setHasMoreState(false);
-            if (isInitial) setRecommendedUsers([]);
-            return;
-        }
-
-        lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
-
-        const myId = user.id;
-        const likedIds = new Set(myLikes.map(l => l.likeeId));
-
-        const filtered = snapshot.docs
-            .map(d => d.data() as User)
-            .filter(u => {
-                if (u.id === myId || likedIds.has(u.id)) return false;
-                
-                const { ageRange, relationship, values, communication, lifestyle, hobbies, interests } = filters;
-                if (u.age < ageRange.min || u.age > ageRange.max) return false;
-
-                const checkTags = (userTags: string[] = [], filterTags: string[]) => 
-                    filterTags.length === 0 || filterTags.every(tag => userTags.includes(tag));
-                
-                return (
-                    checkTags(u.relationship, relationship) &&
-                    checkTags(u.values, values) &&
-                    checkTags(u.communication, communication) &&
-                    checkTags(u.lifestyle, lifestyle) &&
-                    checkTags(u.hobbies, hobbies) &&
-                    checkTags(u.interests, interests)
-                );
-            });
-
-        setRecommendedUsers(prev => isInitial ? filtered : [...prev, ...filtered.filter(u => !prev.some(p => p.id === u.id))]);
-
-    } catch (e) {
-        console.error("Error fetching recommended users:", e);
-    } finally {
-        isLoadingMoreRef.current = false;
-        setIsRecommendedUsersLoading(false);
-    }
-  }, [user, firestore, myLikes, filters]);
-
-
-  const initializeRecommendations = useCallback(() => {
-    if (isLikesLoading || !firestore || !user || !myLikes) return;
-    
-    lastVisibleRef.current = null;
-    hasMoreRef.current = true;
-    setHasMoreState(true);
-    fetchNextRecommendedUsers(true);
-  }, [isLikesLoading, firestore, user, myLikes, fetchNextRecommendedUsers]);
-
-  const prevFiltersRef = useRef(JSON.stringify(filters));
-  useEffect(() => {
-    if (isLoaded) {
-      const currentFilters = JSON.stringify(filters);
-      if (prevFiltersRef.current !== currentFilters) {
-        prevFiltersRef.current = currentFilters;
-        initializeRecommendations();
-      } else if (recommendedUsers.length === 0 && hasMoreRef.current && !isLoadingMoreRef.current) {
-        initializeRecommendations();
-      }
-    }
-  }, [isLoaded, user, myLikes, filters, initializeRecommendations, recommendedUsers.length]);
 
   const totalUnreadCount = (matches || []).reduce((acc, match) => {
     if (user && user.id && match.unreadCounts) {
@@ -375,7 +262,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (newUserData.createdAt === "serverTimestamp") {
         dataToSave.createdAt = serverTimestamp();
     }
-    await setDoc(userRef, dataToSave, { merge: true });
+    // Use non-blocking update for better UX during signup
+    if (newUserData.createdAt === "serverTimestamp") {
+      setDocumentNonBlocking(userRef, dataToSave, { merge: true });
+      return;
+    }
+    await setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);
   
 
@@ -479,12 +371,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     totalUnreadCount, phoneAuth: { phoneNumber, setPhoneNumber, confirmationResult, recaptchaVerifier, setupRecaptcha, sendVerificationCode, verifyOtp, reauthenticate, isSendingOtp, isVerifyingOtp },
     isSignupFlowActive, setIsSignupFlowActive,
     matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading,
-    
-    recommendedUsers,
-    isRecommendedUsersLoading,
-    fetchNextRecommendedUsers,
-    hasMoreRecommendedUsers: hasMoreState,
-    initializeRecommendations,
   };
 
   return (

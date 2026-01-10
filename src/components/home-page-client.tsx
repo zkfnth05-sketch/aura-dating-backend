@@ -1,60 +1,166 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
 import { useUser } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, addDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, addDoc, query, where, getDocs, limit, orderBy, startAfter, DocumentData, QueryDocumentSnapshot, Query } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import type { User } from '@/lib/types';
+import { Skeleton } from './ui/skeleton';
+
 
 const PREFETCH_THRESHOLD = 5;
+const FETCH_LIMIT = 10;
+
+const CardSkeleton = () => (
+    <div className="absolute inset-0 w-full h-full">
+        <Skeleton className="w-full h-full rounded-2xl" />
+    </div>
+);
+
 
 export default function HomePageClient() {
   const { 
     user: currentUser, 
     isLoaded,
     peopleILiked,
-    recommendedUsers,
-    isRecommendedUsersLoading,
-    fetchNextRecommendedUsers,
-    hasMoreRecommendedUsers,
-    initializeRecommendations,
+    filters,
   } = useUser();
   
   const router = useRouter();
   const firestore = useFirestore();
 
+  const [recommendedUsers, setRecommendedUsers] = useState<User[]>([]);
+  const [isRecommendedUsersLoading, setIsRecommendedUsersLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
 
-  // 리스트가 바뀌거나 현재 인덱스가 리스트 길이를 넘어서면 보정
-  useEffect(() => {
-    if (currentIndex >= recommendedUsers.length && recommendedUsers.length > 0) {
-      setCurrentIndex(recommendedUsers.length - 1);
-    } else if (recommendedUsers.length === 0) {
-      setCurrentIndex(0);
-    }
-  }, [recommendedUsers, currentIndex]);
-  
+  const lastVisibleRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const hasMoreRef = useRef(true);
+  const isLoadingMoreRef = useRef(false);
 
-  // Prefetching Logic
-  useEffect(() => {
-    if (!isRecommendedUsersLoading && hasMoreRecommendedUsers && recommendedUsers.length > 0) {
-        const remainingCards = recommendedUsers.length - currentIndex;
-        if (remainingCards <= PREFETCH_THRESHOLD) {
-             fetchNextRecommendedUsers();
+  const fetchNextRecommendedUsers = useCallback(async () => {
+    if (isLoadingMoreRef.current || !hasMoreRef.current || !currentUser || !firestore || peopleILiked === null) {
+        return [];
+    }
+    
+    isLoadingMoreRef.current = true;
+    let newUsers: User[] = [];
+
+    try {
+        const interactedUserIds = new Set(peopleILiked.map(l => l.id));
+        interactedUserIds.add(currentUser.id);
+        
+        let lastDocForNextBatch = lastVisibleRef.current;
+        let keepFetching = true;
+        let loopCount = 0;
+
+        let targetGenders: string[] = filters.gender;
+        if (targetGenders.length === 0) {
+            targetGenders = currentUser.gender === '남성' ? ['여성'] : (currentUser.gender === '여성' ? ['남성'] : []);
         }
-    }
-  }, [currentIndex, recommendedUsers.length, hasMoreRecommendedUsers, isRecommendedUsersLoading, fetchNextRecommendedUsers]);
+        
+        while (newUsers.length < FETCH_LIMIT && keepFetching && loopCount < 5) {
+            loopCount++;
+            
+            let baseQuery: Query<DocumentData> = collection(firestore, 'users');
+            let constraints: any[] = [
+                limit(FETCH_LIMIT * 2) 
+            ];
 
-  // 현재 화면에 보여줄 "진짜" 카드 2장만 추출
+            if (targetGenders.length > 0) {
+                constraints.push(where('gender', 'in', targetGenders));
+            }
+
+            if (lastDocForNextBatch) {
+                constraints.push(startAfter(lastDocForNextBatch));
+            }
+
+            const usersQuery = query(baseQuery, ...constraints);
+            const snapshot = await getDocs(usersQuery);
+
+            if (snapshot.empty) {
+                hasMoreRef.current = false;
+                keepFetching = false;
+                break;
+            }
+            
+            lastDocForNextBatch = snapshot.docs[snapshot.docs.length - 1];
+            
+            const potentialUsers = snapshot.docs
+                .map(doc => doc.data() as User)
+                .filter(u => {
+                    if (interactedUserIds.has(u.id)) return false;
+                    
+                    const existingIds = new Set([...recommendedUsers, ...newUsers].map(ru => ru.id));
+                    if (existingIds.has(u.id)) return false;
+
+                    const { ageRange, relationship, values, communication, lifestyle, hobbies, interests } = filters;
+                    if (u.age < ageRange.min || u.age > ageRange.max) return false;
+
+                    const checkTags = (userTags: string[] = [], filterTags: string[]) => 
+                        filterTags.length === 0 || filterTags.every(tag => userTags.includes(tag));
+                    
+                    return (
+                        checkTags(u.relationship, relationship) &&
+                        checkTags(u.values, values) &&
+                        checkTags(u.communication, communication) &&
+                        checkTags(u.lifestyle, lifestyle) &&
+                        checkTags(u.hobbies, hobbies) &&
+                        checkTags(u.interests, interests)
+                    );
+                });
+            
+            newUsers = [...newUsers, ...potentialUsers];
+        }
+
+        lastVisibleRef.current = lastDocForNextBatch;
+        
+    } catch (e) {
+        console.error("Error fetching more recommended users:", e);
+    } finally {
+        isLoadingMoreRef.current = false;
+    }
+    return newUsers;
+  }, [currentUser, firestore, filters, peopleILiked, recommendedUsers]);
+
+  const initializeRecommendations = useCallback(async () => {
+    if (!isLoaded || !currentUser || peopleILiked === null) return;
+
+    setIsRecommendedUsersLoading(true);
+    setRecommendedUsers([]);
+    setCurrentIndex(0);
+    lastVisibleRef.current = null;
+    hasMoreRef.current = true;
+    isLoadingMoreRef.current = false;
+    
+    const initialUsers = await fetchNextRecommendedUsers();
+    setRecommendedUsers(initialUsers);
+    setIsRecommendedUsersLoading(false);
+  }, [isLoaded, currentUser, peopleILiked, fetchNextRecommendedUsers]);
+
+  useEffect(() => {
+    initializeRecommendations();
+  }, [JSON.stringify(filters), initializeRecommendations]);
+
+  useEffect(() => {
+    if (!isRecommendedUsersLoading && hasMoreRef.current && recommendedUsers.length - currentIndex <= PREFETCH_THRESHOLD) {
+      fetchNextRecommendedUsers().then(newUsers => {
+          if (newUsers.length > 0) {
+            setRecommendedUsers(prev => [...prev, ...newUsers]);
+          }
+      });
+    }
+  }, [currentIndex, recommendedUsers.length, isRecommendedUsersLoading, fetchNextRecommendedUsers]);
+
   const visibleCards = useMemo(() => {
     if (isRecommendedUsersLoading && recommendedUsers.length === 0) return [];
     return recommendedUsers.slice(currentIndex, currentIndex + 2);
@@ -156,66 +262,60 @@ export default function HomePageClient() {
     }, 500); // Animation time
   };
   
-  const isLiked = peopleILiked?.some(u => u.id === activeUser?.id);
+  const isLikedByMe = peopleILiked?.some(u => u.id === activeUser?.id);
 
   return (
-    // touch-none: 시스템 스크롤 방지, overscroll-none: 당겨서 새로고침 방지
     <div className="fixed inset-0 flex flex-col overflow-hidden touch-none bg-background">
       <Header />
       <main className="relative flex-1 flex items-center justify-center p-4">
         <div className="relative w-full aspect-[3/4.5] max-w-[400px]">
-          {(isRecommendedUsersLoading && visibleCards.length === 0) ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            </div>
-          ) : visibleCards.length > 0 ? (
-            visibleCards.map((u, index) => {
-              const isTop = index === 0; // slice했으므로 0번이 무조건 현재 카드
-              return (
-                <div
-                  key={u.id}
-                  className={cn(
-                    "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
-                    isTop ? "z-20" : "z-10"
-                  )}
-                  style={{
-                     // 물리적으로 하단 카드는 터치를 원천 차단
-                     pointerEvents: isTop ? 'auto' : 'none',
-                     // 하드웨어 가속 강제 및 위치/크기 조정
-                     transform: isTop 
-                       ? `translate3d(0,0,0) rotate(${swipeState === 'left' ? -15 : swipeState === 'right' ? 15 : 0}deg)`
-                       : 'translate3d(0, 15px, 0) scale(0.95)',
-                     opacity: isTop ? 1 : 0.6,
-                     transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
-                  }}
-                >
-                  <ProfileCard
-                    currentUser={currentUser!}
-                    potentialMatch={u}
-                    isActive={isTop}
-                    swipeState={isTop ? swipeState : null}
-                  />
+            {isRecommendedUsersLoading && recommendedUsers.length === 0 ? (
+                <CardSkeleton />
+            ) : visibleCards.length > 0 ? (
+                visibleCards.map((u, index) => {
+                    const isTop = index === 0;
+                    return (
+                        <div
+                        key={u.id}
+                        className={cn(
+                            "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
+                            isTop ? "z-20" : "z-10"
+                        )}
+                        style={{
+                            pointerEvents: isTop ? 'auto' : 'none',
+                            transform: isTop 
+                            ? `translate3d(0,0,0) rotate(${swipeState === 'left' ? -15 : swipeState === 'right' ? 15 : 0}deg)`
+                            : 'translate3d(0, 15px, 0) scale(0.95)',
+                            opacity: isTop ? 1 : 0.6,
+                            transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
+                        }}
+                        >
+                        <ProfileCard
+                            currentUser={currentUser!}
+                            potentialMatch={u}
+                            isActive={isTop}
+                            swipeState={isTop ? swipeState : null}
+                        />
+                        </div>
+                    );
+                })
+            ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
+                    <h2 className="text-xl font-bold">주변에 새로운 인연이 없어요.</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">필터를 변경하거나 다시 시도해주세요.</p>
+                    <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
                 </div>
-              );
-            })
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
-              <h2 className="text-xl font-bold">주변에 새로운 인연이 없어요.</h2>
-              <p className="mt-2 text-sm text-muted-foreground">필터를 변경하거나 다시 시도해주세요.</p>
-              <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
-            </div>
-          )}
+            )}
         </div>
       </main>
 
-      {/* 푸터를 하단에 고정 */}
       {activeUser && (
         <footer className="relative z-30 h-28 flex items-center justify-center pb-6">
             <ActionButtons 
                 onDislike={() => handleAction('dislike')}
                 onMessage={() => handleAction('message')}
                 onLike={() => handleAction('like')}
-                isLiked={isLiked}
+                isLiked={isLikedByMe}
             />
         </footer>
       )}
