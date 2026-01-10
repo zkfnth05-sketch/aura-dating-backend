@@ -10,6 +10,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const DateCourseInputSchema = z.object({
@@ -56,45 +57,20 @@ export const streamDateCourse = ai.defineFlow(
   {
     name: 'streamDateCourse',
     inputSchema: DateCourseInputSchema,
-    outputSchema: z.string(),
   },
   async function* (input) {
     const { stream } = await ai.generateStream({
-      prompt: `You are an expert date planner for young Koreans in their 20s and 30s. Based on the user's preferences, create a perfect and detailed date course.
-The response must be in Korean and formatted as Markdown.
-
+        model: googleAI.model('gemini-2.5-flash'),
+        prompt: `Based on the user's preferences, create a perfect and detailed date course in Korean, formatted as Markdown.
 User Preferences:
 - Destination/Atmosphere: ${input.destination}
-- Number of People: ${input.partySize}
+- People: ${input.partySize}
 - Duration: ${input.duration}
 - Date: ${input.date}
 - Transportation: ${input.transportation}
-- Budget per person: ${input.cost}
-- Preferred Date Type: ${input.dateType}
-
-Provide a detailed plan. The output must be formatted as **Markdown**.
-- Start with a catchy overall title for the date course (e.g., '# Title').
-- For each step in the timeline, use headings (e.g., '## 14:00 - Activity Title').
-- Under each step, include '설명', '찾아가는 길', '예상 비용', and '💖 로맨틱 팁'.
-- Conclude with a summary of the total estimated cost (e.g., '### 총 예상 비용').
-- Finally, add a warm and encouraging summary message for the couple.
-
-Example Markdown structure:
-# 감성 충만, 홍대 예술 데이트
-
-## 14:00 - 빈티지 소품샵 투어
-**설명:** 아기자기한 소품들을 구경하며 서로의 취향을 알아가는 시간.
-**찾아가는 길:** 홍대입구역 3번 출구에서 도보 5분 '오브젝트'
-**예상 비용:** 1인당 10,000원 (소품 구매)
-**💖 로맨틱 팁:** 서로에게 어울리는 작은 선물을 골라주며 마음을 표현해보세요.
-
-... (more steps) ...
-
-### 총 예상 비용: 1인당 50,000원
-
-두 분의 특별한 날이 행복한 기억으로 가득하길 바랍니다!
-
-Generate the entire course now based on the user's preferences.`,
+- Budget: ${input.cost}
+- Vibe: ${input.dateType}
+The Markdown should include a main title, several steps with time/title/description/directions/cost/tip, a total cost summary, and a final message.`,
     });
     
     for await (const chunk of stream) {
@@ -114,37 +90,17 @@ const dateCourseTextFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      prompt: `You are an expert date planner for young Koreans in their 20s and 30s. Based on the user's preferences, create a perfect and detailed date course.
-The response must be in Korean.
-
-User Preferences:
-- Destination/Atmosphere: ${input.destination}
-- Number of People: ${input.partySize}
+      model: googleAI.model('gemini-2.5-flash'),
+      prompt: `Create a date course JSON based on these preferences. The response must be in Korean.
+- Destination: ${input.destination}
+- People: ${input.partySize}
 - Duration: ${input.duration}
 - Date: ${input.date}
 - Transportation: ${input.transportation}
-- Budget per person: ${input.cost}
-- Preferred Date Type: ${input.dateType}
+- Budget: ${input.cost}
+- Vibe: ${input.dateType}
 
-Please provide a detailed plan. The output must be a JSON object that follows the specified schema.
-- Create a catchy overall title for the date course.
-- Create at least 4-5 timeline entries in the 'steps' array.
-- For each step, provide all the required fields: 'time', 'title', 'description', 'directions', 'cost', 'romanticTip', and a suitable 'imagePrompt'.
-- Conclude with a summary of the total estimated cost in the 'totalCost' field.
-- Finally, create a warm and encouraging summary message for the couple in the 'summaryAndMessage' field. This message should be a few sentences long and wish them a wonderful date.
-
-Example for one step object in the array:
-{
-  "time": "21:00",
-  "title": "야경이 보이는 루프탑 바",
-  "description": "빛나는 도시 야경을 배경으로 달콤한 칵테일을 즐기며 하루를 마무리하는 시간입니다. 눈부신 야경처럼 두 분의 사랑도 영원히 빛나길 바랍니다.",
-  "directions": "레스토랑에서 택시로 10분 거리에 있는 '더 그리핀' 바",
-  "cost": "1인당 30,000원",
-  "romanticTip": "서로에게 오늘 하루 중 가장 좋았던 순간을 이야기해주고, 다음 데이트를 기약하는 설레는 대화를 나눠보세요.",
-  "imagePrompt": "A young Korean couple in their 20s enjoying cocktails at a glamorous rooftop bar at night, with a sparkling city skyline in the background."
-}
-
-Generate the entire course now based on the user's preferences.`,
+The JSON should have a title, totalCost, steps (array of time, title, description, directions, cost, romanticTip, imagePrompt), and a summaryAndMessage.`,
       output: { schema: DateCourseOutputSchema },
     });
     return output!;
