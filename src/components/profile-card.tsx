@@ -4,7 +4,6 @@ import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { calculateCompatibility } from '@/lib/utils';
-import { Heart } from 'lucide-react';
 import React from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -13,17 +12,18 @@ type ProfileCardProps = {
   potentialMatch: User;
   isActive: boolean;
   swipeState: 'left' | 'right' | null;
-  zIndex: number;
 };
 
-const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex }: ProfileCardProps) => {
+const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState }: ProfileCardProps) => {
   const router = useRouter();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
   const cardStyle: React.CSSProperties = {
     transform: `translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})`,
     transition: 'transform 0.5s ease-in-out',
-    zIndex: zIndex,
+    touchAction: 'none',
+    userSelect: 'none',
+    WebkitUserSelect: 'none'
   };
 
   const allTags = [
@@ -45,16 +45,21 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
       <Link 
         href={`/users/${potentialMatch.id}`} 
         className="block w-full h-full"
+        draggable={false}
       >
         {potentialMatch.photoUrls && potentialMatch.photoUrls.length > 0 ? (
-          <Image
-            src={potentialMatch.photoUrls[0]}
-            alt={`Profile of ${potentialMatch.name}`}
-            fill
-            className="object-cover"
-            data-ai-hint="person portrait"
-            priority={isActive}
-          />
+          <div className="relative w-full h-[75%] bg-muted">
+            <Image
+                src={potentialMatch.photoUrls[0]}
+                alt={`Profile of ${potentialMatch.name}`}
+                fill
+                className="object-cover pointer-events-none"
+                data-ai-hint="person portrait"
+                priority={isActive}
+                draggable={false}
+                sizes="(max-width: 768px) 100vw, 400px"
+            />
+          </div>
         ) : (
           <div className="w-full h-full bg-secondary flex items-center justify-center">
             <span className="text-muted-foreground">No image</span>
@@ -73,20 +78,20 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
             )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)]">
-          <div className="flex items-center gap-2">
-            <h2 className="text-3xl font-bold">
-              {potentialMatch.name}, <span className="font-light">{potentialMatch.age}, {potentialMatch.gender}</span>
-            </h2>
-          </div>
-          <p className="text-white/80 mt-1 line-clamp-2">{potentialMatch.bio}</p>
-          <div className="flex flex-wrap gap-2 mt-4">
-            {allTags.slice(0, 4).map((item) => (
-              <Badge key={item} variant="secondary" className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full border-0">
-                {item}
-              </Badge>
-            ))}
-          </div>
+        <div className="flex-1 p-6 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/40 to-transparent absolute bottom-0 w-full text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.5)]">
+            <div className="flex items-center gap-2">
+                <h2 className="text-3xl font-bold">
+                {potentialMatch.name}, <span className="font-light">{potentialMatch.age}</span>
+                </h2>
+            </div>
+            <p className="text-white/90 mt-1 line-clamp-1">{potentialMatch.bio}</p>
+            <div className="flex flex-wrap gap-2 mt-4">
+                {allTags.slice(0, 4).map((item) => (
+                <Badge key={item} variant="secondary" className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full border-0">
+                    {item}
+                </Badge>
+                ))}
+            </div>
         </div>
       </Link>
     </div>
