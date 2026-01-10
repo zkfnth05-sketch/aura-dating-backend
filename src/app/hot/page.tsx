@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from '@/components/ui/card';
@@ -8,12 +9,11 @@ import Link from 'next/link';
 import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
-
-const UserCard = ({ user }: { user: User }) => {
+const UserCard = React.memo(({ user }: { user: User }) => {
   // Defensive check for photoUrls
   if (!user.photoUrls || user.photoUrls.length === 0) {
     // Optionally, render a placeholder or null
@@ -38,7 +38,17 @@ const UserCard = ({ user }: { user: User }) => {
       </Card>
     </Link>
   );
-};
+});
+UserCard.displayName = 'UserCard';
+
+const UserGridSkeleton = () => (
+    <div className="grid grid-cols-2 gap-4">
+        {Array.from({ length: 8 }).map((_, index) => (
+            <Skeleton key={index} className="w-full aspect-[3/4] rounded-lg" />
+        ))}
+    </div>
+);
+
 
 export default function HotPage() {
   const { user: currentUser, isLoaded } = useUser();
@@ -123,9 +133,7 @@ export default function HotPage() {
           
           <TabsContent value="new" className="mt-0 p-4 pb-4">
             {isLoading ? (
-              <div className="flex items-center justify-center pt-20">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
+                <UserGridSkeleton />
             ) : (
               <div className="grid grid-cols-2 gap-4">
                   {newUsers.map((user) => (
@@ -136,9 +144,7 @@ export default function HotPage() {
           </TabsContent>
           <TabsContent value="hot" className="mt-0 p-4 pb-4">
             {isLoading ? (
-              <div className="flex items-center justify-center pt-20">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
+              <UserGridSkeleton />
             ) : (
               <div className="grid grid-cols-2 gap-4">
                   {hotUsers.map((user) => (
