@@ -19,7 +19,7 @@ const DateCourseInputSchema = z.object({
   duration: z.string().describe('The duration of the date.'),
   date: z.string().describe('The date of the date.'),
   transportation: z.string().describe('The mode of transportation.'),
-  cost: z-string().describe('The budget per person for the date.'),
+  cost: z.string().describe('The budget per person for the date.'),
   dateType: z.string().describe('The preferred type of date.'),
 });
 export type DateCourseInput = z.infer<typeof DateCourseInputSchema>;

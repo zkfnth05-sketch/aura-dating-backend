@@ -7,7 +7,6 @@ import * as z from 'zod';
 import { useState } from 'react';
 import { Loader2, Bus, Car, Plane, Footprints } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { useActions, useStreamableValue } from 'ai/rsc';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -21,8 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { streamDateCourseAction } from '@/app/actions/ai-actions';
+import { streamDateCourse } from '@/app/actions/ai-actions';
 
 
 const formSchema = z.object({
@@ -50,7 +48,6 @@ const transportationIcons = {
 } as const;
 
 export default function DateCourseForm() {
-  const { streamDateCourseAction: streamAction } = useActions();
   const [streamedResult, setStreamedResult] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   
@@ -72,7 +69,7 @@ export default function DateCourseForm() {
     setStreamedResult('');
 
     try {
-        const stream = streamAction(values);
+        const stream = await streamDateCourse(values);
         let content = "";
         for await (const delta of stream) {
             content += delta;
