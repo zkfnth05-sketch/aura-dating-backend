@@ -1,3 +1,4 @@
+
 'use server';
 
 import {
@@ -7,6 +8,7 @@ import {
 } from '@/ai/flows/enhance-photo-flow';
 import {
     recommendDateCourse,
+    streamDateCourse,
     DateCourseInput,
     DateCourseOutput,
 } from '@/ai/flows/date-course-flow';
@@ -67,4 +69,9 @@ export async function getAIChatReplySuggestions(
         console.error('AI Chat Reply suggestion failed:', error);
         throw new Error('Failed to get AI chat reply suggestions.');
     }
+}
+
+
+export async function streamDateCourseAction(input: DateCourseInput) {
+    return streamDateCourse(input);
 }

@@ -4,12 +4,14 @@
  * @fileOverview AI-powered date course recommendation flow.
  *
  * - recommendDateCourse - A function that takes user preferences and returns a recommended date course.
+ * - streamDateCourse - A function that streams the date course recommendation.
  * - DateCourseInput - The input type for the recommendDateCourse function.
  * - DateCourseOutput - The return type for the recommendDateCourse function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { streamFlow } from '@genkit-ai/next/server';
 
 const DateCourseInputSchema = z.object({
   destination: z.string().describe('The desired travel destination or atmosphere.'),
@@ -17,7 +19,7 @@ const DateCourseInputSchema = z.object({
   duration: z.string().describe('The duration of the date.'),
   date: z.string().describe('The date of the date.'),
   transportation: z.string().describe('The mode of transportation.'),
-  cost: z.string().describe('The budget per person for the date.'),
+  cost: z-string().describe('The budget per person for the date.'),
   dateType: z.string().describe('The preferred type of date.'),
 });
 export type DateCourseInput = z.infer<typeof DateCourseInputSchema>;
@@ -51,6 +53,57 @@ function getSeason(dateString: string): string {
     return 'winter';
 }
 
+export const streamDateCourse = streamFlow({
+    name: 'streamDateCourse',
+    inputSchema: DateCourseInputSchema,
+  },
+  async function* (input) {
+    const { stream } = await ai.generateStream({
+      prompt: `You are an expert date planner for young Koreans in their 20s and 30s. Based on the user's preferences, create a perfect and detailed date course.
+The response must be in Korean and formatted as Markdown.
+
+User Preferences:
+- Destination/Atmosphere: ${input.destination}
+- Number of People: ${input.partySize}
+- Duration: ${input.duration}
+- Date: ${input.date}
+- Transportation: ${input.transportation}
+- Budget per person: ${input.cost}
+- Preferred Date Type: ${input.dateType}
+
+Provide a detailed plan. The output must be formatted as **Markdown**.
+- Start with a catchy overall title for the date course (e.g., '# Title').
+- For each step in the timeline, use headings (e.g., '## 14:00 - Activity Title').
+- Under each step, include '설명', '찾아가는 길', '예상 비용', and '💖 로맨틱 팁'.
+- Conclude with a summary of the total estimated cost (e.g., '### 총 예상 비용').
+- Finally, add a warm and encouraging summary message for the couple.
+
+Example Markdown structure:
+# 감성 충만, 홍대 예술 데이트
+
+## 14:00 - 빈티지 소품샵 투어
+**설명:** 아기자기한 소품들을 구경하며 서로의 취향을 알아가는 시간.
+**찾아가는 길:** 홍대입구역 3번 출구에서 도보 5분 '오브젝트'
+**예상 비용:** 1인당 10,000원 (소품 구매)
+**💖 로맨틱 팁:** 서로에게 어울리는 작은 선물을 골라주며 마음을 표현해보세요.
+
+... (more steps) ...
+
+### 총 예상 비용: 1인당 50,000원
+
+두 분의 특별한 날이 행복한 기억으로 가득하길 바랍니다!
+
+Generate the entire course now based on the user's preferences.`,
+    });
+    
+    for await (const chunk of stream) {
+        yield chunk.text;
+    }
+  }
+);
+
+
+// This function is kept for potential non-streaming use or for image generation logic, but the streaming flow is now the primary way.
 const dateCourseTextFlow = ai.defineFlow(
   {
     name: 'dateCourseTextFlow',

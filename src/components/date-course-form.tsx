@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -5,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useState } from 'react';
 import { Loader2, Bus, Car, Plane, Footprints } from 'lucide-react';
-import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
+import { useActions, useStreamableValue } from 'ai/rsc';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,9 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { getDateCourse } from '@/app/actions/ai-actions';
-import { DateCourseOutput } from '@/ai/flows/date-course-flow';
-import { Skeleton } from './ui/skeleton';
+import { streamDateCourseAction } from '@/app/actions/ai-actions';
 
 
 const formSchema = z.object({
@@ -50,10 +50,10 @@ const transportationIcons = {
 } as const;
 
 export default function DateCourseForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<DateCourseOutput | null>(null);
-  const [showForm, setShowForm] = useState(true);
-
+  const { streamDateCourseAction: streamAction } = useActions();
+  const [streamedResult, setStreamedResult] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -68,29 +68,28 @@ export default function DateCourseForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
-    setResult(null);
-    setShowForm(false);
+    setIsStreaming(true);
+    setStreamedResult('');
 
     try {
-        const response = await getDateCourse({
-            ...values,
-        });
-        setResult(response);
+        const stream = streamAction(values);
+        let content = "";
+        for await (const delta of stream) {
+            content += delta;
+            setStreamedResult(content);
+        }
     } catch (error) {
         toast({
             variant: 'destructive',
             title: '오류 발생',
             description: '데이트 코스를 생성하는 데 실패했습니다. 다시 시도해주세요.',
         });
-        setShowForm(true); // Show form again on error
     } finally {
-        setIsLoading(false);
+        setIsStreaming(false);
     }
   }
 
-
-  if (isLoading) {
+  if (isStreaming && !streamedResult) {
     return (
         <div className="mt-8 flex flex-col items-center justify-center text-center h-96">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -99,61 +98,28 @@ export default function DateCourseForm() {
     );
   }
 
-  if (result) {
+  if (streamedResult !== null) {
     return (
-      <div>
-        <div className="text-center my-8">
-            <h2 className="text-3xl font-bold text-primary">{result.title}</h2>
-            <p className="text-muted-foreground mt-4 px-4">{result.summaryAndMessage.split('\n')[0]}</p>
-        </div>
-        <div className="space-y-8">
-            {result.steps.map((step, index) => (
-                <Card key={index} className="overflow-hidden bg-card border-border/40">
-                    <CardHeader>
-                        <CardTitle className="text-xl font-bold text-foreground">{step.time} - {step.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 pt-0">
-                        {step.imageDataUri ? (
-                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden mb-4">
-                                <Image
-                                    src={step.imageDataUri}
-                                    alt={step.title}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </div>
-                        ) : (
-                            <Skeleton className="w-full aspect-[4/3] rounded-lg mb-4" />
-                        )}
-                        <p className="text-muted-foreground mb-4">{step.description}</p>
-                        <div className="space-y-3 pt-4 text-foreground/90 border-t border-border/20">
-                            <p><span className="font-semibold text-foreground">찾아가는 길:</span> <span className="text-muted-foreground">{step.directions}</span></p>
-                            <p><span className="font-semibold text-foreground">예상 비용:</span> <span className="text-muted-foreground">{step.cost}</span></p>
-                            <p><span className="font-semibold text-foreground">💖 로맨틱 팁:</span> <span className="text-muted-foreground">{step.romanticTip}</span></p>
-                        </div>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-        <Card className="my-8 text-center bg-card border-border/40">
-            <CardHeader>
-                <CardTitle>총 예상 비용 ({result.steps.length > 0 ? form.getValues('partySize').charAt(0) : 'N/A'}인 기준)</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-3xl font-bold text-primary mb-4">{result.totalCost}</p>
-                <p className="text-sm text-muted-foreground px-4">{result.summaryAndMessage}</p>
-            </CardContent>
-        </Card>
+      <div className="prose prose-sm dark:prose-invert max-w-none pt-4">
+        <ReactMarkdown>{streamedResult}</ReactMarkdown>
+        
+        {isStreaming && (
+            <div className="flex justify-center mt-4">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+        )}
 
-        <Button onClick={() => { setResult(null); setShowForm(true); }} className="w-full mt-4 h-12 text-base font-bold">
-            새로운 코스 추천받기
-        </Button>
+        {!isStreaming && (
+             <Button onClick={() => setStreamedResult(null)} className="w-full mt-8 h-12 text-base font-bold">
+                새로운 코스 추천받기
+            </Button>
+        )}
     </div>
     );
   }
 
   return (
-    <div style={{ display: showForm ? 'block' : 'none' }}>
+    <div>
         <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-primary">AI 데이트 코스 추천</h2>
             <p className="text-muted-foreground mt-2">
@@ -310,8 +276,8 @@ export default function DateCourseForm() {
             )}
           />
 
-          <Button type="submit" disabled={isLoading} className="w-full h-12 text-base font-bold">
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button type="submit" disabled={isStreaming} className="w-full h-12 text-base font-bold">
+            {isStreaming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             AI 데이트 코스 추천받기
           </Button>
         </form>
