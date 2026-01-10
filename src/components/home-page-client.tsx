@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
@@ -12,8 +12,8 @@ import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-// [최적화] 더 빨리 다음 카드를 로드하기 위해 임계값을 5로 증가
 const PREFETCH_THRESHOLD = 5;
 
 export default function HomePageClient() {
@@ -34,16 +34,17 @@ export default function HomePageClient() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
 
-  // Reset index when recommended list is cleared (e.g., filter change)
+  // 리스트가 바뀌거나 현재 인덱스가 리스트 길이를 넘어서면 보정
   useEffect(() => {
     if (currentIndex >= recommendedUsers.length && recommendedUsers.length > 0) {
       setCurrentIndex(recommendedUsers.length - 1);
     } else if (recommendedUsers.length === 0) {
       setCurrentIndex(0);
     }
-  }, [recommendedUsers.length, currentIndex]);
+  }, [recommendedUsers, currentIndex]);
+  
 
-  // Prefetching Logic (Aggressive)
+  // Prefetching Logic
   useEffect(() => {
     if (!isRecommendedUsersLoading && hasMoreRecommendedUsers && recommendedUsers.length > 0) {
         const remainingCards = recommendedUsers.length - currentIndex;
@@ -52,6 +53,12 @@ export default function HomePageClient() {
         }
     }
   }, [currentIndex, recommendedUsers.length, hasMoreRecommendedUsers, isRecommendedUsersLoading, fetchNextRecommendedUsers]);
+
+  // 현재 화면에 보여줄 "진짜" 카드 2장만 추출
+  const visibleCards = useMemo(() => {
+    if (isRecommendedUsersLoading && recommendedUsers.length === 0) return [];
+    return recommendedUsers.slice(currentIndex, currentIndex + 2);
+  }, [recommendedUsers, currentIndex, isRecommendedUsersLoading]);
 
   const activeUser = recommendedUsers[currentIndex];
 
@@ -152,35 +159,34 @@ export default function HomePageClient() {
   const isLiked = peopleILiked?.some(u => u.id === activeUser?.id);
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background overflow-hidden touch-none overscroll-none">
+    // touch-none: 시스템 스크롤 방지, overscroll-none: 당겨서 새로고침 방지
+    <div className="fixed inset-0 flex flex-col overflow-hidden touch-none bg-background">
       <Header />
-      
-      <main className="flex-1 relative flex items-center justify-center p-4">
-        <div className="relative w-full max-w-[380px] aspect-[3/4.5] max-h-[600px] z-10">
-          {isRecommendedUsersLoading && recommendedUsers.length === 0 ? (
-             <div className="flex items-center justify-center h-full w-full">
+      <main className="relative flex-1 flex items-center justify-center p-4">
+        <div className="relative w-full aspect-[3/4.5] max-w-[400px]">
+          {(isRecommendedUsersLoading && visibleCards.length === 0) ? (
+            <div className="absolute inset-0 flex items-center justify-center">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-             </div>
-          ) : !activeUser ? (
-             <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
-              <h2 className="text-xl font-bold">새로운 추천이 없어요</h2>
-              <p className="text-sm text-muted-foreground mt-2">필터를 바꾸거나 잠시 후 다시 시도해주세요.</p>
-              <Button onClick={initializeRecommendations} className="mt-4">다시 시도</Button>
             </div>
-          ) : (
-            recommendedUsers.map((u, index) => {
-              if (index < currentIndex || index > currentIndex + 1) return null;
-
-              const isTop = index === currentIndex;
+          ) : visibleCards.length > 0 ? (
+            visibleCards.map((u, index) => {
+              const isTop = index === 0; // slice했으므로 0번이 무조건 현재 카드
               return (
                 <div
                   key={u.id}
-                  className="absolute inset-0 w-full h-full transform-gpu transition-all duration-300 ease-out"
-                  style={{ 
-                    transform: isTop ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.95)',
-                    opacity: isTop ? 1 : 0.6,
-                    zIndex: recommendedUsers.length - index,
-                    pointerEvents: isTop ? 'auto' : 'none' 
+                  className={cn(
+                    "absolute inset-0 w-full h-full transition-all duration-500 ease-in-out",
+                    isTop ? "z-20" : "z-10"
+                  )}
+                  style={{
+                     // 물리적으로 하단 카드는 터치를 원천 차단
+                     pointerEvents: isTop ? 'auto' : 'none',
+                     // 하드웨어 가속 강제 및 위치/크기 조정
+                     transform: isTop 
+                       ? `translate3d(0,0,0) rotate(${swipeState === 'left' ? -15 : swipeState === 'right' ? 15 : 0}deg)`
+                       : 'translate3d(0, 15px, 0) scale(0.95)',
+                     opacity: isTop ? 1 : 0.6,
+                     transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
                   }}
                 >
                   <ProfileCard
@@ -192,18 +198,25 @@ export default function HomePageClient() {
                 </div>
               );
             })
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
+              <h2 className="text-xl font-bold">주변에 새로운 인연이 없어요.</h2>
+              <p className="mt-2 text-sm text-muted-foreground">필터를 변경하거나 다시 시도해주세요.</p>
+              <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
+            </div>
           )}
         </div>
       </main>
 
+      {/* 푸터를 하단에 고정 */}
       {activeUser && (
-        <footer className="h-28 flex items-center justify-center pb-6 z-20">
-          <ActionButtons 
-            onDislike={() => handleAction('dislike')}
-            onMessage={() => handleAction('message')}
-            onLike={() => handleAction('like')}
-            isLiked={isLiked}
-          />
+        <footer className="relative z-30 h-28 flex items-center justify-center pb-6">
+            <ActionButtons 
+                onDislike={() => handleAction('dislike')}
+                onMessage={() => handleAction('message')}
+                onLike={() => handleAction('like')}
+                isLiked={isLiked}
+            />
         </footer>
       )}
     </div>
