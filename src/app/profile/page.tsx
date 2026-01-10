@@ -41,7 +41,7 @@ export default function ProfilePage() {
   // Render immediately if we have user data, otherwise show a loader.
   if (!currentUser) {
     return (
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-full">
         <Header/>
         <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />

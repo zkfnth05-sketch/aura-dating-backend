@@ -25,14 +25,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col h-full">
-      <div className={cn(
-        "flex-1 flex flex-col min-h-0",
+      <main className={cn(
+        "flex-1 flex flex-col overflow-y-auto",
         showBottomNav && "pb-20"
       )}>
-        <main className="flex-1 flex flex-col">
-            {children}
-        </main>
-      </div>
+          {children}
+      </main>
       
       {showBottomNav && <BottomNav />}
       
