@@ -112,6 +112,8 @@ const MemoizedAdvancedMarker = React.memo(function MemoizedAdvancedMarker({
   isCurrentUser: boolean;
   onClick: (userId: string) => void;
 }) {
+  if (typeof user.lat !== 'number' || typeof user.lng !== 'number') return null;
+
   return (
     <AdvancedMarker
       position={{ lat: user.lat, lng: user.lng }}
@@ -119,14 +121,16 @@ const MemoizedAdvancedMarker = React.memo(function MemoizedAdvancedMarker({
     >
       <div 
         className={cn(
-            "relative w-12 h-12 rounded-full border-2 shadow-lg cursor-pointer transition-transform duration-200 hover:scale-110",
-            isCurrentUser ? "border-primary" : "border-transparent"
+            "relative w-10 h-10 rounded-full border-2 shadow-md cursor-pointer transition-transform duration-200 hover:scale-110 will-change-transform",
+            isCurrentUser ? "border-primary z-20" : "border-white z-10"
         )}
       >
         <Image
-          src={user.photoUrls[0]}
+          src={user.photoUrls?.[0] || '/default-avatar.png'}
           alt={user.name}
           fill
+          sizes="40px"
+          priority={isCurrentUser}
           className="object-cover rounded-full"
         />
       </div>
@@ -138,36 +142,27 @@ MemoizedAdvancedMarker.displayName = 'MemoizedAdvancedMarker';
 
 export default function MapClient({ users, currentUser, initialCenter }: MapClientProps) {
   const router = useRouter();
-  
   const [zoom, setZoom] = useState(11);
-  const [center, setCenter] = useState(initialCenter);
-
-  useEffect(() => {
-    setCenter(initialCenter);
-  }, [initialCenter]);
-
-
+  
   const handleMarkerClick = useCallback((userId: string) => {
     if (currentUser && userId === currentUser.id) {
       router.push('/profile');
     } else {
       router.push(`/users/${userId}`);
     }
-  }, [router, currentUser]);
-  
-  const memoizedUsers = useMemo(() => users, [users]);
+  }, [router, currentUser?.id]);
 
   return (
-    <div className="w-full h-full relative">
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-full px-4">
-        <div className="bg-black/50 backdrop-blur-sm rounded-full p-1 flex justify-around items-center text-white text-sm font-semibold">
+    <div className="w-full h-full relative overflow-hidden">
+      <div className="absolute top-4 left-0 right-0 z-10 px-4">
+        <div className="max-w-md mx-auto bg-black/60 backdrop-blur-md rounded-full p-1 flex justify-around items-center text-white">
           {distanceOptions.map(option => (
             <button
               key={option.label}
               onClick={() => setZoom(option.zoom)}
               className={cn(
-                'py-2 px-4 rounded-full transition-colors duration-200 w-full',
-                zoom === option.zoom ? 'bg-primary text-primary-foreground' : 'bg-transparent text-white/80'
+                'py-1.5 px-3 rounded-full text-xs font-medium transition-all duration-200 flex-1',
+                zoom === option.zoom ? 'bg-primary text-white shadow-sm' : 'hover:bg-white/10'
               )}
             >
               {option.label}
@@ -175,16 +170,17 @@ export default function MapClient({ users, currentUser, initialCenter }: MapClie
           ))}
         </div>
       </div>
+
       <Map
-        center={center}
+        defaultCenter={initialCenter}
         zoom={zoom}
+        onZoomChanged={(e) => setZoom(e.detail.zoom)}
         mapId={'dating-app-map-style'}
         disableDefaultUI={true}
-        styles={mapStyles}
         gestureHandling={'greedy'}
-        onCenterChanged={(e) => setCenter(e.detail.center)}
+        reuseMaps={true}
       >
-        {memoizedUsers.map((user) => (
+        {users.map((user) => (
           <MemoizedAdvancedMarker
             key={user.id}
             user={user}
