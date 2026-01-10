@@ -26,10 +26,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-screen-sm w-full flex flex-col h-full">
       <main className={cn(
-        "flex-1 flex flex-col overflow-y-auto",
-        showBottomNav && "pb-20"
+        "flex-1 flex flex-col",
       )}>
+        {/* This div is the main scrollable container */}
+        <div className="flex-1 h-full overflow-y-auto">
           {children}
+        </div>
       </main>
       
       {showBottomNav && <BottomNav />}
