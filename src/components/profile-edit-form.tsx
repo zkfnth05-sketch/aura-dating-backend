@@ -180,7 +180,7 @@ export default function ProfileEditForm() {
                  toast({
                     variant: "destructive",
                     title: "AI 보정 실패",
-                    description: "AI 보정에 실패하여 원본 사진이 대신 사용됩니다.",
+                    description: "다시 한번 시도해주세요,AI 사진 보정이 안될시에는 원본 사진이 사용됩니다",
                 });
             }
             

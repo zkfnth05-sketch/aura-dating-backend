@@ -58,47 +58,47 @@ const enhancePhotoFlow = ai.defineFlow(
   async (input) => {
     const enhancementPrompt = generateEnhancementPrompt(input.gender);
     
-    // The try...catch block is removed. Any error from ai.generate() will now propagate up.
-    // This allows Next.js to catch it and display the detailed error overlay.
-    const { media } = await ai.generate({
-        model: googleAI.model('gemini-2.5-flash-image'),
-        prompt: [
-            { text: enhancementPrompt },
-            { media: { url: input.photoDataUri } },
-        ],
-        config: {
-            responseModalities: ['IMAGE'],
-            safetySettings: [
-              {
-                category: 'HARM_CATEGORY_HATE_SPEECH',
-                threshold: 'BLOCK_ONLY_HIGH',
-              },
-              {
-                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                threshold: 'BLOCK_NONE',
-              },
-              {
-                category: 'HARM_CATEGORY_HARASSMENT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-              },
-              {
-                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-              },
+    try {
+        const { media } = await ai.generate({
+            model: googleAI.model('gemini-2.5-flash-image'),
+            prompt: [
+                { text: enhancementPrompt },
+                { media: { url: input.photoDataUri } },
             ],
-        },
-        retries: 3,
-    });
+            config: {
+                responseModalities: ['IMAGE'],
+                safetySettings: [
+                  {
+                    category: 'HARM_CATEGORY_HATE_SPEECH',
+                    threshold: 'BLOCK_ONLY_HIGH',
+                  },
+                  {
+                    category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    threshold: 'BLOCK_NONE',
+                  },
+                  {
+                    category: 'HARM_CATEGORY_HARASSMENT',
+                    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                  },
+                  {
+                    category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+                  },
+                ],
+            },
+            retries: 3,
+        });
 
-    if (media && media.url) {
-        return {
-            enhancedPhotoDataUri: media.url,
-        };
+        if (media && media.url) {
+            return {
+                enhancedPhotoDataUri: media.url,
+            };
+        }
+        
+        throw new Error("AI photo enhancement did not return a valid image.");
+    } catch (error) {
+        console.error("AI photo enhancement failed:", error);
+        return { enhancedPhotoDataUri: input.photoDataUri };
     }
-    
-    // Throw an error if media is not available.
-    throw new Error("AI photo enhancement failed to return an image.");
   }
 );
-
-
