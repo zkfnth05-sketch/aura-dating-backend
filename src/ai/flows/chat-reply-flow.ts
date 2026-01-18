@@ -8,6 +8,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 
 const UserProfileSchema = z.object({
@@ -46,7 +47,7 @@ const chatReplyFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-        model: 'gemini-1.5-flash-latest',
+        model: googleAI.model('gemini-2.5-flash'),
         prompt: `You are an expert dating coach AI. Your goal is to help your client, ${input.currentUser.name}, win the heart of their match, ${input.matchUser.name}, and successfully arrange a date. This is a dating app where the ultimate goal is to meet in person.
 
 Analyze the user profiles and conversation history to generate three highly effective, charming, and strategic replies. The replies must be in Korean.
