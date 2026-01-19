@@ -14,20 +14,27 @@ export default function UserGrid({ users }: { users: User[] }) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {users.map((user) => {
+        const hasPhoto = user.photoUrls && user.photoUrls.length > 0;
         return (
           <Link
             href={`/users/${user.id}`}
             key={user.id}
           >
-            <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
-              <Image
-                src={user.photoUrls[0]}
-                alt={`Profile of ${user.name}`}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="person portrait"
-              />
-              <div className="absolute bottom-0 left-0 right-0 p-3 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)]">
+            <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4] bg-muted">
+              {hasPhoto ? (
+                <Image
+                  src={user.photoUrls[0]}
+                  alt={`Profile of ${user.name}`}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  data-ai-hint="person portrait"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-secondary">
+                  <span className="text-muted-foreground">사진 없음</span>
+                </div>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 p-3 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)] bg-gradient-to-t from-black/60 to-transparent">
                 <p className="font-semibold truncate">{user.name}, {user.age}</p>
               </div>
             </Card>
