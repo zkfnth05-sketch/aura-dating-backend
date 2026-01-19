@@ -104,22 +104,21 @@ export default function DateCourseForm() {
   if (result) {
     return (
         <div className="pt-4">
-            <h1 className="text-3xl font-bold mb-2">{result.title}</h1>
+            <h1 className="text-3xl font-bold mb-4">{result.title}</h1>
+            
+            {result.overallImageDataUri ? (
+                <div className="relative w-full aspect-video rounded-lg overflow-hidden my-4">
+                    <Image src={result.overallImageDataUri} alt={result.title} fill className="object-cover" />
+                </div>
+            ) : (
+                <div className="w-full aspect-video rounded-lg my-4 flex items-center justify-center bg-muted/50">
+                    <p className="text-muted-foreground text-sm">대표 이미지를 생성할 수 없습니다.</p>
+                </div>
+            )}
             
             {result.steps.map((step, index) => (
-                <div key={index} className="my-6">
+                <div key={index} className="my-6 border-t border-border/40 pt-6">
                     <h3 className="text-xl font-semibold text-primary">{step.time} - {step.title}</h3>
-                    
-                    {step.imageDataUri ? (
-                        <div className="relative w-full aspect-video rounded-lg overflow-hidden my-4">
-                            <Image src={step.imageDataUri} alt={step.title} fill className="object-cover" />
-                        </div>
-                    ) : (
-                        <div className="w-full aspect-video rounded-lg my-4 flex items-center justify-center bg-muted/50">
-                            <p className="text-muted-foreground text-sm">이미지 없음</p>
-                        </div>
-                    )}
-                    
                     <p className="text-sm text-foreground/80 my-2">{step.description}</p>
                     <p className="text-xs text-muted-foreground"><strong>이동:</strong> {step.directions}</p>
                     <p className="text-xs text-muted-foreground"><strong>비용:</strong> {step.cost}</p>

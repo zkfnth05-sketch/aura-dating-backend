@@ -30,7 +30,6 @@ const DateCourseStepSchema = z.object({
     directions: z.string().describe("How to get there."),
     cost: z.string().describe("Estimated cost per person."),
     romanticTip: z.string().describe("A romantic tip to make the moment special."),
-    imagePrompt: z.string().describe("A short, descriptive prompt for an AI image generator to create a relevant, photorealistic image for this activity. Example: 'A cozy cafe with warm lighting' or 'A couple walking on a beach at sunset'."),
 });
 
 const DateCourseOutputSchema = z.object({
@@ -38,10 +37,12 @@ const DateCourseOutputSchema = z.object({
     totalCost: z.string().describe("A summary of the total estimated cost for the date."),
     steps: z.array(DateCourseStepSchema).describe("An array of detailed steps for the date course. Include at least 4-5 steps."),
     summaryAndMessage: z.string().describe("A final warm and encouraging summary message for the couple's date."),
+    overallImagePrompt: z.string().describe("A single, short, descriptive prompt for an AI image generator to create one representative, photorealistic image for the entire date course. Example: 'A happy couple enjoying a romantic picnic in a park with Seoul skyline in the background'."),
 });
 
 export type DateCourseOutput = z.infer<typeof DateCourseOutputSchema> & {
-    steps: (z.infer<typeof DateCourseStepSchema> & { imageDataUri?: string })[];
+    steps: z.infer<typeof DateCourseStepSchema>[];
+    overallImageDataUri?: string;
 };
 
 function getSeason(dateString: string): string {
@@ -70,7 +71,7 @@ const dateCourseTextFlow = ai.defineFlow(
 - Budget: ${input.cost}
 - Vibe: ${input.dateType}
 
-The JSON should have a title, totalCost, steps (array of time, title, description, directions, cost, romanticTip, imagePrompt), and a summaryAndMessage.`,
+The JSON should have a title, totalCost, steps (array of time, title, description, directions, cost, romanticTip), a summaryAndMessage, and an overallImagePrompt for the entire course. Do NOT include image prompts for individual steps.`,
       output: { schema: DateCourseOutputSchema },
       retries: 3,
     });
@@ -105,20 +106,12 @@ export async function recommendDateCourse(input: DateCourseInput): Promise<DateC
     const textResult = await dateCourseTextFlow(input);
     const season = getSeason(input.date);
 
-    const imagePromises = textResult.steps.map(step => {
-        const imagePrompt = `${step.imagePrompt}, young Korean couple in their 20s-30s, ${season}, photorealistic, high quality`;
-        return dateCourseImageFlow(imagePrompt);
-    });
-
-    const imageDataUris = await Promise.all(imagePromises);
-
-    const stepsWithImages = textResult.steps.map((step, index) => ({
-        ...step,
-        imageDataUri: imageDataUris[index] || undefined,
-    }));
+    const imagePrompt = `${textResult.overallImagePrompt}, young Korean couple in their 20s-30s, ${season}, photorealistic, high quality`;
+    const imageDataUri = await dateCourseImageFlow(imagePrompt);
 
     return {
         ...textResult,
-        steps: stepsWithImages,
+        steps: textResult.steps,
+        overallImageDataUri: imageDataUri || undefined,
     };
 }
