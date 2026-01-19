@@ -106,7 +106,7 @@ export async function recommendDateCourse(input: DateCourseInput): Promise<DateC
     const textResult = await dateCourseTextFlow(input);
     const season = getSeason(input.date);
 
-    const imagePrompt = `${textResult.overallImagePrompt}, photorealistic high quality image of a young Korean man and woman couple enjoying a date, ${season}`;
+    const imagePrompt = `${textResult.overallImagePrompt}, photorealistic high quality image of a young Korean man and woman couple enjoying a date as the main focus, ${season}`;
     const imageDataUri = await dateCourseImageFlow(imagePrompt);
 
     return {
