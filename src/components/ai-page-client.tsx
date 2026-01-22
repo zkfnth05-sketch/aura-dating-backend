@@ -20,6 +20,7 @@ const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: U
   return (
     <Link 
       href={`/users/${user.id}?from=ai`}
+      prefetch={false}
     >
       <Card className="overflow-hidden relative group cursor-pointer border-none">
         <div className="relative aspect-[3/4]">

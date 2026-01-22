@@ -23,6 +23,7 @@ const UserCard = React.memo(({ user }: { user: User }) => {
   return (
     <Link
       href={`/users/${user.id}`}
+      prefetch={false}
     >
       <Card className="overflow-hidden relative group cursor-pointer border-none aspect-[3/4]">
         <Image
