@@ -2,16 +2,16 @@
   "name": "Aura",
   "short_name": "Aura",
   "description": "Aura와 함께 당신의 인연을 찾아보세요.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#FFD700",
   "icons": [
     {
       "src": "/icon.svg",
-      "sizes": "512x512",
+      "sizes": "any",
       "type": "image/svg+xml"
     }
-  ],
-  "theme_color": "#FFD700",
-  "background_color": "#000000",
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait"
+  ]
 }
