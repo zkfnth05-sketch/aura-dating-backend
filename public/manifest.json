@@ -1,0 +1,17 @@
+{
+  "name": "Aura - 새로운 만남의 시작",
+  "short_name": "Aura",
+  "description": "Aura와 함께 당신의 인연을 찾아보세요.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#FFD700",
+  "background_color": "#121212",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
+}
