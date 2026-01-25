@@ -20,6 +20,7 @@ export type User = {
   lastSeen?: 'Online' | string; // 'Online' or ISO 8601 date string
   createdAt?: Timestamp;
   phoneNumber?: string;
+  pushSubscriptions?: any[];
 };
 
 export type Match = {

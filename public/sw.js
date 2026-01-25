@@ -1,70 +1,108 @@
+// Define the cache name and assets to cache
 const CACHE_NAME = 'aura-cache-v1';
 const urlsToCache = [
   '/',
   '/offline.html',
-  '/manifest.json',
   '/icon.svg'
 ];
 
-// On install, cache the offline page and other core assets
+// Install the service worker and cache assets
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+      .then(cache => {
+        console.log('Opened cache');
+        return cache.addAll(urlsToCache);
+      })
   );
 });
 
-// On activate, clean up old caches
+// Activate the service worker and clean up old caches
 self.addEventListener('activate', event => {
+  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
-                 .map(name => caches.delete(name))
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            return caches.delete(cacheName);
+          }
+        })
       );
     })
   );
+  return self.clients.claim();
 });
 
-// On fetch, use network first, then cache, then offline page
+// Intercept fetch requests
 self.addEventListener('fetch', event => {
-  // We only want to handle GET requests
-  if (event.request.method !== 'GET') {
-    return;
+  // Only handle navigation requests for offline fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        try {
+          // First, try to use the navigation preload response if it's supported
+          const preloadResponse = await event.preloadResponse;
+          if (preloadResponse) {
+            return preloadResponse;
+          }
+
+          // Always try the network first
+          const networkResponse = await fetch(event.request);
+          return networkResponse;
+        } catch (error) {
+          // catch is only triggered if the network fails
+          console.log('Fetch failed; returning offline page instead.', error);
+
+          const cache = await caches.open(CACHE_NAME);
+          const cachedResponse = await cache.match('/offline.html');
+          return cachedResponse;
+        }
+      })()
+    );
+  } else {
+    // For non-navigation requests, use a cache-first strategy
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => {
+          return response || fetch(event.request);
+        })
+    );
   }
-  
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // If we get a valid response, cache it and return it
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME)
-          .then(cache => {
-            // Only cache successful GET requests
-            if (response.status === 200) {
-              cache.put(event.request, responseToCache);
-            }
-          });
-        return response;
-      })
-      .catch(() => {
-        // If the network fails, try the cache
-        return caches.match(event.request)
-          .then(cachedResponse => {
-            // If we have a cached response, return it
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            // For navigation requests, if cache also fails, return the offline fallback page
-            if (event.request.mode === 'navigate') {
-              return caches.match('/offline.html');
-            }
-            // For other requests, we don't have a fallback, so we let the browser handle the error.
-            return new Response("Network error and not in cache", {
-              status: 408,
-              headers: { 'Content-Type': 'text/plain' }
-            });
-          });
-      })
+});
+
+
+// Listen for push notifications
+self.addEventListener('push', function(event) {
+  const data = event.data ? event.data.json() : { title: 'Aura', body: '새로운 알림이 도착했습니다.', tag: 'default' };
+  const title = data.title;
+  const options = {
+    body: data.body,
+    icon: '/icon.svg',
+    badge: '/icon.svg',
+    tag: data.tag || 'default', // Add a tag to group notifications
+    renotify: true, // Re-notify if a new notification with the same tag arrives
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      // If a window is already open, focus it
+      for (let i = 0; i < clientList.length; i++) {
+        let client = clientList[i];
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
   );
 });

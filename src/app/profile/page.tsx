@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import Header from '@/components/layout/header';
-
+import { useToast } from '@/hooks/use-toast';
 
 // Helper components for page structure
 const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -30,12 +30,39 @@ const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false }: 
 
 
 export default function ProfilePage() {
-  const { user: currentUser, notificationSettings, updateNotificationSettings, isLoaded } = useUser();
+  const { user: currentUser, notificationSettings, updateNotificationSettings, subscribeToPushNotifications } = useUser();
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const { toast } = useToast();
 
   const handleSettingChange = (id: keyof typeof notificationSettings) => (checked: boolean) => {
     updateNotificationSettings({ [id]: checked });
+
+    // If the main "all notifications" toggle is turned on, initiate push subscription
+    if (id === 'all' && checked) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            subscribeToPushNotifications();
+          } else {
+             toast({
+                variant: 'destructive',
+                title: '알림 권한 거부됨',
+                description: '푸시 알림을 받으려면 브라우저 또는 기기 설정에서 알림 권한을 허용해주세요.'
+            });
+          }
+        });
+      } else if (Notification.permission === 'granted') {
+        subscribeToPushNotifications();
+      } else {
+        // Permission is denied
+        toast({
+            variant: 'destructive',
+            title: '알림 권한 거부됨',
+            description: '푸시 알림을 받으려면 브라우저 또는 기기 설정에서 알림 권한을 허용해주세요.'
+        });
+      }
+    }
   };
   
   // Render immediately if we have user data, otherwise show a loader.
@@ -209,7 +236,7 @@ export default function ProfilePage() {
 
             <div className="py-8">
               <Button asChild className="w-full h-12 bg-primary text-primary-foreground rounded-full font-bold text-base">
-                  <Link href="/profile/edit">프로필 수정</Link>
+                  <Link href="/profile/edit" prefetch={false}>프로필 수정</Link>
               </Button>
             </div>
           </div>

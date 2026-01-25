@@ -7,6 +7,7 @@ import { doc, serverTimestamp, collection, query, where, getDoc, getDocs, update
 import type { User, Match, Like } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
 
 interface NotificationSettings {
   all: boolean;
@@ -59,6 +60,7 @@ interface UserContextType {
   peopleILiked: User[] | null;
   peopleWhoLikedMe: User[] | null;
   isLikesLoading: boolean;
+  subscribeToPushNotifications: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -103,6 +105,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
   const auth = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
@@ -371,12 +374,72 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
   }, [reauthVerificationId, authUser]);
 
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const subscribeToPushNotifications = useCallback(async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          toast({ variant: 'destructive', title: '푸시 알림 미지원', description: '이 브라우저는 푸시 알림을 지원하지 않습니다.' });
+          return;
+      }
+      if (!user || !firestore) return;
+
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (subscription) {
+            const isAlreadySaved = user.pushSubscriptions?.some(sub => sub.endpoint === subscription!.endpoint);
+            if (!isAlreadySaved) {
+                await updateUser({ pushSubscriptions: [...(user.pushSubscriptions || []), subscription.toJSON()] });
+            }
+            toast({ title: '알림이 설정되었습니다.' });
+            return;
+        }
+
+        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidPublicKey) {
+            console.error('VAPID public key is not defined in .env file.');
+            toast({ variant: 'destructive', title: '설정 오류', description: '푸시 알림 설정에 오류가 발생했습니다.' });
+            return;
+        }
+
+        const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey
+        });
+
+        await updateUser({
+            pushSubscriptions: [...(user.pushSubscriptions || []), subscription.toJSON()]
+        });
+        
+        toast({ title: '알림이 성공적으로 설정되었습니다.' });
+      } catch (error) {
+          console.error('Failed to subscribe to push notifications:', error);
+          toast({ variant: 'destructive', title: '구독 실패', description: '푸시 알림 구독에 실패했습니다. 다시 시도해주세요.' });
+      }
+  }, [user, firestore, updateUser, toast]);
+
+
   const value: UserContextType = {
     user, authUser, updateUser, notificationSettings, updateNotificationSettings,
     filters, updateFilters, resetFilters, isLoaded,
     totalUnreadCount, phoneAuth: { phoneNumber, setPhoneNumber, confirmationResult, recaptchaVerifier, setupRecaptcha, sendVerificationCode, verifyOtp, reauthenticate, isSendingOtp, isVerifyingOtp },
     isSignupFlowActive, setIsSignupFlowActive,
     matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading,
+    subscribeToPushNotifications
   };
 
   return (
