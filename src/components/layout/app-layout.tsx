@@ -16,8 +16,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isAdminPage = pathname.startsWith('/admin');
   
   const noBottomNavPaths = ['/signup', '/profile/edit', '/filter', '/chat'];
-  // 채팅방 상세 페이지('/chat/...')에서는 네비게이션을 숨기지만, 채팅 목록('/chat')에서는 보여야 한다면 로직 확인 필요
-  // 현재 로직은 /chat으로 시작하면 무조건 숨김입니다.
   
   const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
 
@@ -50,13 +48,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
       
-      {/* Toasts */}
-      <div className="absolute top-0 left-0 right-0 z-50">
-        <IncomingCallToast />
-        <NewLikeToast />
-        <NewMatchToast />
-        <NewMessageToast />
-      </div>
+      {/* Toast components do not render anything themselves, they trigger toasts.
+          The wrapper div is not necessary. */}
+      <IncomingCallToast />
+      <NewLikeToast />
+      <NewMatchToast />
+      <NewMessageToast />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +13,7 @@ export function NewLikeToast() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const [lastSeenLikeTimestamp, setLastSeenLikeTimestamp] = useState<Timestamp | null>(null);
+  const lastSeenLikeTimestamp = useRef<Timestamp | null>(null);
 
   const newLikesQuery = useMemoFirebase(() => {
     if (!currentUser?.id || !firestore) {
@@ -66,12 +66,20 @@ export function NewLikeToast() {
     if (newLikes && newLikes.length > 0) {
       const latestLike = newLikes[0];
       
-      if (latestLike && latestLike.timestamp && (!lastSeenLikeTimestamp || latestLike.timestamp.seconds > lastSeenLikeTimestamp.seconds)) {
+      // On the very first load, set the initial timestamp without showing a toast.
+      if (lastSeenLikeTimestamp.current === null) {
+          if (latestLike && latestLike.timestamp) {
+              lastSeenLikeTimestamp.current = latestLike.timestamp;
+          }
+          return;
+      }
+      
+      if (latestLike && latestLike.timestamp && (lastSeenLikeTimestamp.current.seconds < latestLike.timestamp.seconds)) {
         showToast(latestLike);
-        setLastSeenLikeTimestamp(latestLike.timestamp);
+        lastSeenLikeTimestamp.current = latestLike.timestamp;
       }
     }
-  }, [newLikes, lastSeenLikeTimestamp, showToast]);
+  }, [newLikes, showToast]);
 
   return null;
 }
