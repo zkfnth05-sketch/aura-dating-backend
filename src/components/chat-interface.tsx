@@ -214,6 +214,7 @@ export default function ChatInterface({ match: initialMatch, otherUser, messages
     const matchUpdateData = {
       lastMessage: newMessage,
       lastMessageTimestamp: serverTimestamp(),
+      lastMessageSenderId: currentUser.id,
       [`unreadCounts.${otherUserId}`]: increment(1)
     };
     batch.update(matchRef, matchUpdateData);
@@ -252,6 +253,7 @@ export default function ChatInterface({ match: initialMatch, otherUser, messages
     const matchUpdateData = {
         lastMessage: '음성 메시지',
         lastMessageTimestamp: serverTimestamp(),
+        lastMessageSenderId: currentUser.id,
         [`unreadCounts.${otherUserId}`]: increment(1)
     };
     batch.update(matchRef, matchUpdateData);

@@ -151,6 +151,7 @@ function UserProfilePageContent() {
           matchDate: serverTimestamp(),
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),
+          lastMessageSenderId: 'system',
           unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
           callStatus: 'idle' as const,
           callerId: null,

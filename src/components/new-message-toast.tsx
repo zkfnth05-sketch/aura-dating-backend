@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { useRouter, usePathname } from 'next/navigation';
@@ -15,7 +15,7 @@ export function NewMessageToast() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const unreadCountsRef = useRef<Map<string, number>>(new Map());
+  const lastTimestampRef = useRef<Map<string, Timestamp>>(new Map());
   const isInitialLoad = useRef(true);
 
   const matchesQuery = useMemoFirebase(() => {
@@ -36,18 +36,23 @@ export function NewMessageToast() {
     }
 
     if (isInitialLoad.current) {
-      matches.forEach(m => unreadCountsRef.current.set(m.id, m.unreadCounts?.[currentUser.id] || 0));
+      matches.forEach(m => {
+        if (m.lastMessageTimestamp) {
+          lastTimestampRef.current.set(m.id, m.lastMessageTimestamp);
+        }
+      });
       isInitialLoad.current = false;
       return;
     }
     
     matches.forEach(match => {
-      const currentUnreadCount = match.unreadCounts?.[currentUser.id] || 0;
-      const previousUnreadCount = unreadCountsRef.current.get(match.id) ?? 0;
-
+      const newTimestamp = match.lastMessageTimestamp;
+      const oldTimestamp = lastTimestampRef.current.get(match.id);
       const isUserInChat = pathname === `/chat/${match.id}`;
+      
+      const isNewer = newTimestamp && oldTimestamp ? newTimestamp.seconds > oldTimestamp.seconds : !!newTimestamp;
 
-      if (!isUserInChat && currentUnreadCount > previousUnreadCount) {
+      if (!isUserInChat && isNewer && match.lastMessageSenderId !== currentUser.id) {
         const sender = match.participants.find(p => p.id !== currentUser.id);
 
         if (sender) {
@@ -72,7 +77,9 @@ export function NewMessageToast() {
         }
       }
 
-      unreadCountsRef.current.set(match.id, currentUnreadCount);
+      if (newTimestamp) {
+        lastTimestampRef.current.set(match.id, newTimestamp);
+      }
     });
 
   }, [matches, currentUser, pathname, router, toast]);
