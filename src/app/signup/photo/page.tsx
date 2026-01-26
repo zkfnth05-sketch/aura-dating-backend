@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Loader2, Camera, ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import { getEnhancedPhoto } from '@/actions/ai-actions';
 import { compressImage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';

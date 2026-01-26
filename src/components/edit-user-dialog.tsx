@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus } from 'lucide-react';
-import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import { getEnhancedPhoto } from '@/actions/ai-actions';
 import Image from 'next/image';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';

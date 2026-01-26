@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -11,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
-import { getAIChatReplySuggestions } from '@/app/actions/ai-actions';
+import { getAIChatReplySuggestions } from '@/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from './video-chat';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';

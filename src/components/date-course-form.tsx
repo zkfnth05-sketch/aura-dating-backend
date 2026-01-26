@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { getDateCourse } from '@/app/actions/ai-actions';
+import { getDateCourse } from '@/actions/ai-actions';
 import type { DateCourseOutput } from '@/ai/flows/date-course-flow';
 
 const formSchema = z.object({

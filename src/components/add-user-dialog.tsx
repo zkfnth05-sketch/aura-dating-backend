@@ -19,7 +19,7 @@ import Image from 'next/image';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Switch } from './ui/switch';
-import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import { getEnhancedPhoto } from '@/actions/ai-actions';
 import { Label } from '@/components/ui/label';
 import { compressImage } from '@/lib/utils';
 

@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn, compressImage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
-import { getEnhancedPhoto } from '@/app/actions/ai-actions';
+import { getEnhancedPhoto } from '@/actions/ai-actions';
 import { getAuth, deleteUser } from 'firebase/auth';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
