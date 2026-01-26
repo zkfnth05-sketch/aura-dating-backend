@@ -109,7 +109,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
                 toast({
                     variant: "destructive",
                     title: "AI 보정 실패",
-                    description: error.message || "알 수 없는 오류가 발생했습니다. 원본 사진이 사용됩니다.",
+                    description: "Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.",
                 });
                 finalPhotoUrl = compressedUri; // Fallback
               }

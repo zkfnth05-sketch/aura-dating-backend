@@ -174,21 +174,22 @@ export default function ProfileEditForm() {
 
     let finalUriToUpload = compressedForUpload;
 
-    try {
-        if (aiEnhancement) {
-            try {
-                const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: profile.gender });
-                finalUriToUpload = await compressImage(result.enhancedPhotoDataUri);
-            } catch (error: any) {
-                console.error("AI photo enhancement failed:", error);
-                toast({
-                    variant: "destructive",
-                    title: "AI 보정 실패",
-                    description: error.message || "알 수 없는 오류가 발생했습니다. 원본 사진이 사용됩니다.",
-                });
-                // Fallback to original compressed image is handled by finalUriToUpload's initial value
-            }
+    if (aiEnhancement) {
+        try {
+            const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: profile.gender });
+            finalUriToUpload = await compressImage(result.enhancedPhotoDataUri);
+        } catch (error: any) {
+            console.error("AI photo enhancement failed:", error);
+            toast({
+                variant: "destructive",
+                title: "AI 보정 실패",
+                description: "Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.",
+            });
+            // Fallback to original compressed image is handled by finalUriToUpload's initial value
         }
+    }
+    
+    try {
         await updateUser({ photoUrls: [...photoUrls, finalUriToUpload] });
     } catch (error) {
         console.error("Failed to update user with new photo:", error);
