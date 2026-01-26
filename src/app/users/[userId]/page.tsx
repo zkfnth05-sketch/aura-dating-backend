@@ -147,7 +147,6 @@ function UserProfilePageContent() {
         const matchData = {
           id: newMatchRef.id,
           users: [currentUser.id, targetUserId],
-          participants: [currentUser, user],
           matchDate: serverTimestamp(),
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),

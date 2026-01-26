@@ -182,7 +182,6 @@ export default function HomePageClient() {
         const matchData = {
           id: newMatchRef.id,
           users: [currentUser.id, targetUserId],
-          participants: [currentUser, activeUser],
           matchDate: serverTimestamp(),
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),

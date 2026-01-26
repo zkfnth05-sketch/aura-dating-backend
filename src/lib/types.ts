@@ -26,7 +26,6 @@ export type User = {
 export type Match = {
   id: string;
   users: string[];
-  participants: User[]; // Store a subset of user data for quick access
   lastMessage: string;
   lastMessageTimestamp: Timestamp;
   lastMessageSenderId?: string;

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import Link from 'next/link';
-import type { Match } from '@/lib/types';
+import type { Match, User } from '@/lib/types';
 
 export function NewMatchToast() {
   const { user: currentUser } = useUser();
@@ -28,6 +28,38 @@ export function NewMatchToast() {
 
   const { data: matches } = useCollection<Match>(matchesQuery);
 
+  const showMatchToast = useCallback(async (match: Match) => {
+    if (!currentUser || !firestore) return;
+    const otherUserId = match.users.find(id => id !== currentUser.id);
+    if (!otherUserId) return;
+
+    try {
+        const userRef = doc(firestore, 'users', otherUserId);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+            const otherUser = userSnap.data() as User;
+            toast({
+                duration: 5000,
+                title: '🎉 새로운 매치!',
+                description: (
+                  <Link href={`/chat/${match.id}`} className="w-full">
+                    <div className="flex items-center gap-3 mt-2 cursor-pointer">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={otherUser.photoUrls?.[0]} alt={otherUser.name} />
+                        <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <span>{otherUser.name}님과 새로운 인연이 시작되었습니다.</span>
+                    </div>
+                  </Link>
+                ),
+              });
+        }
+    } catch (e) {
+        console.error("Failed to show match toast", e);
+    }
+  }, [currentUser, firestore, toast]);
+
   useEffect(() => {
     if (!matches || !currentUser) {
       return;
@@ -41,31 +73,12 @@ export function NewMatchToast() {
 
     matches.forEach(match => {
       if (!knownMatchIds.current.has(match.id)) {
-        const otherUser = match.participants.find(p => p.id !== currentUser.id);
-        
-        if (otherUser) {
-          toast({
-            duration: 5000,
-            title: '🎉 새로운 매치!',
-            description: (
-              <Link href={`/chat/${match.id}`} className="w-full">
-                <div className="flex items-center gap-3 mt-2 cursor-pointer">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={otherUser.photoUrls?.[0]} alt={otherUser.name} />
-                    <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span>{otherUser.name}님과 새로운 인연이 시작되었습니다.</span>
-                </div>
-              </Link>
-            ),
-          });
-        }
-        
+        showMatchToast(match);
         knownMatchIds.current.add(match.id);
       }
     });
     
-  }, [matches, currentUser, toast]);
+  }, [matches, currentUser, showMatchToast]);
 
   return null;
 }
