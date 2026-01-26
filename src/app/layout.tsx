@@ -1,7 +1,5 @@
-'use client';
-
-import type { Metadata } from 'next';
-import '@/app/globals.css';
+"use client";
+import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { UserProvider } from '@/contexts/user-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
@@ -46,7 +44,7 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="font-body antialiased h-full" suppressHydrationWarning>
+      <body className="font-body antialiased h-full bg-background text-foreground" suppressHydrationWarning>
         <FirebaseClientProvider>
           <UserProvider>
             <AppLayout>
