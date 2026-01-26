@@ -1,0 +1,55 @@
+{
+  "packageId": "app.web.aura",
+  "host": "studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app",
+  "name": "Aura Ai Dating",
+  "launcherName": "Aura",
+  "display": "standalone",
+  "themeColor": "#FFD700",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#121212",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://placehold.co/512x512/FFD700/121212.png?text=Aura",
+  "maskableIconUrl": "https://placehold.co/512x512/FFD700/121212.png?text=Aura",
+  "monochromeIconUrl": "https://placehold.co/512x512/FFFFFF/000000.png?text=Aura",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/home/user/studio/android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "2",
+  "appVersionCode": 2,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": true
+    },
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "2"
+}
