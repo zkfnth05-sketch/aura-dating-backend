@@ -61,7 +61,7 @@ const dateCourseTextFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash'),
+      model: googleAI.model('gemini-1.5-flash-latest'),
       prompt: `Create a date course JSON based on these preferences. The response must be in Korean.
 - Destination: ${input.destination}
 - People: ${input.partySize}
@@ -103,15 +103,45 @@ const dateCourseImageFlow = ai.defineFlow(
 
 
 export async function recommendDateCourse(input: DateCourseInput): Promise<DateCourseOutput> {
-    const textResult = await dateCourseTextFlow(input);
-    const season = getSeason(input.date);
+  try {
+      const textResult = await dateCourseTextFlow(input);
+      const season = getSeason(input.date);
 
-    const imagePrompt = `${textResult.overallImagePrompt}, photorealistic high quality image of a young Korean man and woman couple enjoying a date as the main focus, ${season}`;
-    const imageDataUri = await dateCourseImageFlow(imagePrompt);
+      const imagePrompt = `${textResult.overallImagePrompt}, photorealistic high quality image of a young Korean man and woman couple enjoying a date as the main focus, ${season}`;
+      const imageDataUri = await dateCourseImageFlow(imagePrompt);
 
-    return {
-        ...textResult,
-        steps: textResult.steps,
-        overallImageDataUri: imageDataUri || undefined,
-    };
+      return {
+          ...textResult,
+          steps: textResult.steps,
+          overallImageDataUri: imageDataUri || undefined,
+      };
+  } catch (error) {
+      console.error("AI date course recommendation failed, returning fallback.", error);
+      // Return a fallback response
+      return {
+          title: "도심 속 힐링 데이트",
+          totalCost: "약 5만원",
+          summaryAndMessage: "AI 추천에 오류가 발생했지만, 이 로맨틱한 데이트로 즐거운 시간을 보내세요!",
+          overallImagePrompt: "A couple enjoying coffee at a cafe",
+          overallImageDataUri: "https://picsum.photos/seed/date/1280/720",
+          steps: [
+              {
+                  time: "14:00",
+                  title: "아늑한 카페에서 커피 한잔",
+                  description: "분위기 좋은 카페에 앉아 담소를 나누며 데이트를 시작하세요.",
+                  directions: "가까운 평점 좋은 카페 검색",
+                  cost: "1인당 약 1만원",
+                  romanticTip: "서로의 눈을 바라보며 이야기하는 시간을 가져보세요."
+              },
+              {
+                  time: "16:00",
+                  title: "공원 산책",
+                  description: "가까운 공원을 찾아 손을 잡고 걸으며 여유를 만끽하세요.",
+                  directions: "도보 5분",
+                  cost: "무료",
+                  romanticTip: "예쁜 꽃이나 풍경을 배경으로 함께 사진을 찍어보세요."
+              }
+          ]
+      };
+  }
 }

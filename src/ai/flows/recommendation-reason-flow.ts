@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI flow to generate a recommendation reason between two users.
@@ -34,7 +35,15 @@ const RecommendationReasonOutputSchema = z.object({
 export type RecommendationReasonOutput = z.infer<typeof RecommendationReasonOutputSchema>;
 
 export async function getRecommendationReason(input: RecommendationReasonInput): Promise<RecommendationReasonOutput> {
-  return recommendationReasonFlow(input);
+  try {
+    return await recommendationReasonFlow(input);
+  } catch (error) {
+    console.error("AI recommendation reason failed, returning fallback.", error);
+    // Return a fallback response in case of an error
+    return {
+      reason: "두 분은 공통 관심사가 많아 즐거운 대화를 나눌 수 있을 거예요. 좋은 인연이 될 수 있을 것 같아요!"
+    };
+  }
 }
 
 const recommendationReasonFlow = ai.defineFlow(
@@ -45,7 +54,7 @@ const recommendationReasonFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-        model: googleAI.model('gemini-2.5-flash'),
+        model: googleAI.model('gemini-1.5-flash-latest'),
         prompt: `You are an AI dating assistant. Your task is to explain why two people would be a good match based on their profiles.
 The explanation must be in Korean. Be specific, warm, and encouraging. Highlight 2-3 key commonalities.
 

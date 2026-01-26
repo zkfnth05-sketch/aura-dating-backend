@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI flow to generate chat reply suggestions.
@@ -36,7 +37,19 @@ const ChatReplyOutputSchema = z.object({
 export type ChatReplyOutput = z.infer<typeof ChatReplyOutputSchema>;
 
 export async function getChatReplySuggestions(input: ChatReplyInput): Promise<ChatReplyOutput> {
-  return chatReplyFlow(input);
+  try {
+    return await chatReplyFlow(input);
+  } catch (error) {
+    console.error("AI chat reply suggestion failed, returning fallback.", error);
+    // Return a fallback response in case of an error
+    return {
+      suggestions: [
+        "안녕하세요! 프로필 잘 봤어요. 저희 공통점이 많네요. 😊",
+        "반가워요! 어떤 계기로 저희 앱을 사용하게 되셨어요?",
+        "대화 나눠보고 싶어서 메시지 드려요. 좋은 하루 보내고 계신가요?"
+      ]
+    };
+  }
 }
 
 const chatReplyFlow = ai.defineFlow(
@@ -47,7 +60,7 @@ const chatReplyFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-        model: googleAI.model('gemini-2.5-flash'),
+        model: googleAI.model('gemini-1.5-flash-latest'),
         prompt: `You are an expert dating coach AI. Your goal is to help your client, ${input.currentUser.name}, win the heart of their match, ${input.matchUser.name}, and successfully arrange a date. This is a dating app where the ultimate goal is to meet in person.
 
 Analyze the user profiles and conversation history to generate three highly effective, charming, and strategic replies. The replies must be in Korean.
