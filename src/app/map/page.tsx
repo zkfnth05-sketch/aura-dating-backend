@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import MapClient from '@/components/map-client';
 import Header from '@/components/layout/header';
 import { useUser } from '@/contexts/user-context';
@@ -15,37 +16,38 @@ export default function MapPage() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
   const [mapUsers, setMapUsers] = useState<User[]>([]);
   const [isFetchingUsers, setIsFetchingUsers] = useState(true);
   const [center, setCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // Default to Seoul
 
   useEffect(() => {
-    if (currentUser) {
-      if (typeof currentUser.lat === 'number' && typeof currentUser.lng === 'number') {
-        setCenter({ lat: currentUser.lat, lng: currentUser.lng });
+    // Redirect if not logged in
+    if (isUserLoaded && !currentUser) {
+      router.replace('/signup');
+    }
+  }, [isUserLoaded, currentUser, router]);
+
+  useEffect(() => {
+    if (currentUser?.lat && currentUser?.lng) {
+      setCenter({ lat: currentUser.lat, lng: currentUser.lng });
+    } else {
+      // Fallback to geolocation if user location not available
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            setCenter({ lat: latitude, lng: longitude });
+          },
+          (error) => {
+            console.error("Geolocation error:", error);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        );
       }
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          setCenter({ lat: latitude, lng: longitude });
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000,
-        }
-      );
-    }
-  }, []);
-  
   useEffect(() => {
     const fetchInitialUsers = async () => {
       if (!currentUser || !firestore) {
@@ -53,23 +55,23 @@ export default function MapPage() {
         setIsFetchingUsers(false);
         return;
       }
-      
+  
       setIsFetchingUsers(true);
       try {
         let genderFilter = currentUser.gender === '남성' ? ['여성'] : 
-                           currentUser.gender === '여성' ? ['남성'] : ['남성', '여성', '기타'];
+                             currentUser.gender === '여성' ? ['남성'] : ['남성', '여성', '기타'];
   
         const usersQuery = query(
           collection(firestore, 'users'),
           where('gender', 'in', genderFilter),
-          limit(30) // 50개는 모바일에서 다소 무거울 수 있으므로 30개로 조정
+          limit(50) // Increased limit to show more users on map
         );
         
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
         
-        // 중복 제거 및 내 정보 포함 로직 최적화
         const otherUsers = fetchedUsers.filter(u => u.id !== currentUser.id);
+        // Ensure current user is always on the map
         setMapUsers([currentUser, ...otherUsers]);
   
       } catch (error) {
@@ -79,10 +81,9 @@ export default function MapPage() {
       }
     };
   
-    if (isUserLoaded) {
+    if (isUserLoaded && currentUser) {
       fetchInitialUsers();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, firestore, isUserLoaded]);
 
   if (!apiKey) {
@@ -107,13 +108,23 @@ export default function MapPage() {
     );
   }
 
-  // Render the map immediately, markers will be added when `mapUsers` is populated.
+  if (!isUserLoaded || !currentUser) {
+    return (
+        <div className="flex flex-col h-screen">
+            <Header />
+            <main className="flex-1 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </main>
+        </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       <Header />
       <div className="flex-1">
-        {!isUserLoaded ? (
-            <div className="flex-1 flex items-center justify-center">
+        {isFetchingUsers ? (
+            <div className="flex-1 flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
         ) : (
