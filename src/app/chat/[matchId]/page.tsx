@@ -23,17 +23,17 @@ export default function ChatPage() {
   
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
-  const otherParticipant = useMemo(() => {
+  // Find the ID of the other user from the `users` array, which is more reliable than `participants`
+  const otherUserId = useMemo(() => {
     if (!match || !currentUser) return null;
-    // Find the participant object that is not the current user from the potentially stale participants array
-    return match.participants.find(p => p.id !== currentUser.id);
+    return match.users.find(id => id !== currentUser.id);
   }, [match, currentUser]);
 
   const otherUserRef = useMemoFirebase(() => {
-    // Use the ID from the (potentially stale) participant object to create a ref for a fresh fetch.
-    if (!otherParticipant?.id || !firestore) return null;
-    return doc(firestore, 'users', otherParticipant.id);
-  }, [firestore, otherParticipant]);
+    // Use the ID to create a ref for a fresh fetch of the user data
+    if (!otherUserId || !firestore) return null;
+    return doc(firestore, 'users', otherUserId);
+  }, [firestore, otherUserId]);
 
   // Fetch the fresh user data using the ref
   const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
@@ -43,7 +43,8 @@ export default function ChatPage() {
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
   }, [firestore, matchId]);
   
-  const isLoading = isMatchLoading || !currentUser || (otherParticipant && isOtherUserLoading);
+  // The loading state now correctly waits for `otherUserId` to be determined
+  const isLoading = isMatchLoading || !currentUser || isOtherUserLoading;
 
 
   if (isLoading) {
@@ -54,7 +55,8 @@ export default function ChatPage() {
     );
   }
 
-  if (!match) {
+  // This check now handles cases where the match might not exist or doesn't include the current user
+  if (!match || !otherUserId) {
     return (
         <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
             <UserX className="h-16 w-16 text-muted-foreground mb-4" />
@@ -68,6 +70,7 @@ export default function ChatPage() {
     );
   }
   
+  // If we have an ID but the user document fetch returned no data, it means they deleted their account.
   if (!otherUser) {
     return (
         <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
