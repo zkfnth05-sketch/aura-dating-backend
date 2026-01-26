@@ -10,7 +10,7 @@ runConfig:
 # Environment variables and secrets.
 env:
   - variable: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    value: "여기에_구글_지도_API_키를_입력하세요"
+    value: "AIzaSyDif-s30htM9_bWTE8FxOJD7wwDHkrcPg8"
     availability:
       - BUILD
       - RUNTIME

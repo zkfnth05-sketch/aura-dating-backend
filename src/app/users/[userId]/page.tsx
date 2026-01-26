@@ -10,7 +10,7 @@ import { ArrowLeft, Sparkles, Loader2, UserX } from 'lucide-react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import ActionButtons from '@/components/action-buttons';
-import { getAIRecommendationReason } from '@/app/actions/ai-actions';
+import { getAIRecommendationReason } from '@/actions/ai-actions';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';

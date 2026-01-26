@@ -21,23 +21,35 @@
     "path": "/home/user/studio/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "3",
-  "appVersionCode": 3,
+  "appVersionName": "2",
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/manifest.json",
   "fallbackType": "customtabs",
-  "features": {},
+  "features": {
+    "playBilling": {
+      "enabled": true
+    },
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
   "alphaDependencies": {
     "enabled": false
   },
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
+  "fullScopeUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/",
   "minSdkVersion": 21,
-  "orientation": "default",
+  "orientation": "portrait",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "3"
+  "appVersion": "2"
 }
