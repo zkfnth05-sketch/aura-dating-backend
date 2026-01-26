@@ -170,34 +170,33 @@ export default function ProfileEditForm() {
   const processAndAddImage = async (dataUri: string) => {
     const compressedForUpload = await compressImage(dataUri);
     setTempPhotoUri(compressedForUpload);
+    setIsEnhancing(true);
+
+    let finalUriToUpload = compressedForUpload;
 
     try {
         if (aiEnhancement) {
-            setIsEnhancing(true);
-            const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: profile.gender });
-            
-            if (result.enhancedPhotoDataUri === compressedForUpload) {
-                 toast({
+            try {
+                const result = await getEnhancedPhoto({ photoDataUri: compressedForUpload, gender: profile.gender });
+                finalUriToUpload = await compressImage(result.enhancedPhotoDataUri);
+            } catch (error: any) {
+                console.error("AI photo enhancement failed:", error);
+                toast({
                     variant: "destructive",
                     title: "AI 보정 실패",
-                    description: "다시 한번 시도해주세요,AI 사진 보정이 안될시에는 원본 사진이 사용됩니다",
+                    description: error.message || "알 수 없는 오류가 발생했습니다. 원본 사진이 사용됩니다.",
                 });
+                // Fallback to original compressed image is handled by finalUriToUpload's initial value
             }
-            
-            const finalCompressedUri = await compressImage(result.enhancedPhotoDataUri);
-            await updateUser({ photoUrls: [...photoUrls, finalCompressedUri] });
-        } else {
-            await updateUser({ photoUrls: [...photoUrls, compressedForUpload] });
         }
+        await updateUser({ photoUrls: [...photoUrls, finalUriToUpload] });
     } catch (error) {
-         console.error("AI enhancement process failed:", error);
+        console.error("Failed to update user with new photo:", error);
         toast({
           variant: "destructive",
           title: "사진 추가 실패",
-          description: "사진을 추가하는 중 오류가 발생했습니다.",
+          description: "프로필에 사진을 추가하는 중 오류가 발생했습니다.",
         });
-        // In case of any error, use the original compressed image
-        await updateUser({ photoUrls: [...photoUrls, compressedForUpload] });
     } finally {
         setIsEnhancing(false);
         setTempPhotoUri(null);

@@ -101,15 +101,18 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
         if (originalPhotoUri && originalPhotoUri !== user.photoUrls?.[0]) { // Only enhance if photo changed
             const compressedUri = await compressImage(originalPhotoUri);
             if (aiEnhancement) {
+              try {
                 const result = await getEnhancedPhoto({ photoDataUri: compressedUri, gender: values.gender });
-                if (result.enhancedPhotoDataUri === compressedUri) {
-                    toast({
-                        variant: "destructive",
-                        title: "AI 보정 실패",
-                        description: "다시 한번 시도해주세요,AI 사진 보정이 안될시에는 원본 사진이 사용됩니다",
-                    });
-                }
                 finalPhotoUrl = await compressImage(result.enhancedPhotoDataUri);
+              } catch (error: any) {
+                console.error("AI photo enhancement failed:", error);
+                toast({
+                    variant: "destructive",
+                    title: "AI 보정 실패",
+                    description: error.message || "알 수 없는 오류가 발생했습니다. 원본 사진이 사용됩니다.",
+                });
+                finalPhotoUrl = compressedUri; // Fallback
+              }
             } else {
                 finalPhotoUrl = compressedUri;
             }

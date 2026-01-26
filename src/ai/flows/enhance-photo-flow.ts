@@ -97,8 +97,8 @@ const enhancePhotoFlow = ai.defineFlow(
         
         throw new Error("AI photo enhancement did not return a valid image.");
     } catch (error) {
-        console.error("AI photo enhancement failed:", error);
-        return { enhancedPhotoDataUri: input.photoDataUri };
+        console.error("AI photo enhancement failed in flow:", error);
+        throw error;
     }
   }
 );
