@@ -2,13 +2,15 @@ import type { Match, User } from '@/lib/types';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from '@/lib/utils';
-import { useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser } from '@/contexts/user-context';
+import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { useMemo } from 'react';
 import { doc } from 'firebase/firestore';
 
 
 const MatchListItem = ({match}: {match: Match}) => {
-    const { user: currentUser, firestore } = useUser();
+    const { user: currentUser } = useUser();
+    const firestore = useFirestore();
 
     const otherUserId = useMemo(() => {
         if (!currentUser) return null;
@@ -23,7 +25,7 @@ const MatchListItem = ({match}: {match: Match}) => {
     const { data: otherUser } = useDoc<User>(otherUserRef);
 
     if (!currentUser || !otherUser) {
-        // You can return a skeleton loader here if you want
+        // A skeleton loader could be returned here for better UX
         return null;
     };
     
