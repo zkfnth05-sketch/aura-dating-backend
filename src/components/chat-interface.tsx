@@ -56,7 +56,7 @@ const formatMessageTime = (timestamp: Timestamp | any): string => {
     });
 };
 
-export default function ChatInterface({ match: initialMatch, messagesColRef }: { match: Match; messagesColRef: CollectionReference }) {
+export default function ChatInterface({ match: initialMatch, otherUser, messagesColRef }: { match: Match; otherUser: User; messagesColRef: CollectionReference }) {
   const router = useRouter();
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
@@ -144,11 +144,6 @@ export default function ChatInterface({ match: initialMatch, messagesColRef }: {
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
-  const otherUser = useMemo(() => {
-    if (!currentUser) return null;
-    return match.participants.find(p => p.id !== currentUser.id)!;
-  }, [match.participants, currentUser]);
-
   useEffect(() => {
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');

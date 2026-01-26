@@ -44,6 +44,7 @@ interface PhoneAuthState {
 interface UserContextType {
   user: User | null;
   authUser: AuthUser | null;
+  firestore: any;
   updateUser: (newUserData: Partial<User>) => Promise<void>;
   notificationSettings: NotificationSettings;
   updateNotificationSettings: (newSettings: Partial<NotificationSettings>) => void;
@@ -434,7 +435,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
 
   const value: UserContextType = {
-    user, authUser, updateUser, notificationSettings, updateNotificationSettings,
+    user, authUser, firestore, updateUser, notificationSettings, updateNotificationSettings,
     filters, updateFilters, resetFilters, isLoaded,
     totalUnreadCount, phoneAuth: { phoneNumber, setPhoneNumber, confirmationResult, recaptchaVerifier, setupRecaptcha, sendVerificationCode, verifyOtp, reauthenticate, isSendingOtp, isVerifyingOtp },
     isSignupFlowActive, setIsSignupFlowActive,

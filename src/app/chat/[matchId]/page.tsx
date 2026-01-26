@@ -4,10 +4,10 @@ import ChatInterface from '@/components/chat-interface';
 import { useDoc, useMemoFirebase, useFirestore, useUser } from '@/firebase';
 import type { Match, User } from '@/lib/types';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, collection, CollectionReference, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, collection, CollectionReference } from 'firebase/firestore';
 import { Loader2, UserX, ArrowLeft } from 'lucide-react';
+import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { useEffect, useMemo, useState } from 'react';
 
 export default function ChatPage() {
   const params = useParams();
@@ -15,7 +15,6 @@ export default function ChatPage() {
   const matchId = params.matchId as string;
   const firestore = useFirestore();
   const { user: currentUser } = useUser();
-  const [otherUser, setOtherUser] = useState<User | null | undefined>(undefined); // undefined: not checked, null: not found
 
   const matchRef = useMemoFirebase(() => {
     if (!matchId || !firestore) return null;
@@ -24,41 +23,26 @@ export default function ChatPage() {
   
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
-  useEffect(() => {
-    const fetchOtherUserData = async () => {
-      if (!match || !currentUser || !firestore) return;
+  const otherUserId = useMemo(() => {
+    if (!match || !currentUser) return null;
+    return match.users.find(id => id !== currentUser.id);
+  }, [match, currentUser]);
 
-      const otherParticipantInfo = match.participants.find(p => p.id !== currentUser.id);
-      if (!otherParticipantInfo) {
-        setOtherUser(null);
-        return;
-      }
-      
-      const otherUserRef = doc(firestore, 'users', otherParticipantInfo.id);
-      try {
-        const userSnap = await getDoc(otherUserRef);
-        if (userSnap.exists()) {
-          setOtherUser(userSnap.data() as User);
-        } else {
-          setOtherUser(null); // User document not found, so they have left
-        }
-      } catch (e) {
-        console.error("Failed to fetch other user's data", e);
-        setOtherUser(null);
-      }
-    };
+  const otherUserRef = useMemoFirebase(() => {
+    if (!otherUserId || !firestore) return null;
+    return doc(firestore, 'users', otherUserId);
+  }, [firestore, otherUserId]);
 
-    if (match && currentUser && firestore) {
-      fetchOtherUserData();
-    }
-  }, [match, currentUser, firestore]);
+  const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
+
   
   const messagesColRef = useMemoFirebase(() => {
     if (!matchId || !firestore) return null;
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
   }, [firestore, matchId]);
   
-  const isLoading = isMatchLoading || !currentUser || otherUser === undefined;
+  const isLoading = isMatchLoading || !currentUser || (otherUserId && isOtherUserLoading) || (match && !otherUserId && !isMatchLoading);
+
 
   if (isLoading) {
     return (
@@ -97,6 +81,6 @@ export default function ChatPage() {
   }
 
   return (
-    <ChatInterface match={match} messagesColRef={messagesColRef!} />
+    <ChatInterface match={match} otherUser={otherUser} messagesColRef={messagesColRef!} />
   );
 }
