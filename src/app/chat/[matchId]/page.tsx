@@ -23,25 +23,27 @@ export default function ChatPage() {
   
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
-  const otherUserId = useMemo(() => {
+  const otherParticipant = useMemo(() => {
     if (!match || !currentUser) return null;
-    return match.users.find(id => id !== currentUser.id);
+    // Find the participant object that is not the current user from the potentially stale participants array
+    return match.participants.find(p => p.id !== currentUser.id);
   }, [match, currentUser]);
 
   const otherUserRef = useMemoFirebase(() => {
-    if (!otherUserId || !firestore) return null;
-    return doc(firestore, 'users', otherUserId);
-  }, [firestore, otherUserId]);
+    // Use the ID from the (potentially stale) participant object to create a ref for a fresh fetch.
+    if (!otherParticipant?.id || !firestore) return null;
+    return doc(firestore, 'users', otherParticipant.id);
+  }, [firestore, otherParticipant]);
 
+  // Fetch the fresh user data using the ref
   const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
-
   
   const messagesColRef = useMemoFirebase(() => {
     if (!matchId || !firestore) return null;
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
   }, [firestore, matchId]);
   
-  const isLoading = isMatchLoading || !currentUser || (otherUserId && isOtherUserLoading) || (match && !otherUserId && !isMatchLoading);
+  const isLoading = isMatchLoading || !currentUser || (otherParticipant && isOtherUserLoading);
 
 
   if (isLoading) {

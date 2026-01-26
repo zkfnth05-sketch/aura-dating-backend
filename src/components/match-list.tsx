@@ -6,6 +6,7 @@ import { useUser } from '@/contexts/user-context';
 import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { useMemo } from 'react';
 import { doc } from 'firebase/firestore';
+import { Skeleton } from './ui/skeleton';
 
 
 const MatchListItem = ({match}: {match: Match}) => {
@@ -22,10 +23,27 @@ const MatchListItem = ({match}: {match: Match}) => {
         return doc(firestore, 'users', otherUserId);
     }, [firestore, otherUserId]);
 
-    const { data: otherUser } = useDoc<User>(otherUserRef);
+    const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
 
-    if (!currentUser || !otherUser) {
-        // A skeleton loader could be returned here for better UX
+    if (!currentUser) {
+        return null;
+    };
+
+    if (isOtherUserLoading) {
+        return (
+            <div className="flex items-center gap-4 p-2">
+                <Skeleton className="h-14 w-14 rounded-full" />
+                <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-48" />
+                </div>
+            </div>
+        );
+    }
+    
+    if (!otherUser) {
+        // This can happen if the other user has deleted their account.
+        // We render nothing in this case, effectively hiding the match from the list.
         return null;
     };
     
