@@ -43,17 +43,29 @@ export default function HomePageClient() {
     let usersQuery: Query<DocumentData>;
     const baseUsersRef = collection(firestore, 'users');
     
-    // Base query, just order by creation time. Filtering happens on the client.
-    usersQuery = query(
-        baseUsersRef,
-        orderBy('createdAt', 'desc')
-    );
+    // --- Server-side Filtering ---
+    let queryConstraints: any[] = [orderBy('createdAt', 'desc')];
+    
+    const genderFilter = filters.gender;
+    if (genderFilter.length > 0) {
+        queryConstraints.push(where('gender', 'in', genderFilter));
+    } else {
+        if (currentUser.gender === '남성') {
+            queryConstraints.push(where('gender', '==', '여성'));
+        } else if (currentUser.gender === '여성') {
+            queryConstraints.push(where('gender', '==', '남성'));
+        }
+        // If currentUser.gender is '기타', no default gender filter is applied.
+    }
+    // --- End Server-side Filtering ---
+    
+    let baseQuery = query(baseUsersRef, ...queryConstraints);
 
     // Add pagination
     if (lastVisibleDoc) {
-      usersQuery = query(usersQuery, startAfter(lastVisibleDoc), limit(FETCH_LIMIT));
+      usersQuery = query(baseQuery, startAfter(lastVisibleDoc), limit(FETCH_LIMIT));
     } else {
-      usersQuery = query(usersQuery, limit(FETCH_LIMIT));
+      usersQuery = query(baseQuery, limit(FETCH_LIMIT));
     }
 
     try {
@@ -64,20 +76,9 @@ export default function HomePageClient() {
 
             return users.filter(user => {
                 if (user.id === currentUser.id) return false;
-                if (likedUserIds.has(user.id)) return false; // Filter out users I've already liked
+                if (likedUserIds.has(user.id)) return false;
 
-                // Gender Filter (client-side)
-                let genderFilter: ('남성' | '여성' | '기타')[] = [];
-                if (filters.gender.length > 0) {
-                    genderFilter = filters.gender;
-                } else if (currentUser.gender === '남성') {
-                    genderFilter = ['여성'];
-                } else if (currentUser.gender === '여성') {
-                    genderFilter = ['남성'];
-                }
-                if (genderFilter.length > 0 && !genderFilter.includes(user.gender)) return false;
-                
-                // Other filters
+                // Age and Tag filters remain on client-side for simplicity
                 if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
                 
                 const checkTags = (userTags: string[] = [], filterTags: string[]) => {
@@ -117,7 +118,6 @@ export default function HomePageClient() {
     if(isLoaded && currentUser) {
       fetchUsers(null);
     }
-    // This effect should only run when filters change or user loads, not on fetchUsers change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, currentUser, filters]);
 
@@ -130,7 +130,6 @@ export default function HomePageClient() {
     const targetUserId = activeUser.id;
   
     if (action === 'message') {
-      // Find if a match already exists
       const matchQuery = query(
         collection(firestore, 'matches'),
         where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
@@ -142,12 +141,10 @@ export default function HomePageClient() {
       if (existingMatchDoc) {
         router.push(`/chat/${existingMatchDoc.id}`);
       } else {
-        // Create a new match if it doesn't exist
         const newMatchRef = doc(collection(firestore, 'matches'));
         const matchData = {
           id: newMatchRef.id,
           users: [currentUser.id, targetUserId],
-          participants: [currentUser, activeUser],
           matchDate: serverTimestamp(),
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),
@@ -201,7 +198,6 @@ export default function HomePageClient() {
 
     const likesCollection = collection(firestore, 'likes');
 
-    // Non-blocking write to the new top-level 'likes' collection
     addDoc(likesCollection, likeData).catch(e => {
       if (e.code === 'permission-denied') {
         const contextualError = new FirestorePermissionError({
