@@ -48,14 +48,13 @@ export default function MapPage() {
   
   useEffect(() => {
     const fetchInitialUsers = async () => {
-      if (!currentUser || !firestore) return;
-      
-      // 이미 데이터가 충분히 있다면 스킵 (캐싱 효과)
-      if (mapUsers.length > 0 && mapUsers.some(u => u.id === currentUser.id)) {
+      if (!currentUser || !firestore) {
+        setMapUsers([]);
         setIsFetchingUsers(false);
         return;
       }
-  
+      
+      setIsFetchingUsers(true);
       try {
         let genderFilter = currentUser.gender === '남성' ? ['여성'] : 
                            currentUser.gender === '여성' ? ['남성'] : ['남성', '여성', '기타'];
@@ -74,7 +73,7 @@ export default function MapPage() {
         setMapUsers([currentUser, ...otherUsers]);
   
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error fetching map users:", error);
       } finally {
         setIsFetchingUsers(false);
       }
@@ -83,7 +82,8 @@ export default function MapPage() {
     if (isUserLoaded) {
       fetchInitialUsers();
     }
-  }, [currentUser?.id, isUserLoaded, firestore, currentUser, mapUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, firestore, isUserLoaded]);
 
   if (!apiKey) {
     return (
