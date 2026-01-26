@@ -61,7 +61,7 @@ const dateCourseTextFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      model: googleAI.model('gemini-1.5-flash-latest'),
+      model: googleAI.model('gemini-2.5-flash'),
       prompt: `Create a date course JSON based on these preferences. The response must be in Korean.
 - Destination: ${input.destination}
 - People: ${input.partySize}

@@ -54,7 +54,7 @@ const recommendationReasonFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-        model: googleAI.model('gemini-1.5-flash-latest'),
+        model: googleAI.model('gemini-2.5-flash'),
         prompt: `You are an AI dating assistant. Your task is to explain why two people would be a good match based on their profiles.
 The explanation must be in Korean. Be specific, warm, and encouraging. Highlight 2-3 key commonalities.
 
