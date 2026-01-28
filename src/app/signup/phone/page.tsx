@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,17 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const countryCodes = [
-  { value: '+82', label: 'South Korea (+82)' },
-  { value: '+1', label: 'United States (+1)' },
-  { value: '+81', label: 'Japan (+81)' },
-  { value: '+86', label: 'China (+86)' },
-  { value: '+44', label: 'United Kingdom (+44)' },
-  { value: '+33', label: 'France (+33)' },
-  { value: '+49', label: 'Germany (+49)' },
-];
-
+import { countryCodes } from '@/lib/country-codes';
 
 export default function PhonePage() {
   const router = useRouter();
@@ -79,9 +70,9 @@ export default function PhonePage() {
                 <SelectTrigger id="country-code" className="mt-2 w-full bg-zinc-900 border-zinc-800 h-12 text-base">
                     <SelectValue placeholder="국가 선택" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-900 text-white border-zinc-800">
+                <SelectContent className="bg-zinc-900 text-white border-zinc-800 max-h-60">
                     {countryCodes.map(c => (
-                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        <SelectItem key={c.label} value={c.value}>{c.label}</SelectItem>
                     ))}
                 </SelectContent>
             </Select>
