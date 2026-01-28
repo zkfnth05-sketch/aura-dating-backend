@@ -13,7 +13,8 @@ fi
 echo "Now in directory: $(pwd)"
 echo "Starting the build process. You may be prompted for your keystore password."
 
-bubblewrap build
+# Use npx to ensure the local bubblewrap cli is used
+npx @bubblewrap/cli build
 
 if [ $? -eq 0 ]; then
   echo ""

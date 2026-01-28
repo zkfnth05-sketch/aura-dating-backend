@@ -58,6 +58,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@bubblewrap/cli": "^1.22.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
