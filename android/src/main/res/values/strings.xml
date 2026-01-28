@@ -34,7 +34,7 @@
         \"relation\": [\"delegate_permission/common.handle_all_urls\"],
         \"target\": {
             \"namespace\": \"web\",
-            \"site\": \"https://aura-ai-dating-38251551-64a99.web.app\"
+            \"site\": \"https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app\"
         }
     }]
     
