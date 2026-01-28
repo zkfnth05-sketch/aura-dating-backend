@@ -28,6 +28,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 
 // Helper components for page structure
@@ -122,6 +124,9 @@ function UserProfilePageContent() {
   
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const [reportReason, setReportReason] = useState("");
+  const reportReasons = ["스팸 또는 광고", "음란물", "사기 또는 거짓 정보", "괴롭힘 또는 증오심 표현", "프로필 정보 불일치", "기타"];
 
   const isAlreadyMatched = useMemo(() => {
     if (!matches || !user) return null;
@@ -243,7 +248,43 @@ function UserProfilePageContent() {
     });
     router.back();
   };
+
+  const handleReport = async () => {
+    if (!reportReason) {
+      toast({
+        variant: "destructive",
+        title: "신고 사유를 선택해주세요.",
+      });
+      return;
+    }
+    if (!firestore || !currentUser || !user) return;
   
+    try {
+      const reportsCollection = collection(firestore, 'reports');
+      await addDoc(reportsCollection, {
+        reporterId: currentUser.id,
+        reporterName: currentUser.name,
+        reportedUserId: user.id,
+        reportedUserName: user.name,
+        reason: reportReason,
+        timestamp: serverTimestamp(),
+        status: 'new'
+      });
+  
+      toast({
+        title: "신고 접수 완료",
+        description: "신고가 성공적으로 접수되었습니다. 관리자가 검토 후 조치하겠습니다.",
+      });
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      toast({
+        variant: "destructive",
+        title: "신고 실패",
+        description: "신고를 접수하는 중 오류가 발생했습니다.",
+      });
+    }
+  };
+
   if (isUserLoading || !isLoaded) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -386,7 +427,7 @@ function UserProfilePageContent() {
               )}
             </div>
           </div>
-          <div className="container px-4 my-8">
+          <div className="container px-4 my-8 flex items-center gap-2">
               <AlertDialog>
                   <AlertDialogTrigger asChild>
                       <Button variant="outline" className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
@@ -407,6 +448,35 @@ function UserProfilePageContent() {
                           </AlertDialogAction>
                       </AlertDialogFooter>
                   </AlertDialogContent>
+              </AlertDialog>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    신고하기
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{user.name}님을 신고하시겠습니까?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      신고 사유를 선택해주세요. 허위 신고는 서비스 이용에 불이익을 받을 수 있습니다.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <RadioGroup value={reportReason} onValueChange={setReportReason} className="py-2 space-y-2">
+                    {reportReasons.map((reason) => (
+                      <div key={reason} className="flex items-center space-x-2">
+                        <RadioGroupItem value={reason} id={`r-${reason}`} />
+                        <Label htmlFor={`r-${reason}`} className="font-normal">{reason}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setReportReason("")}>취소</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleReport} disabled={!reportReason}>
+                      신고하기
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
               </AlertDialog>
           </div>
         </main>
@@ -440,3 +510,5 @@ export default function UserProfilePage() {
     </Suspense>
   )
 }
+
+    

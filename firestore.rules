@@ -111,5 +111,17 @@ service cloud.firestore {
         allow delete: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) && resource.data.senderId == request.auth.uid;
       }
     }
+
+    /**
+     * @description Rules for the top-level 'reports' collection.
+     */
+    match /reports/{reportId} {
+      // Any signed-in user can create a report, but they must be the reporter.
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      // Only backend processes should read/update/delete reports.
+      allow read, update, delete: if false;
+    }
   }
 }
+
+    
