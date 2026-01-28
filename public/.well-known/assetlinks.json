@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.web.aura",
+      "sha256_cert_fingerprints": [
+        "2C:7C:90:16:A9:5E:11:82:4B:43:FA:6F:32:C2:CB:C9:BC:96:00:11:1F:8C:EB:5E:E4:E3:D2:F9:84:60:E8:2C"
+      ]
+    }
+  }
+]
