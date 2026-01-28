@@ -47,7 +47,7 @@ def twaManifest = [
     // 'customtabs' and 'webview'.
     fallbackType: 'customtabs',
     enableSiteSettingsShortcut: 'true',
-    orientation: 'default',
+    orientation: 'portrait',
 ]
 
 android {
@@ -73,7 +73,15 @@ android {
         
 
         
+            // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
+            // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
+            // the TWA, as it will probably give a better user experience for non-mobile devices.
+            resValue "string", "webManifestUrl", 'https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/manifest.json'
+        
 
+        
+            // This is used by Meta Quest.
+            resValue "string", "fullScopeUrl", 'https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/'
         
 
         
@@ -199,6 +207,10 @@ repositories {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    
+        implementation 'com.google.androidbrowserhelper:locationdelegation:1.1.2'
+    
+        implementation 'com.google.androidbrowserhelper:billing:1.1.0'
     
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
     

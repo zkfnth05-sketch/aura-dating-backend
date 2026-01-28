@@ -18,11 +18,11 @@
   "monochromeIconUrl": "https://placehold.co/512x512/FFFFFF/000000.png?text=Aura",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "/home/user/studio/android.keystore",
+    "path": "android.keystore",
     "alias": "android"
   },
-  "appVersionName": "2",
-  "appVersionCode": 2,
+  "appVersionName": "3",
+  "appVersionCode": 3,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/manifest.json",
@@ -51,5 +51,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "2"
+  "appVersion": "3"
 }

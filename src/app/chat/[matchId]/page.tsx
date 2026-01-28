@@ -15,7 +15,7 @@ import { getAIChatReplySuggestions } from '@/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from '@/components/video-chat';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp } from 'firebase/firestore';
+import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -99,10 +99,15 @@ export default function ChatPage() {
   
   const messagesQuery = useMemoFirebase(() => {
     if (!messagesColRef) return null;
-    return query(messagesColRef, orderBy('timestamp', 'asc'));
+    return query(messagesColRef, orderBy('timestamp', 'desc'), limit(30));
   }, [messagesColRef]);
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
+  const reversedMessages = useMemo(() => {
+    if (!messages) return [];
+    return [...messages].reverse();
+  }, [messages]);
+
   useEffect(() => {
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
@@ -110,7 +115,7 @@ export default function ChatPage() {
             viewport.scrollTop = viewport.scrollHeight;
         }
     }
-  }, [messages]);
+  }, [reversedMessages]);
 
   useEffect(() => {
     if (!firestore || !currentUser?.id || !match) return;
@@ -220,7 +225,7 @@ export default function ChatPage() {
       const result = await getAIChatReplySuggestions({
           currentUser: { name: currentUser.name, bio: currentUser.bio || '', hobbies: currentUser.hobbies || [], interests: currentUser.interests || [] },
           matchUser: { name: otherUser.name, bio: otherUser.bio || '', hobbies: otherUser.hobbies || [], interests: otherUser.interests || [] },
-          messages: (messages || []).map(m => ({ senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name, text: m.text || '[음성 메시지]' }))
+          messages: (reversedMessages || []).map(m => ({ senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name, text: m.text || '[음성 메시지]' }))
       });
       setSuggestions(result.suggestions);
     } catch (error) {
@@ -346,8 +351,8 @@ export default function ChatPage() {
 
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {areMessagesLoading && <div className="text-center text-muted-foreground">메시지 로딩 중...</div>}
-          {messages && messages.map((message) => (
+          {areMessagesLoading && messages?.length === 0 && <div className="text-center text-muted-foreground">메시지 로딩 중...</div>}
+          {reversedMessages && reversedMessages.map((message) => (
             <div key={message.id} className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'justify-end' : 'justify-start')}>
               {message.senderId !== currentUser.id && (
                 <Avatar className="h-8 w-8 self-start"><AvatarImage src={otherUser.photoUrls?.[0]} /><AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback></Avatar>
