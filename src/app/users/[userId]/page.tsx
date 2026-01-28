@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Sparkles, Loader2, UserX } from 'lucide-react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
@@ -15,6 +15,19 @@ import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc, getDocs, query, setDoc, serverTimestamp, where, addDoc } from 'firebase/firestore';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { cn } from '@/lib/utils';
 
 
 // Helper components for page structure
@@ -96,8 +109,9 @@ function UserProfilePageContent() {
   const userId = params.userId as string;
   const source = searchParams.get('from');
   const firestore = useFirestore();
+  const { toast } = useToast();
 
-  const { user: currentUser, isLoaded, matches, peopleILiked } = useUser();
+  const { user: currentUser, isLoaded, matches, peopleILiked, updateUser } = useUser();
   
   const userRef = useMemoFirebase(() => {
     if (!userId || !firestore) return null;
@@ -214,6 +228,19 @@ function UserProfilePageContent() {
       }
     });
   
+    router.back();
+  };
+
+  const handleBlock = () => {
+    if (!currentUser || !user) return;
+
+    const newBlockedList = [...(currentUser.blockedUsers || []), user.id];
+    updateUser({ blockedUsers: newBlockedList });
+
+    toast({
+        title: "차단 완료",
+        description: `${user.name}님을 차단했습니다.`,
+    });
     router.back();
   };
   
@@ -358,6 +385,29 @@ function UserProfilePageContent() {
                 </ProfileSection>
               )}
             </div>
+          </div>
+          <div className="container px-4 my-8">
+              <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                      <Button variant="outline" className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
+                          차단하기
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>정말로 차단하시겠습니까?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                          차단하면 이 사용자의 프로필이 더 이상 표시되지 않으며, 상대방도 회원님의 프로필을 볼 수 없게 됩니다.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>취소</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleBlock} className={cn(buttonVariants({ variant: "destructive" }))}>
+                          차단하기
+                          </AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
           </div>
         </main>
         <footer className="fixed bottom-24 left-0 right-0 z-20">

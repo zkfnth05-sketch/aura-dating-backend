@@ -69,8 +69,13 @@ export default function MapPage() {
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
         
-        // 중복 제거 및 내 정보 포함 로직 최적화
-        const otherUsers = fetchedUsers.filter(u => u.id !== currentUser.id);
+        // 중복 제거 및 내 정보 포함 로직 최적화, 차단 로직 추가
+        const otherUsers = fetchedUsers.filter(u => {
+            if (u.id === currentUser.id) return false;
+            if (currentUser.blockedUsers?.includes(u.id)) return false;
+            if (u.blockedUsers?.includes(currentUser.id)) return false;
+            return true;
+        });
         setMapUsers([currentUser, ...otherUsers]);
   
       } catch (error) {

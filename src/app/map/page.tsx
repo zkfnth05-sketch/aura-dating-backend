@@ -70,7 +70,12 @@ export default function MapPage() {
         const snapshot = await getDocs(usersQuery);
         const fetchedUsers = snapshot.docs.map(d => d.data() as User);
         
-        const otherUsers = fetchedUsers.filter(u => u.id !== currentUser.id);
+        const otherUsers = fetchedUsers.filter(u => {
+            if (u.id === currentUser.id) return false;
+            if (currentUser.blockedUsers?.includes(u.id)) return false;
+            if (u.blockedUsers?.includes(currentUser.id)) return false;
+            return true;
+        });
         // Ensure current user is always on the map
         setMapUsers([currentUser, ...otherUsers]);
   

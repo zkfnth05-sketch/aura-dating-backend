@@ -90,6 +90,8 @@ export default function HomePageClient() {
             .map(d => d.data() as User)
             .filter(u => {
                 if (interactedUserIds.has(u.id)) return false;
+                if (currentUser.blockedUsers?.includes(u.id)) return false; // I blocked them
+                if (u.blockedUsers?.includes(currentUser.id)) return false; // They blocked me
                 if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
                 return true;
             });

@@ -21,6 +21,7 @@ export type User = {
   createdAt?: Timestamp;
   phoneNumber?: string;
   pushSubscriptions?: any[];
+  blockedUsers?: string[];
 };
 
 export type Match = {

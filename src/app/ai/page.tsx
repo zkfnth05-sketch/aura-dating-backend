@@ -52,8 +52,16 @@ export default function AiPage() {
         const usersSnapshot = await getDocs(usersQuery);
         const allUsers = usersSnapshot.docs.map(doc => doc.data() as User);
         
-        // Final filter to ensure current user is not in the list, although query should handle most cases
-        const filteredUsers = allUsers.filter(user => user.id !== currentUser.id && user.photoUrls && user.photoUrls.length > 0);
+        // Final filter to ensure current user is not in the list, and block logic
+        const filteredUsers = allUsers.filter(user => {
+            if (user.id === currentUser.id) return false;
+            if (!user.photoUrls || user.photoUrls.length === 0) return false;
+            // Don't show users I have blocked
+            if (currentUser.blockedUsers?.includes(user.id)) return false;
+            // Don't show users who have blocked me
+            if (user.blockedUsers?.includes(currentUser.id)) return false;
+            return true;
+        });
 
         setRecommendedUsers(filteredUsers.slice(0, 6));
       } catch (error) {

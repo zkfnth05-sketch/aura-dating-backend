@@ -67,26 +67,33 @@ export default function HotPage() {
       try {
         const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
         const usersCollection = collection(firestore, 'users');
+        
+        const filterBlockedUsers = (users: User[]): User[] => {
+            return users.filter(u => {
+                if (u.id === currentUser.id) return false;
+                if (!u.photoUrls || u.photoUrls.length === 0) return false;
+                if (currentUser.blockedUsers?.includes(u.id)) return false;
+                if (u.blockedUsers?.includes(currentUser.id)) return false;
+                return true;
+            });
+        };
 
         // Fetch New Users (ordered by creation time)
         const newUsersQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(50));
         const newUsersSnap = await getDocs(newUsersQuery);
         const newUsersData = newUsersSnap.docs
             .map(d => d.data() as User)
-            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender && u.photoUrls && u.photoUrls.length > 0)
-            .slice(0, 20);
-        setNewUsers(newUsersData);
+            .filter(u => u.gender === oppositeGender);
+        setNewUsers(filterBlockedUsers(newUsersData).slice(0, 20));
 
         // Fetch Hot Users (for simplicity, we'll just get another batch of users)
-        // A real "hot" logic would require a scoring system.
-        const hotUsersQuery = query(usersCollection, limit(50)); // No specific ordering for "hot" yet
+        const hotUsersQuery = query(usersCollection, limit(50));
         const hotUsersSnap = await getDocs(hotUsersQuery);
         const hotUsersData = hotUsersSnap.docs
             .map(d => d.data() as User)
-            .filter(u => u.id !== currentUser.id && u.gender === oppositeGender && u.photoUrls && u.photoUrls.length > 0)
-            .sort(() => 0.5 - Math.random()) // Randomize for "hot" effect for now
-            .slice(0, 20);
-        setHotUsers(hotUsersData);
+            .filter(u => u.gender === oppositeGender)
+            .sort(() => 0.5 - Math.random());
+        setHotUsers(filterBlockedUsers(hotUsersData).slice(0, 20));
 
       } catch (error) {
         console.error("Error fetching HOT/NEW users:", error);
