@@ -31,6 +31,8 @@ export interface FilterSettings {
 interface PhoneAuthState {
   phoneNumber: string;
   setPhoneNumber: (phone: string) => void;
+  countryCode: string;
+  setCountryCode: (code: string) => void;
   confirmationResult: ConfirmationResult | null;
   recaptchaVerifier: RecaptchaVerifier | null;
   setupRecaptcha: (container: HTMLElement) => void;
@@ -114,6 +116,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
 
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('+82');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -323,18 +326,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [auth, recaptchaVerifier]);
 
   const sendVerificationCode = useCallback(async (phoneNumberOverride?: string) => {
-    let targetPhoneNumber = phoneNumberOverride || phoneNumber;
-    if (recaptchaVerifier && targetPhoneNumber) {
-        if (targetPhoneNumber.startsWith('0')) {
-            targetPhoneNumber = `+82${targetPhoneNumber.substring(1)}`;
-        }
+    // If override is provided, use it directly (for re-auth). Otherwise, construct from state.
+    const fullPhoneNumber = phoneNumberOverride || `${countryCode}${phoneNumber.startsWith('0') ? phoneNumber.substring(1) : phoneNumber}`;
+    
+    if (recaptchaVerifier && fullPhoneNumber) {
         setIsSendingOtp(true);
         try {
             const { signInWithPhoneNumber } = require('firebase/auth');
-            const confirmation = await signInWithPhoneNumber(auth, targetPhoneNumber, recaptchaVerifier);
+            const confirmation = await signInWithPhoneNumber(auth, fullPhoneNumber, recaptchaVerifier);
             setConfirmationResult(confirmation);
             setReauthVerificationId(confirmation.verificationId);
-            if(!phoneNumberOverride) router.push('/signup/otp');
+            // Only navigate if we're in the initial signup flow
+            if(!phoneNumberOverride) {
+              router.push('/signup/otp');
+            }
             return confirmation.verificationId;
         } catch (error) {
             console.error("SMS Error:", error);
@@ -343,7 +348,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setIsSendingOtp(false);
         }
     }
-  }, [auth, phoneNumber, recaptchaVerifier, router]);
+  }, [auth, phoneNumber, countryCode, recaptchaVerifier, router]);
 
   const verifyOtp = useCallback(async (otp: string) => {
     if (confirmationResult && otp) {
@@ -437,7 +442,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const value: UserContextType = {
     user, authUser, firestore, updateUser, notificationSettings, updateNotificationSettings,
     filters, updateFilters, resetFilters, isLoaded,
-    totalUnreadCount, phoneAuth: { phoneNumber, setPhoneNumber, confirmationResult, recaptchaVerifier, setupRecaptcha, sendVerificationCode, verifyOtp, reauthenticate, isSendingOtp, isVerifyingOtp },
+    totalUnreadCount, phoneAuth: { phoneNumber, setPhoneNumber, countryCode, setCountryCode, confirmationResult, recaptchaVerifier, setupRecaptcha, sendVerificationCode, verifyOtp, reauthenticate, isSendingOtp, isVerifyingOtp },
     isSignupFlowActive, setIsSignupFlowActive,
     matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading,
     subscribeToPushNotifications

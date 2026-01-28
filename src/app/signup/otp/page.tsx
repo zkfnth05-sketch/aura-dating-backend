@@ -14,7 +14,7 @@ export default function OtpPage() {
   const router = useRouter();
   const [otp, setOtp] = useState('');
   const { phoneAuth } = useUser();
-  const { phoneNumber, verifyOtp, isVerifyingOtp, sendVerificationCode } = phoneAuth;
+  const { phoneNumber, countryCode, verifyOtp, isVerifyingOtp, sendVerificationCode } = phoneAuth;
 
   const handleVerify = async () => {
     if (otp.length === 6) {
@@ -39,7 +39,7 @@ export default function OtpPage() {
         <div className="space-y-8">
           <div>
             <label htmlFor="otp" className="text-sm font-medium text-zinc-400">
-              {phoneNumber} (으)로 전송된 6자리 코드를 입력하세요.
+              {countryCode}{phoneNumber.startsWith('0') ? phoneNumber.substring(1) : phoneNumber} (으)로 전송된 6자리 코드를 입력하세요.
             </label>
             <Input
               id="otp"

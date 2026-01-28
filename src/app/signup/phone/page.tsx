@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +6,20 @@ import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const countryCodes = [
+  { value: '+82', label: 'South Korea (+82)' },
+  { value: '+1', label: 'United States (+1)' },
+  { value: '+81', label: 'Japan (+81)' },
+  { value: '+86', label: 'China (+86)' },
+  { value: '+44', label: 'United Kingdom (+44)' },
+  { value: '+33', label: 'France (+33)' },
+  { value: '+49', label: 'Germany (+49)' },
+];
+
 
 export default function PhonePage() {
   const router = useRouter();
@@ -15,6 +27,8 @@ export default function PhonePage() {
   const {
     phoneNumber,
     setPhoneNumber,
+    countryCode,
+    setCountryCode,
     setupRecaptcha,
     sendVerificationCode,
     isSendingOtp,
@@ -37,8 +51,8 @@ export default function PhonePage() {
   }, [recaptchaContainer, setupRecaptcha]);
 
   const handleSendCode = async () => {
-    if (!/^010[0-9]{8}$/.test(phoneNumber)) {
-        alert("유효한 전화번호를 입력해주세요. (예: 01012345678)");
+    if (!/^\d{8,15}$/.test(phoneNumber.replace(/^0+/, ''))) {
+        alert("유효한 전화번호를 입력해주세요.");
         return;
     }
     await sendVerificationCode();
@@ -46,13 +60,32 @@ export default function PhonePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-black text-white px-8 py-12">
-      <header className="flex-shrink-0">
-        <h1 className="text-2xl font-bold text-center">전화번호로 로그인</h1>
-        <Progress value={10} className="w-full mt-4 h-1 bg-zinc-800" />
+      <header className="relative flex-shrink-0 flex items-center justify-center">
+        <Link href="/signup" className="absolute left-0 p-2">
+            <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <h1 className="text-xl font-bold text-center">전화번호로 로그인</h1>
       </header>
+      <Progress value={10} className="w-full mt-4 h-1 bg-zinc-800" />
+      
 
       <main className="flex-1 flex flex-col justify-center">
         <div className="space-y-8">
+          <div>
+            <label htmlFor="country-code" className="text-sm font-medium text-zinc-400">
+              국가/지역
+            </label>
+            <Select value={countryCode} onValueChange={setCountryCode} disabled={isSendingOtp}>
+                <SelectTrigger id="country-code" className="mt-2 w-full bg-zinc-900 border-zinc-800 h-12 text-base">
+                    <SelectValue placeholder="국가 선택" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 text-white border-zinc-800">
+                    {countryCodes.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
           <div>
             <label htmlFor="phone" className="text-sm font-medium text-zinc-400">
               전화번호
@@ -61,8 +94,8 @@ export default function PhonePage() {
               id="phone"
               type="tel"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="전화번호를 입력하세요 (예: 01012345678)"
+              onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+              placeholder="전화번호"
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
               disabled={isSendingOtp}
             />
