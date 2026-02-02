@@ -26,6 +26,10 @@ import androidx.activity.EdgeToEdge;
 public class LauncherActivity
         extends com.google.androidbrowserhelper.trusted.LauncherActivity {
     
+    @Override
+    protected boolean shouldGoEdgeToEdge() {
+        return false;
+    }
 
     
 
