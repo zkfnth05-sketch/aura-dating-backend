@@ -23,6 +23,7 @@ const chartConfig = {
 export default function DashboardPage() {
     const firestore = useFirestore();
     const [genderFilter, setGenderFilter] = useState<'all' | '남성' | '여성'>('all');
+    const [timePeriod, setTimePeriod] = useState<'daily' | 'monthly'>('daily');
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -31,9 +32,9 @@ export default function DashboardPage() {
 
     const { data: users, isLoading } = useCollection<User>(usersQuery);
 
-    const { dailySignups, totalUsers, last7DaysSignups } = useMemo(() => {
+    const { chartData, totalUsers, last7DaysSignups } = useMemo(() => {
         if (!users) {
-          return { dailySignups: [], totalUsers: 0, last7DaysSignups: 0 };
+          return { chartData: [], totalUsers: 0, last7DaysSignups: 0 };
         }
 
         const filteredUsers = users.filter(user => {
@@ -42,6 +43,7 @@ export default function DashboardPage() {
         });
         
         const signupsByDate: { [key: string]: number } = {};
+        const signupsByMonth: { [key: string]: number } = {};
         let signupsInLast7Days = 0;
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -50,8 +52,10 @@ export default function DashboardPage() {
             if (user.createdAt) {
                 const signupDate = user.createdAt.toDate();
                 const date = format(signupDate, 'yyyy-MM-dd');
+                const month = format(signupDate, 'yyyy-MM');
                 
                 signupsByDate[date] = (signupsByDate[date] || 0) + 1;
+                signupsByMonth[month] = (signupsByMonth[month] || 0) + 1;
 
                 if (signupDate >= sevenDaysAgo) {
                     signupsInLast7Days++;
@@ -59,17 +63,22 @@ export default function DashboardPage() {
             }
         });
         
-        const chartData = Object.keys(signupsByDate).map(date => ({
+        const dailyData = Object.keys(signupsByDate).map(date => ({
             date,
             users: signupsByDate[date],
         })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        const monthlyData = Object.keys(signupsByMonth).map(month => ({
+            date: month,
+            users: signupsByMonth[month],
+        })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         
         return {
-          dailySignups: chartData,
+          chartData: timePeriod === 'daily' ? dailyData : monthlyData,
           totalUsers: filteredUsers.length,
           last7DaysSignups: signupsInLast7Days,
         };
-    }, [users, genderFilter]);
+    }, [users, genderFilter, timePeriod]);
     
     return (
         <AdminLayout>
@@ -77,17 +86,25 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">대시보드</h2>
-                        <p className="text-muted-foreground">일별 신규 사용자 가입 현황을 확인하세요.</p>
+                        <p className="text-muted-foreground">일별/월별 신규 사용자 가입 현황을 확인하세요.</p>
                     </div>
                 </div>
 
-                <Tabs value={genderFilter} onValueChange={(value) => setGenderFilter(value as any)} className="w-full">
-                    <TabsList>
-                        <TabsTrigger value="all">전체</TabsTrigger>
-                        <TabsTrigger value="남성">남성</TabsTrigger>
-                        <TabsTrigger value="여성">여성</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <Tabs value={genderFilter} onValueChange={(value) => setGenderFilter(value as any)}>
+                        <TabsList>
+                            <TabsTrigger value="all">전체</TabsTrigger>
+                            <TabsTrigger value="남성">남성</TabsTrigger>
+                            <TabsTrigger value="여성">여성</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                     <Tabs value={timePeriod} onValueChange={(value) => setTimePeriod(value as any)}>
+                        <TabsList>
+                            <TabsTrigger value="daily">일별</TabsTrigger>
+                            <TabsTrigger value="monthly">월별</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
@@ -114,8 +131,12 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>일별 신규 가입자 수 ({genderFilter === 'all' ? '전체' : genderFilter})</CardTitle>
-                        <CardDescription>지난 기간 동안의 일일 신규 사용자 가입 추이입니다.</CardDescription>
+                        <CardTitle>{timePeriod === 'daily' ? '일별' : '월별'} 신규 가입자 수 ({genderFilter === 'all' ? '전체' : genderFilter})</CardTitle>
+                        <CardDescription>
+                            {timePeriod === 'daily' 
+                                ? '지난 기간 동안의 일일 신규 사용자 가입 추이입니다.'
+                                : '지난 기간 동안의 월간 신규 사용자 가입 추이입니다.'}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="pl-2">
                         {isLoading ? (
@@ -125,14 +146,19 @@ export default function DashboardPage() {
                         ) : (
                             <div className="h-[350px]">
                                 <ChartContainer config={chartConfig} className="w-full h-full">
-                                    <BarChart data={dailySignups} margin={{ top: 20, right: 20, bottom: 20, left: -10 }}>
+                                    <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: -10 }}>
                                         <CartesianGrid vertical={false} />
                                         <XAxis
                                             dataKey="date"
                                             tickLine={false}
                                             tickMargin={10}
                                             axisLine={false}
-                                            tickFormatter={(value) => format(parseISO(value), 'MM-dd')}
+                                            tickFormatter={(value) => {
+                                                if (timePeriod === 'monthly') {
+                                                    return format(parseISO(value), 'yyyy-MM');
+                                                }
+                                                return format(parseISO(value), 'MM-dd');
+                                            }}
                                         />
                                         <YAxis allowDecimals={false} />
                                         <ChartTooltip
