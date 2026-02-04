@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin-layout';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -10,6 +10,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Loader2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const chartConfig = {
   users: {
@@ -21,6 +22,7 @@ const chartConfig = {
 
 export default function DashboardPage() {
     const firestore = useFirestore();
+    const [genderFilter, setGenderFilter] = useState<'all' | '남성' | '여성'>('all');
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -33,13 +35,18 @@ export default function DashboardPage() {
         if (!users) {
           return { dailySignups: [], totalUsers: 0, last7DaysSignups: 0 };
         }
+
+        const filteredUsers = users.filter(user => {
+            if (genderFilter === 'all') return true;
+            return user.gender === genderFilter;
+        });
         
         const signupsByDate: { [key: string]: number } = {};
         let signupsInLast7Days = 0;
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        users.forEach(user => {
+        filteredUsers.forEach(user => {
             if (user.createdAt) {
                 const signupDate = user.createdAt.toDate();
                 const date = format(signupDate, 'yyyy-MM-dd');
@@ -59,21 +66,35 @@ export default function DashboardPage() {
         
         return {
           dailySignups: chartData,
-          totalUsers: users.length,
+          totalUsers: filteredUsers.length,
           last7DaysSignups: signupsInLast7Days,
         };
-    }, [users]);
+    }, [users, genderFilter]);
     
     return (
         <AdminLayout>
             <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-                <h2 className="text-3xl font-bold tracking-tight">대시보드</h2>
-                <p className="text-muted-foreground">일별 신규 사용자 가입 현황을 확인하세요.</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-3xl font-bold tracking-tight">대시보드</h2>
+                        <p className="text-muted-foreground">일별 신규 사용자 가입 현황을 확인하세요.</p>
+                    </div>
+                </div>
+
+                <Tabs value={genderFilter} onValueChange={(value) => setGenderFilter(value as any)} className="w-full">
+                    <TabsList>
+                        <TabsTrigger value="all">전체</TabsTrigger>
+                        <TabsTrigger value="남성">남성</TabsTrigger>
+                        <TabsTrigger value="여성">여성</TabsTrigger>
+                    </TabsList>
+                </Tabs>
                 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">총 사용자</CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                {genderFilter === 'all' ? '총 사용자' : genderFilter === '남성' ? '총 남성 사용자' : '총 여성 사용자'}
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : totalUsers}</div>
@@ -81,7 +102,9 @@ export default function DashboardPage() {
                     </Card>
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">최근 7일 가입자</CardTitle>
+                            <CardTitle className="text-sm font-medium">
+                                최근 7일 가입자 ({genderFilter === 'all' ? '전체' : genderFilter})
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : last7DaysSignups}</div>
@@ -91,7 +114,7 @@ export default function DashboardPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>일별 신규 가입자 수</CardTitle>
+                        <CardTitle>일별 신규 가입자 수 ({genderFilter === 'all' ? '전체' : genderFilter})</CardTitle>
                         <CardDescription>지난 기간 동안의 일일 신규 사용자 가입 추이입니다.</CardDescription>
                     </CardHeader>
                     <CardContent className="pl-2">
