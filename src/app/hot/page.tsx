@@ -67,35 +67,38 @@ export default function HotPage() {
       const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
       const usersCollection = collection(firestore, 'users');
 
-      // Define queries to fetch a bit more than needed to account for filtering
-      const newUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(40));
-      // For HOT, we fetch without a specific order to get a different set, then shuffle on client
-      const hotUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), limit(40));
+      // Fetch latest users first, then filter by gender on the client to avoid composite index.
+      // Fetch a larger number to increase the chance of getting enough users of the opposite gender.
+      const newUsersQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(80));
       
-      // Fetch data concurrently
+      // For HOT, we can keep the simple filter. This query doesn't need a composite index.
+      const hotUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), limit(20));
+      
       const [newUsersSnap, hotUsersSnap] = await Promise.all([
         getDocs(newUsersQuery),
         getDocs(hotUsersQuery)
       ]);
 
-      const filterUsers = (users: User[]): User[] => {
-        return users.filter(u => 
+      const baseFilter = (u: User): boolean => 
           u.id !== currentUser.id &&
           u.photoUrls && u.photoUrls.length > 0 &&
           !currentUser.blockedUsers?.includes(u.id) &&
-          !u.blockedUsers?.includes(currentUser.id)
-        );
-      };
+          !u.blockedUsers?.includes(currentUser.id);
 
-      // Process New Users
-      const newUsersData = newUsersSnap.docs.map(d => d.data() as User);
-      setNewUsers(filterUsers(newUsersData).slice(0, 20));
+      // Process New Users: apply gender filter on client
+      const newUsersData = newUsersSnap.docs
+        .map(d => d.data() as User)
+        .filter(u => baseFilter(u) && u.gender === oppositeGender); // client-side gender filter
+
+      setNewUsers(newUsersData.slice(0, 20));
 
       // Process Hot Users
       const hotUsersData = hotUsersSnap.docs
         .map(d => d.data() as User)
+        .filter(baseFilter) // apply base filters
         .sort(() => 0.5 - Math.random()); // Shuffle for "hot" effect
-      setHotUsers(filterUsers(hotUsersData).slice(0, 20));
+      
+      setHotUsers(hotUsersData.slice(0, 20));
 
     } catch (error) {
       console.error("Error fetching HOT/NEW users:", error);
