@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import type { User } from '@/lib/types';
 import { useUser } from '@/contexts/user-context';
 import { Loader2 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const UserCard = React.memo(({ user }: { user: User }) => {
@@ -59,53 +59,56 @@ export default function HotPage() {
   const [hotUsers, setHotUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchUsers = useCallback(async () => {
+    if (!currentUser || !firestore) return;
+    setIsLoading(true);
+
+    try {
+      const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
+      const usersCollection = collection(firestore, 'users');
+
+      // Define queries to fetch a bit more than needed to account for filtering
+      const newUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), orderBy('createdAt', 'desc'), limit(40));
+      // For HOT, we fetch without a specific order to get a different set, then shuffle on client
+      const hotUsersQuery = query(usersCollection, where('gender', '==', oppositeGender), limit(40));
+      
+      // Fetch data concurrently
+      const [newUsersSnap, hotUsersSnap] = await Promise.all([
+        getDocs(newUsersQuery),
+        getDocs(hotUsersQuery)
+      ]);
+
+      const filterUsers = (users: User[]): User[] => {
+        return users.filter(u => 
+          u.id !== currentUser.id &&
+          u.photoUrls && u.photoUrls.length > 0 &&
+          !currentUser.blockedUsers?.includes(u.id) &&
+          !u.blockedUsers?.includes(currentUser.id)
+        );
+      };
+
+      // Process New Users
+      const newUsersData = newUsersSnap.docs.map(d => d.data() as User);
+      setNewUsers(filterUsers(newUsersData).slice(0, 20));
+
+      // Process Hot Users
+      const hotUsersData = hotUsersSnap.docs
+        .map(d => d.data() as User)
+        .sort(() => 0.5 - Math.random()); // Shuffle for "hot" effect
+      setHotUsers(filterUsers(hotUsersData).slice(0, 20));
+
+    } catch (error) {
+      console.error("Error fetching HOT/NEW users:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser, firestore]);
+
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (!currentUser || !firestore) return;
-      setIsLoading(true);
-
-      try {
-        const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
-        const usersCollection = collection(firestore, 'users');
-        
-        const filterBlockedUsers = (users: User[]): User[] => {
-            return users.filter(u => {
-                if (u.id === currentUser.id) return false;
-                if (!u.photoUrls || u.photoUrls.length === 0) return false;
-                if (currentUser.blockedUsers?.includes(u.id)) return false;
-                if (u.blockedUsers?.includes(currentUser.id)) return false;
-                return true;
-            });
-        };
-
-        // Fetch New Users (ordered by creation time)
-        const newUsersQuery = query(usersCollection, orderBy('createdAt', 'desc'), limit(50));
-        const newUsersSnap = await getDocs(newUsersQuery);
-        const newUsersData = newUsersSnap.docs
-            .map(d => d.data() as User)
-            .filter(u => u.gender === oppositeGender);
-        setNewUsers(filterBlockedUsers(newUsersData).slice(0, 20));
-
-        // Fetch Hot Users (for simplicity, we'll just get another batch of users)
-        const hotUsersQuery = query(usersCollection, limit(50));
-        const hotUsersSnap = await getDocs(hotUsersQuery);
-        const hotUsersData = hotUsersSnap.docs
-            .map(d => d.data() as User)
-            .filter(u => u.gender === oppositeGender)
-            .sort(() => 0.5 - Math.random());
-        setHotUsers(filterBlockedUsers(hotUsersData).slice(0, 20));
-
-      } catch (error) {
-        console.error("Error fetching HOT/NEW users:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (isLoaded && currentUser) {
       fetchUsers();
     }
-  }, [currentUser, firestore, isLoaded]);
+  }, [isLoaded, currentUser, fetchUsers]);
   
 
   if (!isLoaded || !currentUser) {
