@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Loader2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subMonths } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const chartConfig = {
@@ -67,11 +67,15 @@ export default function DashboardPage() {
             date,
             users: signupsByDate[date],
         })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-        const monthlyData = Object.keys(signupsByMonth).map(month => ({
-            date: month,
-            users: signupsByMonth[month],
-        })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        const oneYearAgo = subMonths(new Date(), 12);
+        const monthlyData = Object.keys(signupsByMonth)
+            .map(month => ({
+                date: month,
+                users: signupsByMonth[month],
+            }))
+            .filter(item => new Date(item.date) >= oneYearAgo)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         
         return {
           chartData: timePeriod === 'daily' ? dailyData : monthlyData,
@@ -135,7 +139,7 @@ export default function DashboardPage() {
                         <CardDescription>
                             {timePeriod === 'daily' 
                                 ? '지난 기간 동안의 일일 신규 사용자 가입 추이입니다.'
-                                : '지난 기간 동안의 월간 신규 사용자 가입 추이입니다.'}
+                                : '최근 1년 동안의 월간 신규 사용자 가입 추이입니다.'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pl-2">
