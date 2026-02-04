@@ -7,7 +7,7 @@ import ProfileCard from '@/components/profile-card';
 import { useUser } from '@/contexts/user-context';
 import { useRouter } from 'next/navigation';
 import { useFirestore } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, addDoc, query, where, getDocs, limit, orderBy, startAfter, DocumentData, QueryDocumentSnapshot, Query } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, addDoc, query, where, getDocs, limit, orderBy, startAfter, DocumentData, QueryDocumentSnapshot, Query, documentId, startAt } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -18,13 +18,22 @@ import { Skeleton } from './ui/skeleton';
 
 
 const PREFETCH_THRESHOLD = 5;
-const FETCH_LIMIT = 10;
+const FETCH_LIMIT = 20; // Fetch more to account for client-side filtering
 
 const CardSkeleton = () => (
     <div className="absolute inset-0 w-full h-full">
         <Skeleton className="w-full h-full rounded-2xl" />
     </div>
 );
+
+function generateRandomFirestoreId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let autoId = '';
+    for (let i = 0; i < 20; i++) {
+      autoId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return autoId;
+}
 
 
 export default function HomePageClient() {
@@ -65,33 +74,45 @@ export default function HomePageClient() {
         const interactedUserIds = new Set(peopleILiked.map(u => u.id));
         interactedUserIds.add(currentUser.id);
 
-        let constraints: any[] = [limit(20)];
+        let constraints: any[] = [orderBy(documentId())];
     
-        if (filters.gender.length > 0) {
-          constraints.push(where('gender', 'in', filters.gender));
-        } else {
-            const oppositeGender = currentUser.gender === '남성' ? ['여성'] : ['남성'];
-            constraints.push(where('gender', 'in', oppositeGender));
-        }
-    
-        if (!isInitial && lastVisibleRef.current) {
+        if (isInitial) {
+            const randomId = generateRandomFirestoreId();
+            constraints.push(startAt(randomId));
+        } else if (lastVisibleRef.current) {
           constraints.push(startAfter(lastVisibleRef.current));
         }
     
+        constraints.push(limit(FETCH_LIMIT));
+    
         const snapshot = await getDocs(query(collection(firestore, 'users'), ...constraints));
         
-        if (snapshot.empty) {
-          hasMoreRef.current = false;
+        let fetchedDocs = snapshot.docs;
+
+        // If initial random query yields nothing, we might be at the end.
+        // Wrap around and query from the beginning.
+        if (isInitial && snapshot.empty) {
+            const wrapAroundSnapshot = await getDocs(query(collection(firestore, 'users'), orderBy(documentId()), limit(FETCH_LIMIT)));
+            fetchedDocs = wrapAroundSnapshot.docs;
+        }
+        
+        if (fetchedDocs.length === 0) {
+            hasMoreRef.current = false;
         } else {
-            lastVisibleRef.current = snapshot.docs[snapshot.docs.length - 1];
+            lastVisibleRef.current = fetchedDocs[fetchedDocs.length - 1];
         }
 
-        const filtered = snapshot.docs
+        const genderFilter = filters.gender.length > 0 
+            ? filters.gender 
+            : (currentUser.gender === '남성' ? ['여성'] : ['남성']);
+
+        const filtered = fetchedDocs
             .map(d => d.data() as User)
             .filter(u => {
+                if (!genderFilter.includes(u.gender)) return false; // Client-side gender filter
                 if (interactedUserIds.has(u.id)) return false;
-                if (currentUser.blockedUsers?.includes(u.id)) return false; // I blocked them
-                if (u.blockedUsers?.includes(currentUser.id)) return false; // They blocked me
+                if (currentUser.blockedUsers?.includes(u.id)) return false;
+                if (u.blockedUsers?.includes(currentUser.id)) return false;
                 if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
                 return true;
             });
