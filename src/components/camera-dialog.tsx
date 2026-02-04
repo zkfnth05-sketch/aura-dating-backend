@@ -81,7 +81,7 @@ export default function CameraDialog({ isOpen, onClose, onPhotoTaken }: CameraDi
           <DialogTitle>사진 촬영</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <div className="relative w-full aspect-video rounded-md overflow-hidden bg-black">
+          <div className="relative w-full aspect-[3/4] rounded-md overflow-hidden bg-black">
             <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
             <canvas ref={canvasRef} className="hidden" />
           </div>

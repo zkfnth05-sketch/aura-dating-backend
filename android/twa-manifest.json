@@ -21,8 +21,8 @@
     "path": "android.keystore",
     "alias": "android"
   },
-  "appVersionName": "3",
-  "appVersionCode": 3,
+  "appVersionName": "4",
+  "appVersionCode": 4,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/manifest.json",
@@ -43,6 +43,7 @@
   "isMetaQuest": false,
   "fullScopeUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/",
   "minSdkVersion": 21,
+  "orientation": "default",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
@@ -50,5 +51,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "3"
+  "appVersion": "4"
 }
