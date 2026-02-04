@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AiPageClient from '@/components/ai-page-client';
 import { useUser } from '@/contexts/user-context';
 import type { User } from '@/lib/types';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit, where } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { collection, query, getDocs, limit, where, startAfter, orderBy, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { Loader2, RefreshCw } from 'lucide-react';
 import Header from '@/components/layout/header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DateCourseForm from '@/components/date-course-form';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { calculateCompatibility } from '@/lib/utils';
+
 
 const UserGridSkeleton = () => (
     <div className="grid grid-cols-2 gap-4">
@@ -20,20 +23,19 @@ const UserGridSkeleton = () => (
     </div>
 );
 
+const FETCH_POOL_SIZE = 30; // Fetch a pool of users to find the best 6
+const DISPLAY_COUNT = 6;
 
 export default function AiPage() {
   const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const [recommendedUsers, setRecommendedUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const firestore = useFirestore();
+  const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
+  const loadRecommendations = useCallback(async () => {
       if (!currentUser || !firestore) {
-        if (!isUserLoaded) {
-            // still waiting for user to load
-            return;
-        }
+        if (!isUserLoaded) return;
         setIsLoading(false);
         return;
       }
@@ -43,38 +45,73 @@ export default function AiPage() {
         let usersQuery;
         const oppositeGender = currentUser.gender === '남성' ? '여성' : '남성';
 
-        usersQuery = query(
+        // Query only by creation date to avoid needing a composite index
+        const baseQuery = query(
           collection(firestore, 'users'), 
-          where('gender', '==', oppositeGender), 
-          limit(20)
+          orderBy('createdAt', 'desc')
         );
+
+        if (lastDocRef.current) {
+            usersQuery = query(baseQuery, startAfter(lastDocRef.current), limit(FETCH_POOL_SIZE));
+        } else {
+            usersQuery = query(baseQuery, limit(FETCH_POOL_SIZE));
+        }
         
         const usersSnapshot = await getDocs(usersQuery);
+        
+        if (usersSnapshot.empty) {
+            // If we're out of users, reset and try from the beginning
+            if (lastDocRef.current) {
+                lastDocRef.current = null;
+                // Recursive call to restart, which might cause issues, let's just show empty and let user click refresh.
+                setRecommendedUsers([]);
+            } else {
+                setRecommendedUsers([]);
+            }
+            setIsLoading(false);
+            return;
+        }
+        
+        lastDocRef.current = usersSnapshot.docs[usersSnapshot.docs.length - 1];
+        
         const allUsers = usersSnapshot.docs.map(doc => doc.data() as User);
         
-        // Final filter to ensure current user is not in the list, and block logic
-        const filteredUsers = allUsers.filter(user => {
-            if (user.id === currentUser.id) return false;
-            if (!user.photoUrls || user.photoUrls.length === 0) return false;
-            // Don't show users I have blocked
-            if (currentUser.blockedUsers?.includes(user.id)) return false;
-            // Don't show users who have blocked me
-            if (user.blockedUsers?.includes(currentUser.id)) return false;
-            return true;
-        });
+        const filteredAndScoredUsers = allUsers
+            .filter(user => {
+                if (user.gender !== oppositeGender) return false; // Filter gender on client
+                if (user.id === currentUser.id) return false;
+                if (!user.photoUrls || user.photoUrls.length === 0) return false;
+                if (currentUser.blockedUsers?.includes(user.id)) return false;
+                if (user.blockedUsers?.includes(currentUser.id)) return false;
+                return true;
+            })
+            .map(user => ({
+                user,
+                compatibility: calculateCompatibility(currentUser, user)
+            }));
+            
+        // Sort by compatibility score
+        filteredAndScoredUsers.sort((a, b) => b.compatibility.score - a.compatibility.score);
 
-        setRecommendedUsers(filteredUsers.slice(0, 6));
+        setRecommendedUsers(filteredAndScoredUsers.slice(0, DISPLAY_COUNT).map(item => item.user));
+
       } catch (error) {
         console.error("Error fetching recommended users:", error);
+        setRecommendedUsers([]);
       } finally {
         setIsLoading(false);
       }
-    };
-
-    if (isUserLoaded) {
-      fetchUsers();
-    }
   }, [currentUser, firestore, isUserLoaded]);
+
+  useEffect(() => {
+    if (isUserLoaded) {
+      loadRecommendations();
+    }
+  }, [isUserLoaded, loadRecommendations]);
+  
+  const handleRefresh = () => {
+    loadRecommendations();
+  }
 
   if (!isUserLoaded || !currentUser) {
     return (
@@ -110,7 +147,18 @@ export default function AiPage() {
             {isLoading ? (
                <UserGridSkeleton />
             ) : (
-              <AiPageClient recommendedUsers={recommendedUsers} currentUser={currentUser} />
+                <>
+                    <AiPageClient recommendedUsers={recommendedUsers} currentUser={currentUser} />
+                    <Button onClick={handleRefresh} className="w-full mt-6">
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        새로운 추천 보기
+                    </Button>
+                </>
+            )}
+            { !isLoading && recommendedUsers.length === 0 && (
+                <div className="text-center py-10">
+                    <p className="text-muted-foreground">추천할 사용자가 없습니다.</p>
+                </div>
             )}
           </TabsContent>
           <TabsContent value="date-course" className="mt-6 pb-8">
