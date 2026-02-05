@@ -36,7 +36,7 @@ import { TranslationKeys } from '@/lib/locales';
 const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
   switch (code) {
     case 'ko':
-      return <svg viewBox="0 0 900 600" {...props}><path fill="#fff" d="M0 0h900v600H0z"/><g transform="translate(450 300)"><circle r="150" fill="#cd2e3a"/><path d="M-150 0a150 150 0 10300 0 75 75 0 11-150 0z" fill="#0047a0"/></g><g fill="#000"><g transform="translate(193.2 143.2)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g><g transform="translate(193.2 456.8)rotate(-33.69)"><path d="M-75-25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150z"/></g><g transform="translate(706.8 143.2)rotate(-33.69)"><path d="M-75-25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150z"/></g><g transform="translate(706.8 456.8)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g></g></svg>;
+        return <svg viewBox="0 0 900 600" {...props}><path fill="#fff" d="M0 0h900v600H0z"/><g transform="translate(450 300)"><circle r="150" fill="#cd2e3a"/><path d="M0-150a150 150 0 0 0 0 300 75 75 0 0 1 0-150Z" fill="#0047a0"/></g><g fill="#000"><g transform="translate(193.2 143.2)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g><g transform="translate(193.2 456.8)rotate(-33.69)"><path d="M-75-25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150z"/></g><g transform="translate(706.8 143.2)rotate(-33.69)"><path d="M-75-25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50z"/></g><g transform="translate(706.8 456.8)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g></g></svg>;
     case 'en':
       return <svg viewBox="0 0 38 20" {...props}><path fill="#B22234" d="m0,0H38V20H0"/><path stroke="#fff" strokeWidth="2" d="m0,2H38m0,4H0m0,4H38m0,4H0"/><path fill="#3C3B6E" d="m0,0H18V10H0"/></svg>;
     case 'es':
@@ -287,7 +287,7 @@ export default function ProfileEditForm() {
 
   return (
     <>
-      <main className="container px-4 pb-24">
+      <main className="container px-4 pb-40">
         <Section title={t('photo_video_section_title')}>
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm">{t('ai_enhancement')}</span>
