@@ -318,6 +318,8 @@ export const translations = {
     'push_noti_subscribe_failed_desc': '푸시 알림 구독에 실패했습니다. 다시 시도해주세요.',
     'push_noti_unsupported_title': '푸시 알림 미지원',
     'push_noti_unsupported_desc': '이 브라우저는 푸시 알림을 지원하지 않습니다.',
+    'media_device_not_found_title': '미디어 장치 없음',
+    'media_device_not_found_desc': '카메라 또는 마이크를 찾을 수 없습니다. 실제 기기에서 다시 시도해주세요.',
     
     // Filters
     'filter_title': '필터',
@@ -748,6 +750,8 @@ export const translations = {
     'push_noti_subscribe_failed_desc': 'Failed to subscribe to push notifications. Please try again.',
     'push_noti_unsupported_title': 'Push Notifications Not Supported',
     'push_noti_unsupported_desc': 'This browser does not support push notifications.',
+    'media_device_not_found_title': 'Media Device Not Found',
+    'media_device_not_found_desc': 'Could not find a camera or microphone. Please try on a device with media inputs.',
     
     // Filters
     'filter_title': 'Filters',
@@ -1176,6 +1180,8 @@ export const translations = {
     'push_noti_subscribe_failed_desc': 'プッシュ通知の購読に失敗しました。もう一度お試しください。',
     'push_noti_unsupported_title': 'プッシュ通知はサポートされていません',
     'push_noti_unsupported_desc': 'このブラウザはプッシュ通知をサポートしていません。',
+    'media_device_not_found_title': 'メディアデバイスが見つかりません',
+    'media_device_not_found_desc': 'カメラまたはマイクが見つかりませんでした。実際のデバイスで再試行してください。',
     
     // Filters
     'filter_title': 'フィルター',
@@ -1603,6 +1609,8 @@ export const translations = {
     'push_noti_subscribe_failed_desc': 'No se pudo suscribir a las notificaciones push. Por favor, inténtalo de nuevo.',
     'push_noti_unsupported_title': 'Notificaciones Push No Soportadas',
     'push_noti_unsupported_desc': 'Este navegador no soporta notificaciones push.',
+    'media_device_not_found_title': 'Dispositivo Multimedia no Encontrado',
+    'media_device_not_found_desc': 'No se pudo encontrar una cámara o un micrófono. Por favor, inténtalo en un dispositivo con entradas de medios.',
     
     // Filters
     'filter_title': 'Filtros',

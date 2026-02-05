@@ -47,14 +47,24 @@ export default function VideoChat({
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = stream;
         }
-      } catch (err) {
-        console.error('Error accessing media devices.', err);
-        setHasPermissions(false);
-        toast({
+      } catch (err: any) {
+        if (err.name === 'NotFoundError') {
+          console.warn('NotFoundError: No media devices found. This is expected in environments without physical devices.');
+          setHasPermissions(false);
+          toast({
             variant: "destructive",
-            title: t('camera_permission_denied_title'),
-            description: t('camera_permission_denied_desc')
-        });
+            title: t('media_device_not_found_title'),
+            description: t('media_device_not_found_desc'),
+          });
+        } else { // For other errors like NotAllowedError (permission denied)
+          console.error('Error accessing media devices.', err);
+          setHasPermissions(false);
+          toast({
+              variant: "destructive",
+              title: t('camera_permission_denied_title'),
+              description: t('camera_permission_denied_desc')
+          });
+        }
       }
     };
 
