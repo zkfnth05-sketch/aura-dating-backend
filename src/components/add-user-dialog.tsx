@@ -123,8 +123,8 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
         createdAt: serverTimestamp(),
         photoUrls: photoUrlToSave ? [photoUrlToSave] : [],
         bio: '새로운 만남을 기다립니다!',
-        hobbies: ['독서', '영화 감상'],
-        interests: ['맛집 탐방', '여행'],
+        hobbies: ['hobbies_section_title_reading', 'hobbies_section_title_movies'],
+        interests: ['interests_section_title_foodie', 'interests_section_title_cafe'],
         lat: 37.5665 + (Math.random() - 0.5) * 0.1, // Seoul with some randomness
         lng: 126.9780 + (Math.random() - 0.5) * 0.1,
         phoneNumber: '',
