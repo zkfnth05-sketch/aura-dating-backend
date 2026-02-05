@@ -1,10 +1,10 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useUser } from '@/contexts/user-context';
+import { useLanguage } from '@/contexts/language-context';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
@@ -23,6 +23,7 @@ type PhotoState = {
 export default function UploadPhotoPage() {
   const router = useRouter();
   const { user, updateUser, isLoaded, authUser, setIsSignupFlowActive } = useUser();
+  const { t } = useLanguage();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<PhotoState>({ uri: null, isEnhancing: false });
@@ -126,13 +127,13 @@ export default function UploadPhotoPage() {
     <>
     <div className="flex flex-col min-h-screen bg-black text-white px-8 py-12">
       <header className="flex-shrink-0">
-        <h1 className="text-2xl font-bold text-center">프로필 만들기</h1>
+        <h1 className="text-2xl font-bold text-center">{t('create_profile_title')}</h1>
         <Progress value={75} className="w-full mt-4 h-1 bg-zinc-800" />
       </header>
 
       <main className="flex-1 overflow-y-auto py-8">
         <div className="flex flex-col items-center justify-center h-full text-center">
-            <p className="text-zinc-400 mb-6">대표 사진을 등록해주세요.</p>
+            <p className="text-zinc-400 mb-6">{t('add_profile_photo_title')}</p>
             
             <Dialog open={isPhotoSourceDialogOpen} onOpenChange={setIsPhotoSourceDialogOpen}>
             <DialogTrigger asChild>
@@ -153,19 +154,19 @@ export default function UploadPhotoPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
                 <DialogHeader>
-                <DialogTitle>사진 추가</DialogTitle>
+                <DialogTitle>{t('add_photo')}</DialogTitle>
                 <DialogDescription>
-                    프로필에 사진을 추가하는 방법을 선택하세요.
+                    {t('choose_photo_method')}
                 </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                 <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
                     <Camera className="mr-2 h-4 w-4" />
-                    사진 촬영
+                    {t('take_photo')}
                 </Button>
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                     <ImageIcon className="mr-2 h-4 w-4" />
-                    앨범에서 선택
+                    {t('from_album')}
                 </Button>
                 <input
                     type="file"
@@ -181,7 +182,7 @@ export default function UploadPhotoPage() {
 
             <div className="flex items-center justify-center gap-4 mt-8">
             <label htmlFor="ai-enhancement" className="text-sm font-medium text-zinc-400">
-                AI 보정
+                {t('ai_enhancement')}
             </label>
             <Switch
                 id="ai-enhancement"
@@ -198,7 +199,7 @@ export default function UploadPhotoPage() {
             className="w-full h-14 bg-zinc-800 text-zinc-300 font-bold rounded-full text-lg hover:bg-zinc-700"
             disabled={isSubmitting || photo.isEnhancing}
         >
-            이전
+            {t('previous_button')}
         </Button>
         <Button
           onClick={handleComplete}
@@ -206,7 +207,7 @@ export default function UploadPhotoPage() {
           className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-full text-lg hover:bg-primary/90 disabled:bg-zinc-800 disabled:text-zinc-500"
         >
           {(photo.isEnhancing || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          완료
+          {t('complete_button')}
         </Button>
       </footer>
     </div>

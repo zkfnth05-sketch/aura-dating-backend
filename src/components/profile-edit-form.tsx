@@ -1,10 +1,9 @@
-
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
+import { useLanguage } from '@/contexts/language-context';
 import Image from 'next/image';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import ReauthDialog from './reauth-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
@@ -63,10 +63,14 @@ const allValues = {
   interests: ['맛집 탐방', '카페 투어', '사진 촬영', '패션', '뷰티', '재테크', '자기계발', '그림 그리기', '독서', '등산', '클래식 음악', '요가']
 };
 
+type LanguageCode = 'ko' | 'en' | 'es' | 'ja';
+
+
 export default function ProfileEditForm() {
   const router = useRouter();
   const { toast } = useToast();
   const { user: currentUser, updateUser, isLoaded, authUser } = useUser();
+  const { t, setLanguage, supportedLanguages } = useLanguage();
   const firestore = useFirestore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -76,6 +80,7 @@ export default function ProfileEditForm() {
     location: '',
     bio: '',
     gender: '여성' as '남성' | '여성' | '기타',
+    language: 'ko' as LanguageCode,
     relationship: [] as string[],
     values: [] as string[],
     communication: [] as string[],
@@ -101,6 +106,7 @@ export default function ProfileEditForm() {
           location: currentUser.location || '',
           bio: currentUser.bio || '',
           gender: currentUser.gender || '여성',
+          language: currentUser.language || 'ko',
           relationship: currentUser.relationship || [],
           values: currentUser.values || [],
           communication: currentUser.communication || [],
@@ -131,8 +137,11 @@ export default function ProfileEditForm() {
     });
   };
 
-  const handleSingleSelect = (field: 'gender', value: '남성' | '여성' | '기타') => {
+  const handleSingleSelect = (field: 'gender' | 'language', value: any) => {
     setProfile(prev => ({...prev, [field]: value}));
+    if (field === 'language') {
+      setLanguage(value);
+    }
   }
 
   const handleSave = () => {
@@ -185,7 +194,6 @@ export default function ProfileEditForm() {
                 title: "AI 보정 실패",
                 description: "Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.",
             });
-            // Fallback to original compressed image is handled by finalUriToUpload's initial value
         }
     }
     
@@ -264,6 +272,20 @@ export default function ProfileEditForm() {
   return (
     <>
       <main className="container px-4 pb-24">
+        
+        <Section title={t('language_section_title')} description={t('language_section_description')}>
+            <Select value={profile.language} onValueChange={(value: LanguageCode) => handleSingleSelect('language', value)}>
+                <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
+                    <SelectValue placeholder="언어 선택" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 text-white border-zinc-800">
+                    {supportedLanguages.map(lang => (
+                        <SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </Section>
+        
         <Section title="사진 및 동영상">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm">AI 보정</span>
@@ -417,10 +439,10 @@ export default function ProfileEditForm() {
 
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-zinc-800">
         <div className="flex w-full gap-2">
-            <Button variant="secondary" onClick={() => router.back()} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">취소</Button>
+            <Button variant="secondary" onClick={() => router.back()} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">{t('cancel_button')}</Button>
             <Button onClick={handleSave} disabled={isSaving || isEnhancing} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">
                 {(isSaving || isEnhancing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                저장
+                {t('save_button')}
             </Button>
         </div>
         <div className="text-center mt-4">

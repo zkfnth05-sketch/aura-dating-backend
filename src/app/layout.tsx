@@ -5,6 +5,7 @@ import { UserProvider } from '@/contexts/user-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import AppLayout from '@/components/layout/app-layout';
 import { useEffect } from 'react';
+import { LanguageProvider } from '@/contexts/language-context';
 
 
 export default function RootLayout({
@@ -47,10 +48,12 @@ export default function RootLayout({
       <body className="font-body antialiased h-full bg-background text-foreground" suppressHydrationWarning>
         <FirebaseClientProvider>
           <UserProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-            <Toaster />
+            <LanguageProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+              <Toaster />
+            </LanguageProvider>
           </UserProvider>
         </FirebaseClientProvider>
       </body>

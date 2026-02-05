@@ -1,9 +1,9 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
+import { useLanguage } from '@/contexts/language-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +15,7 @@ import { countryCodes } from '@/lib/country-codes';
 export default function PhonePage() {
   const router = useRouter();
   const { phoneAuth } = useUser();
+  const { t } = useLanguage();
   const {
     phoneNumber,
     setPhoneNumber,
@@ -55,7 +56,7 @@ export default function PhonePage() {
         <Link href="/signup" className="absolute left-0 p-2">
             <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-xl font-bold text-center">전화번호로 로그인</h1>
+        <h1 className="text-xl font-bold text-center">{t('phone_login_title')}</h1>
       </header>
       <Progress value={10} className="w-full mt-4 h-1 bg-zinc-800" />
       
@@ -64,7 +65,7 @@ export default function PhonePage() {
         <div className="space-y-8">
           <div>
             <label htmlFor="country-code" className="text-sm font-medium text-zinc-400">
-              국가/지역
+              {t('country_region')}
             </label>
             <Select value={countryCode} onValueChange={setCountryCode} disabled={isSendingOtp}>
                 <SelectTrigger id="country-code" className="mt-2 w-full bg-zinc-900 border-zinc-800 h-12 text-base">
@@ -79,19 +80,19 @@ export default function PhonePage() {
           </div>
           <div>
             <label htmlFor="phone" className="text-sm font-medium text-zinc-400">
-              전화번호
+              {t('phone_number')}
             </label>
             <Input
               id="phone"
               type="tel"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-              placeholder="전화번호"
+              placeholder={t('phone_number_placeholder')}
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
               disabled={isSendingOtp}
             />
             <p className="text-xs text-zinc-500 mt-2">
-              로그인 또는 회원가입을 위해 전화번호를 입력해주세요.
+              {t('phone_number_description')}
             </p>
           </div>
         </div>
@@ -103,7 +104,7 @@ export default function PhonePage() {
           disabled={isSendingOtp || !phoneNumber}
           className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-full text-lg"
         >
-          {isSendingOtp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "인증 코드 받기"}
+          {isSendingOtp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('get_verify_code')}
         </Button>
       </footer>
       

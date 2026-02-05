@@ -13,6 +13,7 @@ export type User = {
   interests: string[];
   photoUrls: string[];
   gender: '남성' | '여성' | '기타';
+  language?: 'ko' | 'en' | 'es' | 'ja';
   relationship?: string[];
   values?: string[];
   communication?: string[];

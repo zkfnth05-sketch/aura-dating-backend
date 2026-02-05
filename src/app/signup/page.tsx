@@ -7,10 +7,11 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogDescription,
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useLanguage } from '@/contexts/language-context';
+import { cn } from '@/lib/utils';
 
 // Phone icon
 const PhoneIcon = () => (
@@ -29,15 +30,23 @@ const PhoneIcon = () => (
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t, setLanguage, supportedLanguages, language } = useLanguage();
 
   return (
     <div className="flex flex-col items-center justify-between min-h-screen bg-black text-white p-8">
       <div className="flex-grow flex flex-col items-center justify-center text-center w-full max-w-sm">
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+            {supportedLanguages.map(lang => (
+                <Button key={lang.code} variant="ghost" size="sm" onClick={() => setLanguage(lang.code as any)} className={cn(language === lang.code && "bg-primary text-primary-foreground hover:bg-primary/90")}>
+                    {lang.name}
+                </Button>
+            ))}
+        </div>
         <span className="font-headline text-6xl font-bold text-primary drop-shadow-sm scale-y-[.85]">
-          Aura
+          {t('app_title')}
         </span>
         <p className="mt-8 mb-16 text-lg text-neutral-300">
-          운명적인 인연을 발견하세요
+          {t('app_tagline')}
         </p>
 
         <div className="space-y-3 w-full">
@@ -47,20 +56,20 @@ export default function SignupPage() {
             className="w-full h-12 bg-neutral-800 text-white hover:bg-neutral-700 font-semibold text-base relative"
           >
             <PhoneIcon />
-            전화번호로 계속하기
+            {t('continue_with_phone')}
           </Button>
         </div>
       </div>
 
       <div className="text-center text-xs text-neutral-500 max-w-sm">
-        계속 진행하면 Aura의{' '}
+        {t('terms_agree_prefix')}
         <Dialog>
           <DialogTrigger asChild>
-            <button className="underline">이용약관</button>
+            <button className="underline">{t('terms_of_service')}</button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card text-foreground">
             <DialogHeader>
-              <DialogTitle>이용약관</DialogTitle>
+              <DialogTitle>{t('terms_of_service')}</DialogTitle>
             </DialogHeader>
             <ScrollArea className="h-96 w-full rounded-md border p-4">
               <div className="prose prose-sm dark:prose-invert">
@@ -90,14 +99,14 @@ export default function SignupPage() {
             </ScrollArea>
           </DialogContent>
         </Dialog>
-        {' '}및{' '}
+        {t('and')}
         <Dialog>
           <DialogTrigger asChild>
-            <button className="underline">개인정보처리방침</button>
+            <button className="underline">{t('privacy_policy')}</button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] bg-card text-foreground">
             <DialogHeader>
-              <DialogTitle>개인정보처리방침</DialogTitle>
+              <DialogTitle>{t('privacy_policy')}</DialogTitle>
             </DialogHeader>
             <ScrollArea className="h-96 w-full rounded-md border p-4">
               <div className="prose prose-sm dark:prose-invert">
@@ -123,7 +132,7 @@ export default function SignupPage() {
             </ScrollArea>
           </DialogContent>
         </Dialog>
-        에 동의하는 것으로 간주됩니다.
+        {t('terms_agree_suffix')}
       </div>
     </div>
   );

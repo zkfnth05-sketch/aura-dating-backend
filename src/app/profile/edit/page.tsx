@@ -3,12 +3,14 @@
 import ProfileEditForm from '@/components/profile-edit-form';
 import { Loader2 } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
+import { useLanguage } from '@/contexts/language-context';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 export default function ProfileEditPage() {
   const { isLoaded } = useUser();
+  const { t } = useLanguage();
   const router = useRouter();
 
   // Wait for user context to be loaded before rendering the form
@@ -27,7 +29,7 @@ export default function ProfileEditPage() {
         <Button variant="ghost" size="icon" className="mr-2" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-xl font-bold text-center flex-1">프로필 수정</h1>
+        <h1 className="text-xl font-bold text-center flex-1">{t('edit_profile_title')}</h1>
         <div className="w-10"></div>
       </header>
       <ProfileEditForm />

@@ -1,9 +1,9 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
+import { useLanguage } from '@/contexts/language-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,7 @@ export default function CreateProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, updateUser, authUser, isLoaded, setIsSignupFlowActive, isSignupFlowActive } = useUser();
+  const { language, t } = useLanguage();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [city, setCity] = useState('');
@@ -70,6 +71,7 @@ export default function CreateProfilePage() {
       age: parseInt(age, 10),
       location: city,
       gender,
+      language: language,
       phoneNumber: authUser.phoneNumber || '',
       id: authUser.uid,
       email: authUser.email || '',
@@ -105,7 +107,7 @@ export default function CreateProfilePage() {
   return (
     <div className="flex flex-col min-h-screen bg-black text-white px-8 py-12">
       <header className="flex-shrink-0">
-        <h1 className="text-2xl font-bold text-center">프로필 만들기</h1>
+        <h1 className="text-2xl font-bold text-center">{t('create_profile_title')}</h1>
         <Progress value={25} className="w-full mt-4 h-1 bg-zinc-800" />
       </header>
 
@@ -113,14 +115,14 @@ export default function CreateProfilePage() {
         <div className="space-y-8">
           <div>
             <label htmlFor="name" className="text-sm font-medium text-zinc-400">
-              이름
+              {t('name_label')}
             </label>
             <Input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="이름을 입력하세요"
+              placeholder={t('name_placeholder')}
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
               disabled={isSubmitting}
             />
@@ -128,14 +130,14 @@ export default function CreateProfilePage() {
 
           <div>
             <label htmlFor="age" className="text-sm font-medium text-zinc-400">
-              나이
+              {t('age_label')}
             </label>
             <Input
               id="age"
               type="number"
               value={age}
               onChange={(e) => setAge(e.target.value)}
-              placeholder="나이를 입력하세요"
+              placeholder={t('age_placeholder')}
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
               disabled={isSubmitting}
             />
@@ -143,21 +145,21 @@ export default function CreateProfilePage() {
 
           <div>
             <label htmlFor="city" className="text-sm font-medium text-zinc-400">
-              도시
+              {t('city_label')}
             </label>
             <Input
               id="city"
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="거주 도시를 입력하세요"
+              placeholder={t('city_placeholder')}
               className="mt-2 bg-zinc-900 border-zinc-800 h-12 text-base"
               disabled={isSubmitting}
             />
           </div>
 
           <div>
-            <label className="text-sm font-medium text-zinc-400">성별</label>
+            <label className="text-sm font-medium text-zinc-400">{t('gender_label')}</label>
             <div className="mt-2 grid grid-cols-2 gap-px bg-zinc-800 rounded-lg border border-zinc-800 overflow-hidden">
               <Button
                 onClick={() => setGender('여성')}
@@ -170,7 +172,7 @@ export default function CreateProfilePage() {
                     : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
                 )}
               >
-                여성
+                {t('gender_female')}
               </Button>
               <Button
                 onClick={() => setGender('남성')}
@@ -183,7 +185,7 @@ export default function CreateProfilePage() {
                     : 'bg-zinc-900 text-zinc-300 hover:bg-zinc-800'
                 )}
               >
-                남성
+                {t('gender_male')}
               </Button>
             </div>
           </div>
@@ -197,7 +199,7 @@ export default function CreateProfilePage() {
           className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-full text-lg"
         >
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          다음
+          {t('next_button')}
         </Button>
       </footer>
     </div>

@@ -1,9 +1,9 @@
-
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
+import { useLanguage } from '@/contexts/language-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -14,6 +14,7 @@ export default function OtpPage() {
   const router = useRouter();
   const [otp, setOtp] = useState('');
   const { phoneAuth } = useUser();
+  const { t } = useLanguage();
   const { phoneNumber, countryCode, verifyOtp, isVerifyingOtp, sendVerificationCode } = phoneAuth;
 
   const handleVerify = async () => {
@@ -30,7 +31,7 @@ export default function OtpPage() {
         <Link href="/signup/phone" className="absolute left-0 p-2">
             <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-xl font-bold text-center">인증 코드 입력</h1>
+        <h1 className="text-xl font-bold text-center">{t('otp_title')}</h1>
       </header>
       <Progress value={20} className="w-full mt-4 h-1 bg-zinc-800" />
 
@@ -39,7 +40,7 @@ export default function OtpPage() {
         <div className="space-y-8">
           <div>
             <label htmlFor="otp" className="text-sm font-medium text-zinc-400">
-              {countryCode}{phoneNumber.startsWith('0') ? phoneNumber.substring(1) : phoneNumber} (으)로 전송된 6자리 코드를 입력하세요.
+              {countryCode}{phoneNumber.startsWith('0') ? phoneNumber.substring(1) : phoneNumber}{t('otp_description')}
             </label>
             <Input
               id="otp"
@@ -53,7 +54,7 @@ export default function OtpPage() {
             />
           </div>
            <Button variant="link" onClick={() => sendVerificationCode()} className="text-zinc-400">
-              코드 재전송
+              {t('resend_code')}
             </Button>
         </div>
       </main>
@@ -64,7 +65,7 @@ export default function OtpPage() {
           disabled={isVerifyingOtp || otp.length !== 6}
           className="w-full h-14 bg-primary text-primary-foreground font-bold rounded-full text-lg"
         >
-          {isVerifyingOtp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "인증하고 계속하기"}
+          {isVerifyingOtp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : t('verify_and_continue')}
         </Button>
       </footer>
     </div>
