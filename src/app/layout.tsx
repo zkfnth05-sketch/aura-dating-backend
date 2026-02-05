@@ -4,7 +4,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { UserProvider } from '@/contexts/user-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import AppLayout from '@/components/layout/app-layout';
-import { useEffect } from 'react';
 import { LanguageProvider } from '@/contexts/language-context';
 
 
@@ -13,18 +12,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/sw.js').then(function(registration) {
-          console.log('Service Worker registration successful with scope: ', registration.scope);
-        }, function(err) {
-          console.log('Service Worker registration failed: ', err);
-        });
-      });
-    }
-  }, []);
 
   return (
     <html lang="ko" className="dark h-full" suppressHydrationWarning>
