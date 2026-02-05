@@ -40,7 +40,7 @@ export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = 
         )}
         disabled={isLiked}
       >
-        <Heart className={cn("w-10 h-10", isLiked && "fill-current")} />
+        <Heart className="w-10 h-10 fill-current" />
       </Button>
     </div>
   );
