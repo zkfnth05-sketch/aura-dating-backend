@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -133,7 +132,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!firestore || !currentUser?.id || !match) return;
-    
+
     const currentUnreadCount = match.unreadCounts?.[currentUser.id] || 0;
     if (currentUnreadCount > 0) {
       updateDoc(matchRef!, { [`unreadCounts.${currentUser.id}`]: 0 }).catch(e => {
@@ -146,14 +145,14 @@ export default function ChatPage() {
       });
     }
     
-    if(match.callStatus === 'active' && match.callerId === currentUser?.id) {
-        setIsCallActive(true);
+    // Corrected logic to enter video call
+    if (match.callStatus === 'active' && !isCallActive) {
+      setIsCallActive(true);
+    } else if (match.callStatus !== 'active' && isCallActive) {
+      setIsCallActive(false);
     }
-    if(match.callStatus === 'idle' && isCallActive) {
-        setIsCallActive(false);
-    }
+  }, [firestore, match, currentUser?.id, matchRef, isCallActive]);
 
-  }, [firestore, match, currentUser?.id, isCallActive, matchRef]);
 
   useEffect(() => {
     if (otherUser) {

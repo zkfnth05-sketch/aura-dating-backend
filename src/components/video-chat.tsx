@@ -24,29 +24,28 @@ export default function VideoChat({
   const { t } = useLanguage();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   
   const [hasPermissions, setHasPermissions] = useState(false);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
-    let userStream: MediaStream | null = null;
     const getMedia = async () => {
       try {
-        userStream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
-        setStream(userStream);
+        streamRef.current = stream;
         setHasPermissions(true);
         if (localVideoRef.current) {
-          localVideoRef.current.srcObject = userStream;
+          localVideoRef.current.srcObject = stream;
         }
         // For simulation, we'll use the same stream for the remote user.
         // In a real app, this would come from a WebRTC connection.
         if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = userStream;
+          remoteVideoRef.current.srcObject = stream;
         }
       } catch (err) {
         console.error('Error accessing media devices.', err);
@@ -63,16 +62,16 @@ export default function VideoChat({
 
     return () => {
       // Clean up the stream when the component unmounts
-      if (userStream) {
-        userStream.getTracks().forEach((track) => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleMic = () => {
-    if (stream) {
-        stream.getAudioTracks().forEach(track => {
+    if (streamRef.current) {
+        streamRef.current.getAudioTracks().forEach(track => {
             track.enabled = !isMicOn;
         });
         setIsMicOn(!isMicOn);
@@ -80,8 +79,8 @@ export default function VideoChat({
   };
 
   const toggleCamera = () => {
-     if (stream) {
-        stream.getVideoTracks().forEach(track => {
+     if (streamRef.current) {
+        streamRef.current.getVideoTracks().forEach(track => {
             track.enabled = !isCameraOn;
         });
         setIsCameraOn(!isCameraOn);
@@ -89,8 +88,8 @@ export default function VideoChat({
   };
 
   const handleEndCall = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
     }
     onEndCall();
   };
