@@ -182,18 +182,28 @@ export default function ChatPage() {
     let translations = {};
 
     if (currentUserLang !== otherUserLang) {
-        try {
-            const result = await getChatTranslation({
-                text: newMessage,
-                targetLanguage: languageMap[otherUserLang] || 'English',
-            });
-            if (result.translatedText) {
-                translations = { [otherUserLang]: result.translatedText };
-            }
-        } catch (error) {
-            console.error("Chat translation failed:", error);
-            // Fail silently, message will be sent untranslated
+      try {
+        const result = await getChatTranslation({
+          text: newMessage,
+          targetLanguage: languageMap[otherUserLang] || 'English',
+        });
+        if (result.translatedText) {
+          translations = { [otherUserLang]: result.translatedText };
+        } else {
+          toast({
+            variant: "destructive",
+            title: t('translation_failed_title'),
+            description: t('translation_failed_empty_desc'),
+          });
         }
+      } catch (error) {
+        console.error("Chat translation failed:", error);
+        toast({
+          variant: "destructive",
+          title: t('translation_service_error_title'),
+          description: t('translation_service_error_desc'),
+        });
+      }
     }
     
     const batch = writeBatch(firestore);
@@ -392,9 +402,8 @@ export default function ChatPage() {
           {reversedMessages && reversedMessages.map((message) => {
               const isMyMessage = message.senderId === currentUser.id;
               const currentUserLang = currentUser.language || 'ko';
-              const messageLang = message.senderLanguage || 'ko'; // Fallback for older messages
               
-              const isTranslated = !isMyMessage && messageLang !== currentUserLang && !!message.translations?.[currentUserLang];
+              const isTranslated = !isMyMessage && !!message.translations?.[currentUserLang];
               
               const displayText = isTranslated 
                   ? message.translations![currentUserLang]!
