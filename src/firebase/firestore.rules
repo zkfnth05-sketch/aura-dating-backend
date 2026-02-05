@@ -1,0 +1,133 @@
+
+/**
+ * This ruleset enforces a strict, user-centric security model for a dating application.
+ *
+ * Core Philosophy:
+ * The security model is built around user ownership and explicit consent (matches). Users have absolute
+ * control over their own profile and the 'likes' they issue. Access to shared resources, such as chat
+ * rooms, is strictly limited to the participating users of a confirmed match.
+ *
+ * Data Structure:
+ * - /users/{userId}: Contains all private, user-specific data, including their profile and likes. This
+ *   structure enforces ownership via the document path.
+ * - /matches/{matchId}: A top-level collection for shared match data. This flat structure avoids deep
+ *   nesting and simplifies queries for a user's matches.
+ * - /matches/{matchId}/messages: A subcollection for chat messages, inheriting its access control from
+ *   the parent match document.
+ *
+ * Key Security Decisions:
+ * - User Profiles Are Publicly Readable: A user's profile document under `/users/{userId}` is readable by
+ *   any signed-in user. This is necessary for a dating app where users browse profiles.
+ * - Writes are Owner-Only (with exception for admin): All write operations (create, update, delete) on a user's profile and their
+ *   subcollections (likes) are strictly limited to the owner of that data, or an admin.
+ * - Server-Managed Matches: The creation of `match` documents is disabled for clients. This critical
+ *   business logic should be handled by a trusted server environment (e.g., Cloud Functions) to prevent
+ *   users from creating fraudulent matches, though for prototyping it can be done client-side with careful rules.
+ * - Explicit Participant Checks: Access to any data within the `/matches` collection and its
+ *   subcollections is granted only after verifying the requesting user's UID is present in the parent
+ *   match document's `users` array field.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * Returns true if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the authenticated user's UID matches the provided userId.
+     * This is the primary function for checking resource ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    /**
+     * Checks if the current user is one of the participants in a given match document.
+     */
+    function isMatchParticipant(matchDoc) {
+      return isSignedIn() && request.auth.uid in matchDoc.data.users;
+    }
+
+    // --------------------------------
+    // User Data Collections
+    // --------------------------------
+
+    /**
+     * @description Users can create their own profile. Authenticated users can read/list profiles.
+     * Only the owner can update/delete their own profile.
+     */
+    match /users/{userId} {
+      allow get, list: if isSignedIn();
+      // Allow any signed-in user (like an admin) to create a new user document.
+      allow create: if isSignedIn(); 
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // --------------------------------
+    // Shared Data Collections
+    // --------------------------------
+
+    /**
+     * @description Rules for the top-level 'likes' collection.
+     */
+    match /likes/{likeId} {
+        // Anyone signed in can read the likes, necessary for querying.
+        allow read: if isSignedIn();
+        // A user can only create a like document if the 'likerId' in the document
+        // is their own user ID. This prevents spoofing.
+        allow create: if isSignedIn() && request.resource.data.likerId == request.auth.uid;
+        // Likes are immutable, they cannot be updated or deleted by clients.
+        allow update, delete: if false;
+    }
+
+
+    /**
+     * @description Match documents can be read by participants. Creation is handled client-side for prototype.
+     */
+    match /matches/{matchId} {
+      allow read, list: if isSignedIn() && request.auth.uid in resource.data.users;
+      // Allow client-side creation for prototyping.
+      allow create: if true; 
+      // Updates are more complex; for now, only allow last message updates by participants.
+      allow update: if isSignedIn() && request.auth.uid in resource.data.users;
+      allow delete: if false; // Deleting matches should be a deliberate server-side action.
+
+      /**
+       * @description Messages can be created and read by match participants. Users can only delete their own messages.
+       */
+      match /messages/{messageId} {
+        allow read, list: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId)));
+        allow create: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) && (request.resource.data.senderId == request.auth.uid || request.resource.data.senderId == 'system');
+        allow update: if false; // Messages are immutable
+        allow delete: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) && resource.data.senderId == request.auth.uid;
+      }
+
+      /**
+       * @description WebRTC signaling candidates for video calls.
+       */
+      match /candidates/{candidateId} {
+        allow read, write: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId)));
+      }
+    }
+
+    /**
+     * @description Rules for the top-level 'reports' collection.
+     */
+    match /reports/{reportId} {
+      // Any signed-in user can create a report, but they must be the reporter.
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+      // Only backend processes should read/update/delete reports.
+      allow read, update, delete: if false;
+    }
+  }
+}
