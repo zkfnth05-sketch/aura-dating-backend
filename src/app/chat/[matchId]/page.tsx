@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -401,12 +402,11 @@ export default function ChatPage() {
           {areMessagesLoading && messages?.length === 0 && <div className="text-center text-muted-foreground">{t('chat_loading_messages')}</div>}
           {reversedMessages && reversedMessages.map((message) => {
               const isMyMessage = message.senderId === currentUser.id;
-              const currentUserLang = currentUser.language || 'ko';
               
-              const isTranslated = !isMyMessage && !!message.translations?.[currentUserLang];
+              const isTranslated = !isMyMessage && !!message.translations?.[language];
               
               const displayText = isTranslated 
-                  ? message.translations![currentUserLang]!
+                  ? message.translations![language]!
                   : (message.text || '');
               
               return (
