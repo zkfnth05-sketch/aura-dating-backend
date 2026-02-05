@@ -11,36 +11,39 @@ type ActionButtonsProps = {
 
 export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = false }: ActionButtonsProps) {
   return (
-    <div className="flex items-center justify-center gap-10 z-10">
+    <div className="flex items-center justify-center gap-6 z-10">
+      {/* Dislike Button */}
       <Button 
         onClick={onDislike} 
-        variant="outline" 
+        variant="ghost" 
         size="icon" 
-        className="w-16 h-16 rounded-full bg-button-dislike text-white hover:bg-button-dislike/90 shadow-lg border-2 border-white/20"
+        className="w-20 h-20 rounded-full bg-neutral-800/90 backdrop-blur-sm text-neutral-300 hover:bg-neutral-700"
       >
         <X className="w-10 h-10" />
       </Button>
 
+      {/* Message Button */}
       <Button 
         onClick={onMessage} 
-        variant="outline" 
+        variant="ghost" 
         size="icon" 
-        className="w-16 h-16 rounded-full bg-button-superlike text-white hover:bg-button-superlike/90 shadow-lg border-2 border-white/20"
+        className="w-16 h-16 rounded-full bg-neutral-800/90 backdrop-blur-sm text-blue-400 hover:bg-neutral-700"
       >
-        <MessageCircle className="w-9 h-9" />
+        <MessageCircle className="w-8 h-8" />
       </Button>
       
+      {/* Like Button */}
       <Button 
         onClick={onLike} 
-        variant="outline" 
+        variant="ghost" 
         size="icon" 
         className={cn(
-            "w-16 h-16 rounded-full bg-button-like text-white hover:bg-button-like/90 shadow-lg border-2 border-white/20",
-            isLiked && "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+            "w-20 h-20 rounded-full bg-neutral-800/90 backdrop-blur-sm text-rose-500 hover:bg-neutral-700",
+            isLiked && "cursor-not-allowed opacity-70"
         )}
         disabled={isLiked}
       >
-        <Heart className="w-10 h-10 fill-current" />
+        <Heart className={cn("w-10 h-10", isLiked && "fill-current")} />
       </Button>
     </div>
   );
