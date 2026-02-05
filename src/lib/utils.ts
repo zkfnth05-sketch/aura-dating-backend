@@ -72,7 +72,8 @@ export function calculateCompatibility(user1: User, user2: User): { score: numbe
     lifestyle: 5,
   };
 
-  const findCommon = (arr1: string[] = [], arr2: string[] = []) => {
+  const findCommon = (arr1?: string[], arr2?: string[]) => {
+    if (!arr1 || !arr2) return [];
     const set1 = new Set(arr1);
     return arr2.filter(item => set1.has(item));
   };
@@ -87,15 +88,17 @@ export function calculateCompatibility(user1: User, user2: User): { score: numbe
   
   const commonValues = findCommon(user1.values, user2.values);
   score += commonValues.length * weights.values;
+  commonalities.push(...commonValues);
   
   const commonCommunication = findCommon(user1.communication, user2.communication);
   score += commonCommunication.length * weights.communication;
+  commonalities.push(...commonCommunication);
 
   const commonLifestyle = findCommon(user1.lifestyle, user2.lifestyle);
   score += commonLifestyle.length * weights.lifestyle;
+  commonalities.push(...commonLifestyle);
 
   // Normalize score to be out of 100
-  // This is a simplistic normalization. A more complex one might be needed.
   const finalScore = Math.min(100, Math.floor(score));
 
   return {
