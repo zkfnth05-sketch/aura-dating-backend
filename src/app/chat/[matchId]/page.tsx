@@ -74,7 +74,7 @@ export default function ChatPage() {
   const matchId = params.matchId as string;
   const firestore = useFirestore();
   const storage = useStorage();
-  const { user: currentUser, isLoaded: isUserLoaded } = useUser();
+  const { user: currentUser, isLoaded: isUserLoaded, updateUser } = useUser();
   const { t, language } = useLanguage();
   const { toast } = useToast();
   
@@ -148,11 +148,16 @@ export default function ChatPage() {
       });
     }
   
-    // Listen for call status changes
+    // Listen for call status changes and update the UI accordingly.
     const unsubscribe = onSnapshot(matchRef, (doc) => {
         const data = doc.data() as Match | undefined;
-        if(data?.callStatus === 'active') {
+        // The component should render the video chat only when the call is 'active'.
+        if (data?.callStatus === 'active') {
             setIsCallActive(true);
+        } else {
+            // If the call status is 'ringing', 'idle', or undefined, ensure the video chat UI is not active.
+            // This fixes the bug where the call screen would not close when the other user hangs up.
+            setIsCallActive(false);
         }
     });
   
@@ -163,28 +168,39 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (otherUser) {
-      const formattedText = (() => {
-        if (!otherUser.lastSeen) return t('last_seen_long_ago');
-        if (otherUser.lastSeen === 'Online') return t('online_status');
-        const now = new Date();
-        const lastSeenDate = new Date(otherUser.lastSeen);
-        const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
-        if (diffInSeconds < 60) return t('last_seen_just_now');
-        const diffInMinutes = Math.floor(diffInSeconds / 60);
-        if (diffInMinutes < 60) return t('last_seen_minutes_ago').replace('%s', diffInMinutes.toString());
-        const diffInHours = Math.floor(diffInMinutes / 60);
-        if (diffInHours < 24) return t('last_seen_hours_ago').replace('%s', diffInHours.toString());
-        const diffInDays = Math.floor(diffInHours / 24);
-        if (diffInDays < 7) return t('last_seen_days_ago').replace('%s', diffInDays.toString());
-        return lastSeenDate.toLocaleDateString(language);
-      })();
-      setLastSeenText(formattedText);
+      const now = new Date();
+      if(otherUser.lastSeen === 'Online') {
+          setLastSeenText(t('online_status'));
+          return;
+      }
+      if (!otherUser.lastSeen) {
+          setLastSeenText(t('last_seen_long_ago'));
+          return;
+      }
+      
+      const lastSeenDate = new Date(otherUser.lastSeen);
+      const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
+      
+      if (diffInSeconds < 300) { // 5분 이내
+        setLastSeenText(t('online_status'));
+      } else if (diffInSeconds < 3600) { // 1시간 이내
+        setLastSeenText(t('last_seen_minutes_ago').replace('%s', Math.floor(diffInSeconds / 60).toString()));
+      } else if (diffInSeconds < 86400) { // 24시간 이내
+        setLastSeenText(t('last_seen_hours_ago').replace('%s', Math.floor(diffInSeconds / 3600).toString()));
+      } else if (diffInSeconds < 604800) { // 7일 이내
+        setLastSeenText(t('last_seen_days_ago').replace('%s', Math.floor(diffInSeconds / 86400).toString()));
+      } else {
+        setLastSeenText(lastSeenDate.toLocaleDateString(language));
+      }
     }
   }, [otherUser, t, language]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !firestore || !currentUser || !otherUser) return;
+    
+    // Update user's lastSeen when they send a message
+    updateUser({ lastSeen: new Date().toISOString() });
 
     const currentUserLang = currentUser.language || 'ko';
     const otherUserLang = otherUser.language || 'ko';
@@ -247,6 +263,9 @@ export default function ChatPage() {
 
   const handleSendAudio = async (audioBlob: Blob) => {
     if (!firestore || !currentUser || !otherUser || !storage) return;
+
+    // Update user's lastSeen when they send a message
+    updateUser({ lastSeen: new Date().toISOString() });
 
     const audioFileRef = storageRef(storage, `audio_messages/${matchId}/${new Date().getTime()}.webm`);
 
@@ -368,6 +387,16 @@ export default function ChatPage() {
       setIsCallActive(false);
   }
 
+  const isDuringConversation = useMemo(() => {
+    if (!otherUser?.lastSeen) return false;
+    if (otherUser.lastSeen === 'Online') return true;
+    const now = new Date();
+    const lastSeenDate = new Date(otherUser.lastSeen);
+    const diffInMinutes = (now.getTime() - lastSeenDate.getTime()) / (1000 * 60);
+    return diffInMinutes <= 5;
+  }, [otherUser?.lastSeen]);
+
+
   const isLoading = !isUserLoaded || isMatchLoading || (match != null && otherUserId != null && isOtherUserLoading);
   
   if (isLoading) {
@@ -472,8 +501,34 @@ export default function ChatPage() {
             <span className="text-2xl">✨</span>
           </Button>
           <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={t('chat_input_placeholder')} autoComplete="off" />
-          {newMessage.trim() ? (<Button type="submit" size="icon"><Send className="h-6 w-6 text-primary" /></Button>) : (
-            <Button type="button" size="icon" variant={isRecording ? 'destructive' : 'ghost'} onMouseDown={handleMicPress} onMouseUp={handleMicRelease} onTouchStart={handleMicPress} onTouchEnd={handleMicRelease}><MicIcon className="h-6 w-6 text-primary" /></Button>
+          {newMessage.trim() ? (
+            <Button type="submit" size="icon"><Send className="h-6 w-6 text-primary" /></Button>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Button 
+                      type="button" 
+                      size="icon" 
+                      variant={isRecording ? 'destructive' : 'ghost'} 
+                      onMouseDown={handleMicPress} 
+                      onMouseUp={handleMicRelease} 
+                      onTouchStart={handleMicPress} 
+                      onTouchEnd={handleMicRelease}
+                      disabled={!isDuringConversation}
+                    >
+                      <MicIcon className="h-6 w-6 text-primary" />
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                {!isDuringConversation && (
+                  <TooltipContent>
+                    <p>음성 메시지는 상대방과 대화 중일 때만 보낼 수 있습니다.</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )}
         </form>
       </footer>
