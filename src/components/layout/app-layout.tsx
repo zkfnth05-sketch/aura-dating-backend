@@ -1,5 +1,6 @@
     'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import BottomNav from '@/components/layout/bottom-nav';
@@ -8,8 +9,26 @@ import { NewLikeToast } from '@/components/new-like-toast';
 import { NewMatchToast } from '@/components/new-match-toast';
 import { NewMessageToast } from '@/components/new-message-toast';
 import { cn } from '@/lib/utils';
+import SplashScreen from '@/components/splash-screen';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    // This runs only on the client
+    if (sessionStorage.getItem('aura_splash_seen')) {
+      setShowSplash(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      sessionStorage.setItem('aura_splash_seen', 'true');
+      setShowSplash(false);
+    }, 2500); 
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const pathname = usePathname();
   const { authUser, user } = useUser();
 
@@ -19,37 +38,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   
   const showBottomNav = authUser && user && !noBottomNavPaths.some(path => pathname.startsWith(path));
 
+  if (showSplash) {
+    return <SplashScreen />;
+  }
+
   if (isAdminPage) {
     return <>{children}</>;
   }
 
   return (
-    // h-full 대신 h-[100dvh]를 사용하여 모바일 주소창 높이 변화에 대응
     <div className="mx-auto max-w-screen-sm w-full flex flex-col h-[100dvh] relative bg-background">
       <main className={cn(
-        "flex-1 flex flex-col min-h-0", // min-h-0: flex 자식 스크롤 버그 방지
+        "flex-1 flex flex-col min-h-0",
       )}>
-        {/* 실제 스크롤 되는 영역 */}
         <div className={cn(
             "flex-1 overflow-y-auto", 
-            // BottomNav가 보일 때는 하단에 패딩을 줘서 컨텐츠가 가려지지 않게 함
             showBottomNav ? "pb-20" : "" 
         )}>
           {children}
         </div>
       </main>
       
-      {/* BottomNav는 보통 fixed로 되어 있으므로 흐름 밖에서 렌더링되거나,
-          flex 흐름 안에 있다면 main 아래에 위치합니다. 
-          z-index를 주어 컨텐츠 위에 뜨도록 보장합니다. */}
       {showBottomNav && (
         <div className="z-50">
           <BottomNav />
         </div>
       )}
       
-      {/* Toast components do not render anything themselves, they trigger toasts.
-          The wrapper div is not necessary. */}
       <IncomingCallToast />
       <NewLikeToast />
       <NewMatchToast />
