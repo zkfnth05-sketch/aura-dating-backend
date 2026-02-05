@@ -61,7 +61,7 @@ export function compressImage(dataUri: string, quality = 0.8, maxWidth = 1024, m
  */
 export function calculateCompatibility(user1: User, user2: User): { score: number; commonalities: string[] } {
   let score = 0;
-  const commonalities: string[] = [];
+  const allCommonalities: string[] = [];
 
   // Define weights for different categories
   const weights = {
@@ -70,6 +70,7 @@ export function calculateCompatibility(user1: User, user2: User): { score: numbe
     values: 10,
     communication: 5,
     lifestyle: 5,
+    relationship: 10
   };
 
   const findCommon = (arr1?: string[], arr2?: string[]) => {
@@ -78,31 +79,19 @@ export function calculateCompatibility(user1: User, user2: User): { score: numbe
     return arr2.filter(item => set1.has(item));
   };
   
-  const commonHobbies = findCommon(user1.hobbies, user2.hobbies);
-  score += commonHobbies.length * weights.hobbies;
-  commonalities.push(...commonHobbies);
+  const categories: (keyof typeof weights)[] = ['hobbies', 'interests', 'values', 'communication', 'lifestyle', 'relationship'];
 
-  const commonInterests = findCommon(user1.interests, user2.interests);
-  score += commonInterests.length * weights.interests;
-  commonalities.push(...commonInterests);
+  categories.forEach(category => {
+    const commonItems = findCommon(user1[category as keyof User] as string[] | undefined, user2[category as keyof User] as string[] | undefined);
+    score += commonItems.length * weights[category];
+    allCommonalities.push(...commonItems);
+  });
   
-  const commonValues = findCommon(user1.values, user2.values);
-  score += commonValues.length * weights.values;
-  commonalities.push(...commonValues);
-  
-  const commonCommunication = findCommon(user1.communication, user2.communication);
-  score += commonCommunication.length * weights.communication;
-  commonalities.push(...commonCommunication);
-
-  const commonLifestyle = findCommon(user1.lifestyle, user2.lifestyle);
-  score += commonLifestyle.length * weights.lifestyle;
-  commonalities.push(...commonLifestyle);
-
   // Normalize score to be out of 100
   const finalScore = Math.min(100, Math.floor(score));
 
   return {
     score: finalScore,
-    commonalities: [...new Set(commonalities)], // Return unique commonalities
+    commonalities: [...new Set(allCommonalities)], // Return unique commonalities
   };
 }

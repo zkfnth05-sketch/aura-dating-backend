@@ -286,7 +286,7 @@ export const translations = {
     'block_success_title': '차단 완료',
     'block_success_desc': '%s님을 차단했습니다.',
     'report_select_reason': '신고 사유를 선택해주세요.',
-    'match_score': '궁합 %s%',
+    'match_score': '%s% 일치',
     'common_points': '공통점 %s개',
     'no_photo': '사진 없음',
     'gallery_title': '프로필 이미지 갤러리',
@@ -797,7 +797,6 @@ export const translations = {
     'reauth_submit_button': 'Verify & Delete Account',
     'reauth_error': 'Re-authentication failed. Please try again.',
 
-    
     // Auth
     'auth_phone_invalid': 'Please enter a valid phone number.',
     'auth_otp_invalid': 'Please enter the 6-digit code.',
@@ -1144,7 +1143,7 @@ export const translations = {
     'block_success_title': 'ユーザーをブロックしました',
     'block_success_desc': '%sさんをブロックしました。',
     'report_select_reason': '通報理由を選択してください。',
-    'match_score': '相性%s%',
+    'match_score': '%s％ 一致',
     'common_points': '共通点%s個',
     'no_photo': '写真なし',
     'gallery_title': 'プロフィール画像ギャラリー',
@@ -1570,7 +1569,7 @@ export const translations = {
     'block_success_title': 'Usuario Bloqueado',
     'block_success_desc': 'Has bloqueado a %s.',
     'report_select_reason': 'Por favor, selecciona un motivo para la denuncia.',
-    'match_score': '%s% de compatibilidad',
+    'match_score': '%s% de Coincidencia',
     'common_points': '%s puntos en común',
     'no_photo': 'Sin Foto',
     'gallery_title': 'Galería de Imágenes de Perfil',
