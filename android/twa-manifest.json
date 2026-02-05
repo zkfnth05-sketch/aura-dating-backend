@@ -16,7 +16,7 @@
   "iconUrl": "https://placehold.co/512x512/FFD700/121212.png?text=Aura",
   "maskableIconUrl": "https://placehold.co/512x512/FFD700/121212.png?text=Aura",
   "monochromeIconUrl": "https://placehold.co/512x512/FFFFFF/000000.png?text=Aura",
-  "splashScreenFadeOutDuration": 300,
+  "splashScreenFadeOutDuration": 0,
   "signingKey": {
     "path": "android.keystore",
     "alias": "android"
