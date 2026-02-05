@@ -11,14 +11,16 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { useLanguage } from '@/contexts/language-context';
 
 
 const AdminSidebarContent = () => {
     const pathname = usePathname();
+    const { t } = useLanguage();
 
     const navItems = [
-        { href: '/admin/dashboard', label: '대시보드' },
-        { href: '/admin', label: '사용자 관리' },
+        { href: '/admin/dashboard', label: t('admin_sidebar_dashboard') },
+        { href: '/admin', label: t('admin_sidebar_user_management') },
     ];
 
     return (
@@ -55,7 +57,7 @@ const AdminSidebarContent = () => {
             </nav>
             <div className="flex-shrink-0 px-4">
                 <Button variant="destructive" className="w-full">
-                    로그아웃
+                    {t('admin_logout_button')}
                 </Button>
             </div>
         </>

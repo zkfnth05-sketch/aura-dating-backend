@@ -7,11 +7,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import type { Like, User } from '@/lib/types';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/language-context';
 
 export function NewLikeToast() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const lastSeenLikeTimestamp = useRef<Timestamp | null>(null);
 
@@ -43,7 +45,7 @@ export function NewLikeToast() {
 
         toast({
           duration: 5000,
-          title: '새로운 좋아요!',
+          title: t('new_like_title'),
           description: (
             <Link href={`/users/${liker.id}`} className="w-full">
               <div className="flex items-center gap-3 mt-2 cursor-pointer">
@@ -51,7 +53,7 @@ export function NewLikeToast() {
                   <AvatarImage src={liker.photoUrls?.[0]} alt={liker.name} />
                   <AvatarFallback>{liker.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <span>{liker.name}님이 회원님을 좋아합니다.</span>
+                <span>{t('new_like_desc').replace('%s', liker.name)}</span>
               </div>
             </Link>
           ),
@@ -60,7 +62,7 @@ export function NewLikeToast() {
     } catch (error) {
         console.error("Failed to fetch liker's profile for toast:", error);
     }
-  }, [firestore, toast]);
+  }, [firestore, toast, t]);
 
   useEffect(() => {
     if (newLikes && newLikes.length > 0) {

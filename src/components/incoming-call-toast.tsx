@@ -8,12 +8,14 @@ import { Button } from './ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 import type { Match, User } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
 
 export function IncomingCallToast() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast, dismiss } = useToast();
   const router = useRouter();
+  const { t } = useLanguage();
 
   const activeMatchesQuery = useMemoFirebase(() => {
     // Ensure currentUser and its id are available before creating the query
@@ -45,14 +47,14 @@ export function IncomingCallToast() {
 
           const { id: toastId } = toast({
               duration: Infinity, // Keep toast open until user interacts
-              title: '영상 통화 수신',
+              title: t('incoming_call_title'),
               description: (
                 <div className="flex items-center gap-3 mt-2">
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={caller.photoUrls?.[0]} alt={caller.name} />
                     <AvatarFallback>{caller.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <span>{caller.name}님이 영상 통화를 요청했습니다.</span>
+                  <span>{t('incoming_call_desc').replace('%s', caller.name)}</span>
                 </div>
               ),
               action: (
@@ -62,7 +64,7 @@ export function IncomingCallToast() {
                       await updateDoc(matchRef, { callStatus: 'idle', callerId: null });
                       dismiss(toastId);
                   }}>
-                    거절
+                    {t('reject_call')}
                   </Button>
                   <Button variant="default" size="sm" onClick={async () => {
                       const matchRef = doc(firestore, 'matches', incomingCall.id);
@@ -70,7 +72,7 @@ export function IncomingCallToast() {
                       dismiss(toastId);
                       router.push(`/chat/${incomingCall.id}`);
                   }}>
-                    수락
+                    {t('accept_call')}
                   </Button>
                 </div>
               ),
@@ -81,7 +83,7 @@ export function IncomingCallToast() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ringingMatches, currentUser, firestore, router, toast, dismiss]);
+  }, [ringingMatches, currentUser, firestore, router, toast, dismiss, t]);
 
   return null; // This component does not render anything itself
 }

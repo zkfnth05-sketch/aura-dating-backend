@@ -22,6 +22,7 @@ import { Switch } from './ui/switch';
 import { getEnhancedPhoto } from '@/actions/ai-actions';
 import { Label } from '@/components/ui/label';
 import { compressImage } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
 
 const formSchema = z.object({
   name: z.string().min(1, '이름을 입력해주세요.'),
@@ -42,6 +43,7 @@ type AddUserDialogProps = {
 export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [originalPhotoUri, setOriginalPhotoUri] = useState<string | null>(null);
@@ -104,8 +106,8 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
             console.error("AI photo enhancement failed:", error);
             toast({
               variant: "destructive",
-              title: "AI 보정 실패",
-              description: "Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.",
+              title: t('ai_enhance_failed_title'),
+              description: t('ai_enhance_failed_desc'),
             });
             photoUrlToSave = compressedUri; // Fallback to original
           }
@@ -122,7 +124,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
         ...values,
         createdAt: serverTimestamp(),
         photoUrls: photoUrlToSave ? [photoUrlToSave] : [],
-        bio: '새로운 만남을 기다립니다!',
+        bio: t('bio_placeholder'),
         hobbies: ['hobbies_section_title_reading', 'hobbies_section_title_movies'],
         interests: ['interests_section_title_foodie', 'interests_section_title_cafe'],
         lat: 37.5665 + (Math.random() - 0.5) * 0.1, // Seoul with some randomness
@@ -133,8 +135,8 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
       await setDoc(newUserRef, newUserPayload);
 
       toast({
-        title: "사용자 추가 성공",
-        description: `${values.name} 님이 시스템에 추가되었습니다.`,
+        title: t('admin_add_user_success_title'),
+        description: t('admin_add_user_success_desc').replace('%s', values.name),
       });
       onUserAdded();
       handleClose();
@@ -151,8 +153,8 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
             console.error("Error adding user:", error);
             toast({
               variant: "destructive",
-              title: "오류",
-              description: error.message || "사용자를 추가하는 데 실패했습니다.",
+              title: t('admin_add_user_failed_title'),
+              description: error.message || t('admin_add_user_failed_desc'),
             });
           }
     } finally {
@@ -164,16 +166,16 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>새로운 사용자 추가</DialogTitle>
+          <DialogTitle>{t('admin_add_user_dialog_title')}</DialogTitle>
           <DialogDescription>
-            새 사용자의 정보를 입력하세요. 정보는 나중에 수정할 수 있습니다.
+            {t('admin_add_user_dialog_desc')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div className="flex flex-col gap-4">
               <FormItem>
-                <FormLabel>사진</FormLabel>
+                <FormLabel>{t('admin_add_photo_label')}</FormLabel>
                 <FormControl>
                   <div
                     className="relative w-24 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
@@ -198,7 +200,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
               </FormItem>
               <div className="flex items-center space-x-2">
                 <Switch id="ai-enhancement" checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
-                <Label htmlFor="ai-enhancement">AI 보정</Label>
+                <Label htmlFor="ai-enhancement">{t('ai_enhancement')}</Label>
               </div>
             </div>
             <FormField
@@ -206,9 +208,9 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>이름</FormLabel>
+                  <FormLabel>{t('name_label')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="홍길동" {...field} />
+                    <Input placeholder={t('name_placeholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -219,7 +221,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>이메일</FormLabel>
+                  <FormLabel>{t('admin_table_email')}</FormLabel>
                   <FormControl>
                     <Input placeholder="test@example.com" {...field} />
                   </FormControl>
@@ -232,7 +234,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
               name="age"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>나이</FormLabel>
+                  <FormLabel>{t('age_label')}</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
@@ -245,9 +247,9 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>도시</FormLabel>
+                  <FormLabel>{t('city_label')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: 서울" {...field} />
+                    <Input placeholder={t('city_placeholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -258,7 +260,7 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
               name="gender"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel>성별</FormLabel>
+                  <FormLabel>{t('gender_label')}</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -269,19 +271,19 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
                         <FormControl>
                           <RadioGroupItem value="여성" />
                         </FormControl>
-                        <FormLabel className="font-normal">여성</FormLabel>
+                        <FormLabel className="font-normal">{t('gender_female')}</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2">
                         <FormControl>
                           <RadioGroupItem value="남성" />
                         </FormControl>
-                        <FormLabel className="font-normal">남성</FormLabel>
+                        <FormLabel className="font-normal">{t('gender_male')}</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2">
                         <FormControl>
                           <RadioGroupItem value="기타" />
                         </FormControl>
-                        <FormLabel className="font-normal">기타</FormLabel>
+                        <FormLabel className="font-normal">{t('gender_other')}</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -290,10 +292,10 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserD
               )}
             />
              <DialogFooter>
-              <Button type="button" variant="secondary" onClick={handleClose}>취소</Button>
+              <Button type="button" variant="secondary" onClick={handleClose}>{t('cancel_button')}</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                사용자 추가
+                {t('admin_add_user_button')}
               </Button>
             </DialogFooter>
           </form>

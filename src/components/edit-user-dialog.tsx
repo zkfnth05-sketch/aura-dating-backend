@@ -22,6 +22,7 @@ import type { User } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { compressImage } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
 
 
 const formSchema = z.object({
@@ -42,6 +43,7 @@ type EditUserDialogProps = {
 export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }: EditUserDialogProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -108,8 +110,8 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
                 console.error("AI photo enhancement failed:", error);
                 toast({
                     variant: "destructive",
-                    title: "AI 보정 실패",
-                    description: "Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.",
+                    title: t('ai_enhance_failed_title'),
+                    description: t('ai_enhance_failed_desc'),
                 });
                 finalPhotoUrl = compressedUri; // Fallback
               }
@@ -127,8 +129,8 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
         await updateDoc(userRef, updatedPayload);
 
         toast({
-            title: "사용자 정보 수정됨",
-            description: `${values.name} 님의 정보가 성공적으로 업데이트되었습니다.`,
+            title: t('admin_edit_user_success_title'),
+            description: t('admin_edit_user_success_desc').replace('%s', values.name),
         });
         onUserUpdated();
 
@@ -144,8 +146,8 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
             console.error("Error updating user:", error);
             toast({
                 variant: "destructive",
-                title: "오류",
-                description: "사용자 정보를 수정하는 데 실패했습니다.",
+                title: t('admin_edit_user_failed_title'),
+                description: t('admin_edit_user_failed_desc'),
             });
         }
     } finally {
@@ -162,16 +164,16 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>사용자 정보 수정</DialogTitle>
+          <DialogTitle>{t('admin_edit_user_dialog_title')}</DialogTitle>
           <DialogDescription>
-            '{user.name}'님의 정보를 수정합니다.
+            {t('admin_edit_user_dialog_desc').replace('%s', user.name)}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <div className="flex flex-col gap-4">
                <FormItem>
-                <FormLabel>사진</FormLabel>
+                <FormLabel>{t('admin_add_photo_label')}</FormLabel>
                 <FormControl>
                   <div
                     className="relative w-24 h-24 flex items-center justify-center border-2 border-dashed border-zinc-700 rounded-lg cursor-pointer bg-zinc-900/50"
@@ -196,7 +198,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
               </FormItem>
               <div className="flex items-center space-x-2">
                 <Switch id="ai-enhancement-edit" checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
-                <Label htmlFor="ai-enhancement-edit">AI 보정</Label>
+                <Label htmlFor="ai-enhancement-edit">{t('ai_enhancement')}</Label>
               </div>
             </div>
             <FormField
@@ -204,7 +206,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>이름</FormLabel>
+                  <FormLabel>{t('name_label')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -217,7 +219,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>이메일</FormLabel>
+                  <FormLabel>{t('admin_table_email')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -230,7 +232,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
               name="age"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>나이</FormLabel>
+                  <FormLabel>{t('age_label')}</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
                   </FormControl>
@@ -243,7 +245,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>도시</FormLabel>
+                  <FormLabel>{t('city_label')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -256,7 +258,7 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
               name="gender"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel>성별</FormLabel>
+                  <FormLabel>{t('gender_label')}</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -267,19 +269,19 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
                         <FormControl>
                           <RadioGroupItem value="여성" />
                         </FormControl>
-                        <FormLabel className="font-normal">여성</FormLabel>
+                        <FormLabel className="font-normal">{t('gender_female')}</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2">
                         <FormControl>
                           <RadioGroupItem value="남성" />
                         </FormControl>
-                        <FormLabel className="font-normal">남성</FormLabel>
+                        <FormLabel className="font-normal">{t('gender_male')}</FormLabel>
                       </FormItem>
                        <FormItem className="flex items-center space-x-2">
                         <FormControl>
                           <RadioGroupItem value="기타" />
                         </FormControl>
-                        <FormLabel className="font-normal">기타</FormLabel>
+                        <FormLabel className="font-normal">{t('gender_other')}</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -288,10 +290,10 @@ export default function EditUserDialog({ isOpen, onClose, onUserUpdated, user }:
               )}
             />
              <DialogFooter>
-              <Button type="button" variant="secondary" onClick={onClose}>취소</Button>
+              <Button type="button" variant="secondary" onClick={onClose}>{t('cancel_button')}</Button>
               <Button type="submit" disabled={isProcessing}>
                 {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                저장
+                {t('save_button')}
               </Button>
             </DialogFooter>
           </form>

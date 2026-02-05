@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { useRouter, usePathname } from 'next/navigation';
 import type { Match, User } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
 
 export function NewMessageToast() {
   const { user: currentUser } = useUser();
@@ -14,6 +15,7 @@ export function NewMessageToast() {
   const { toast } = useToast();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   const lastTimestampRef = useRef<Map<string, Timestamp>>(new Map());
   const isInitialLoad = useRef(true);
@@ -43,7 +45,7 @@ export function NewMessageToast() {
               const sender = senderSnap.data() as User;
               toast({
                   duration: 5000,
-                  title: `새 메시지: ${sender.name}`,
+                  title: t('new_message_title').replace('%s', sender.name),
                   description: (
                   <div 
                       className="w-full mt-2 cursor-pointer" 
@@ -63,7 +65,7 @@ export function NewMessageToast() {
       } catch (error) {
           console.error("Error fetching sender for new message toast:", error);
       }
-  }, [firestore, currentUser, pathname, router, toast]);
+  }, [firestore, currentUser, pathname, router, toast, t]);
 
   useEffect(() => {
     if (!matches || !currentUser) {

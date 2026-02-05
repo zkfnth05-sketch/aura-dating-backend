@@ -7,11 +7,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import Link from 'next/link';
 import type { Match, User } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
 
 export function NewMatchToast() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { t } = useLanguage();
   
   const knownMatchIds = useRef<Set<string>>(new Set());
   const isInitialLoad = useRef(true);
@@ -41,7 +43,7 @@ export function NewMatchToast() {
             const otherUser = userSnap.data() as User;
             toast({
                 duration: 5000,
-                title: '🎉 새로운 매치!',
+                title: t('new_match_title'),
                 description: (
                   <Link href={`/chat/${match.id}`} className="w-full">
                     <div className="flex items-center gap-3 mt-2 cursor-pointer">
@@ -49,7 +51,7 @@ export function NewMatchToast() {
                         <AvatarImage src={otherUser.photoUrls?.[0]} alt={otherUser.name} />
                         <AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <span>{otherUser.name}님과 새로운 인연이 시작되었습니다.</span>
+                      <span>{t('new_match_desc').replace('%s', otherUser.name)}</span>
                     </div>
                   </Link>
                 ),
@@ -58,7 +60,7 @@ export function NewMatchToast() {
     } catch (e) {
         console.error("Failed to show match toast", e);
     }
-  }, [currentUser, firestore, toast]);
+  }, [currentUser, firestore, toast, t]);
 
   useEffect(() => {
     if (!matches || !currentUser) {

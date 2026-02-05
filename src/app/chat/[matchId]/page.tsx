@@ -18,6 +18,7 @@ import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase
 import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp, limit } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useLanguage } from '@/contexts/language-context';
 
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -45,11 +46,11 @@ const VideoIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-const formatMessageTime = (timestamp: Timestamp | any): string => {
+const formatMessageTime = (timestamp: Timestamp | any, locale: string): string => {
     if (!timestamp?.toDate) {
       return '';
     }
-    return timestamp.toDate().toLocaleTimeString('ko-KR', {
+    return timestamp.toDate().toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
@@ -62,6 +63,7 @@ export default function ChatPage() {
   const matchId = params.matchId as string;
   const firestore = useFirestore();
   const { user: currentUser, isLoaded: isUserLoaded } = useUser();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   
   const [newMessage, setNewMessage] = useState('');
@@ -144,23 +146,23 @@ export default function ChatPage() {
   useEffect(() => {
     if (otherUser) {
       const formattedText = (() => {
-        if (!otherUser.lastSeen) return '오래 전';
-        if (otherUser.lastSeen === 'Online') return '온라인';
+        if (!otherUser.lastSeen) return t('last_seen_long_ago');
+        if (otherUser.lastSeen === 'Online') return t('online_status');
         const now = new Date();
         const lastSeenDate = new Date(otherUser.lastSeen);
         const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
-        if (diffInSeconds < 60) return '방금 전';
+        if (diffInSeconds < 60) return t('last_seen_just_now');
         const diffInMinutes = Math.floor(diffInSeconds / 60);
-        if (diffInMinutes < 60) return `${diffInMinutes}분 전`;
+        if (diffInMinutes < 60) return t('last_seen_minutes_ago').replace('%s', diffInMinutes.toString());
         const diffInHours = Math.floor(diffInMinutes / 60);
-        if (diffInHours < 24) return `${diffInHours}시간 전`;
+        if (diffInHours < 24) return t('last_seen_hours_ago').replace('%s', diffInHours.toString());
         const diffInDays = Math.floor(diffInHours / 24);
-        if (diffInDays < 7) return `${diffInDays}일 전`;
-        return lastSeenDate.toLocaleDateString('ko-KR');
+        if (diffInDays < 7) return t('last_seen_days_ago').replace('%s', diffInDays.toString());
+        return lastSeenDate.toLocaleDateString(language);
       })();
       setLastSeenText(formattedText);
     }
-  }, [otherUser]);
+  }, [otherUser, t, language]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,7 +231,7 @@ export default function ChatPage() {
       });
       setSuggestions(result.suggestions);
     } catch (error) {
-      toast({ variant: "destructive", title: "AI 추천 실패" });
+      toast({ variant: "destructive", title: t('chat_ai_suggestion_failed_title'), description: t('chat_ai_suggestion_failed_desc') });
     } finally {
       setIsLoadingSuggestions(false);
     }
@@ -251,7 +253,7 @@ export default function ChatPage() {
       mediaRecorderRef.current.start();
       setIsRecording(true);
     } catch (err) {
-      toast({ variant: 'destructive', title: '녹음 실패', description: '마이크 접근 권한을 확인해주세요.' })
+      toast({ variant: 'destructive', title: t('chat_mic_permission_failed_title'), description: t('chat_mic_permission_failed_desc') })
     }
   };
   const stopRecording = () => {
@@ -267,7 +269,7 @@ export default function ChatPage() {
     if(!currentUser || !firestore || !otherUser) return;
     const callData = { callStatus: 'ringing', callerId: currentUser.id };
     updateDoc(matchRef!, callData).then(() => {
-      toast({ title: '통화 연결 중...', description: `${otherUser.name}님에게 영상 통화를 요청했습니다.` });
+      toast({ title: t('chat_connecting'), description: t('chat_connecting_desc').replace('%s', otherUser.name) });
       setTimeout(async () => {
           const currentMatchSnap = await getDoc(matchRef!);
           if (currentMatchSnap.exists()) {
@@ -277,7 +279,7 @@ export default function ChatPage() {
                   updateDoc(matchRef!, resetData).catch(e => {
                       if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef!.path, requestResourceData: resetData }));
                   });
-                  toast({ variant: 'destructive', title: '응답 없음', description: `${otherUser.name}님이 전화를 받지 않습니다.` });
+                  toast({ variant: 'destructive', title: t('chat_no_answer_title'), description: t('chat_no_answer_desc').replace('%s', otherUser.name) });
               }
           }
       }, 20000);
@@ -285,7 +287,7 @@ export default function ChatPage() {
       if (error.code === 'permission-denied') {
         errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef!.path, requestResourceData: callData }));
       } else {
-        toast({ variant: "destructive", title: "통화 실패", description: "영상통화 요청에 실패했습니다." });
+        toast({ variant: "destructive", title: t('chat_call_failed_title'), description: t('chat_call_failed_desc') });
       }
     });
   }
@@ -308,9 +310,9 @@ export default function ChatPage() {
     return (
         <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
             <UserX className="h-16 w-16 text-muted-foreground mb-4" />
-            <h1 className="text-2xl font-bold">대화 상대를 찾을 수 없습니다.</h1>
-            <p className="text-muted-foreground mt-2">삭제되었거나 존재하지 않는 대화입니다.</p>
-            <Button onClick={() => router.back()} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> 뒤로 가기</Button>
+            <h1 className="text-2xl font-bold">{t('chat_user_not_found_title')}</h1>
+            <p className="text-muted-foreground mt-2">{t('chat_user_not_found_subtitle')}</p>
+            <Button onClick={() => router.back()} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
         </div>
     );
   }
@@ -319,9 +321,9 @@ export default function ChatPage() {
     return (
         <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
             <UserX className="h-16 w-16 text-muted-foreground mb-4" />
-            <h1 className="text-2xl font-bold">탈퇴한 회원과의 대화입니다.</h1>
-            <p className="text-muted-foreground mt-2">상대방이 서비스를 탈퇴하여 더 이상 대화할 수 없습니다.</p>
-            <Button onClick={() => router.back()} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> 뒤로 가기</Button>
+            <h1 className="text-2xl font-bold">{t('chat_user_withdrawn_title')}</h1>
+            <p className="text-muted-foreground mt-2">{t('chat_user_withdrawn_subtitle')}</p>
+            <Button onClick={() => router.back()} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
         </div>
     );
   }
@@ -341,7 +343,7 @@ export default function ChatPage() {
           </Avatar>
           <div>
             <p className="font-semibold">{otherUser.name}</p>
-            <p className={cn("text-xs", lastSeenText === '온라인' ? 'text-primary' : 'text-muted-foreground')}>{lastSeenText || <>&nbsp;</>}</p>
+            <p className={cn("text-xs", lastSeenText === t('online_status') ? 'text-primary' : 'text-muted-foreground')}>{lastSeenText || <>&nbsp;</>}</p>
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={handleInitiateCall} disabled={match.callStatus === 'ringing' || match.callStatus === 'active'}>
@@ -351,7 +353,7 @@ export default function ChatPage() {
 
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {areMessagesLoading && messages?.length === 0 && <div className="text-center text-muted-foreground">메시지 로딩 중...</div>}
+          {areMessagesLoading && messages?.length === 0 && <div className="text-center text-muted-foreground">{t('chat_loading_messages')}</div>}
           {reversedMessages && reversedMessages.map((message) => (
             <div key={message.id} className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'justify-end' : 'justify-start')}>
               {message.senderId !== currentUser.id && (
@@ -361,7 +363,7 @@ export default function ChatPage() {
                 <div className={cn('max-w-xs md:max-w-md px-4 py-2 rounded-2xl', message.senderId === currentUser.id ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-accent text-accent-foreground rounded-bl-none')}>
                   {message.audioUrl ? (<audio controls src={message.audioUrl} className="h-10" />) : (<p className="text-sm break-words">{message.text}</p>)}
                 </div>
-                <span className="text-xs text-muted-foreground pb-1">{formatMessageTime(message.timestamp)}</span>
+                <span className="text-xs text-muted-foreground pb-1">{formatMessageTime(message.timestamp, language)}</span>
               </div>
             </div>
           ))}
@@ -371,14 +373,14 @@ export default function ChatPage() {
       <footer className="p-4 border-t border-border/40 flex-shrink-0">
         {(isLoadingSuggestions || suggestions.length > 0) && (
             <div className="mb-2 p-2 bg-card rounded-lg">
-                {isLoadingSuggestions ? (<div className="flex items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />AI가 답장을 추천하고 있어요...</div>) : (
+                {isLoadingSuggestions ? (<div className="flex items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('chat_ai_suggestion_loading')}</div>) : (
                     <div className="flex flex-wrap gap-2">{suggestions.map((suggestion, index) => (<Button key={index} variant="outline" size="sm" className="h-auto py-1.5 px-3 rounded-full" onClick={() => setNewMessage(suggestion)}>{suggestion}</Button>))}</div>
                 )}
             </div>
         )}
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}><Sparkles className="h-6 w-6 text-primary" /></Button>
-          <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="메시지를 입력하세요..." autoComplete="off" />
+          <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={t('chat_input_placeholder')} autoComplete="off" />
           {newMessage.trim() ? (<Button type="submit" size="icon"><Send className="h-6 w-6 text-primary" /></Button>) : (
             <Button type="button" size="icon" variant={isRecording ? 'destructive' : 'ghost'} onMouseDown={handleMicPress} onMouseUp={handleMicRelease} onTouchStart={handleMicPress} onTouchEnd={handleMicRelease}><MicIcon className="h-6 w-6 text-primary" /></Button>
           )}
