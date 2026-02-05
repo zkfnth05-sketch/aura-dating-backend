@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -89,9 +90,10 @@ export default function ChatPage() {
   const audioChunksRef = useRef<Blob[]>([]);
 
   const matchRef = useMemoFirebase(() => {
-    if (!matchId || !firestore || !currentUser?.id) return null;
+    if (!matchId || !firestore) return null;
     return doc(firestore, 'matches', matchId);
-  }, [firestore, matchId, currentUser?.id]);
+  }, [firestore, matchId]);
+
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
   const otherUserId = useMemo(() => {
@@ -106,9 +108,9 @@ export default function ChatPage() {
   const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
   
   const messagesColRef = useMemoFirebase(() => {
-    if (!matchId || !firestore || !currentUser?.id) return null;
+    if (!matchId || !firestore) return null;
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
-  }, [firestore, matchId, currentUser?.id]);
+  }, [firestore, matchId]);
   
   const messagesQuery = useMemoFirebase(() => {
     if (!messagesColRef) return null;
@@ -131,27 +133,32 @@ export default function ChatPage() {
   }, [reversedMessages]);
 
   useEffect(() => {
-    if (!firestore || !currentUser?.id || !match) return;
-
+    if (!firestore || !currentUser?.id || !match || !matchRef) return;
+  
+    // Reset unread count
     const currentUnreadCount = match.unreadCounts?.[currentUser.id] || 0;
     if (currentUnreadCount > 0) {
-      updateDoc(matchRef!, { [`unreadCounts.${currentUser.id}`]: 0 }).catch(e => {
+      updateDoc(matchRef, { [`unreadCounts.${currentUser.id}`]: 0 }).catch(e => {
         if (e.code === 'permission-denied') {
           const contextualError = new FirestorePermissionError({
-            operation: 'update', path: matchRef!.path, requestResourceData: { unreadCount: 0 }
+            operation: 'update', path: matchRef.path, requestResourceData: { unreadCount: 0 }
           });
           errorEmitter.emit('permission-error', contextualError);
         }
       });
     }
-    
-    // Corrected logic to enter video call
-    if (match.callStatus === 'active' && !isCallActive) {
-      setIsCallActive(true);
-    } else if (match.callStatus !== 'active' && isCallActive) {
-      setIsCallActive(false);
-    }
-  }, [firestore, match, currentUser?.id, matchRef, isCallActive]);
+  
+    // Listen for call status changes
+    const unsubscribe = onSnapshot(matchRef, (doc) => {
+        const data = doc.data() as Match | undefined;
+        if(data?.callStatus === 'active') {
+            setIsCallActive(true);
+        }
+    });
+  
+    return () => unsubscribe();
+  
+  }, [firestore, match, currentUser?.id, matchRef]);
 
 
   useEffect(() => {
@@ -284,7 +291,8 @@ export default function ChatPage() {
       const result = await getAIChatReplySuggestions({
           currentUser: { name: currentUser.name, bio: currentUser.bio || '', hobbies: currentUser.hobbies || [], interests: currentUser.interests || [] },
           matchUser: { name: otherUser.name, bio: otherUser.bio || '', hobbies: otherUser.hobbies || [], interests: otherUser.interests || [] },
-          messages: (reversedMessages || []).map(m => ({ senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name, text: m.text || '[음성 메시지]' }))
+          messages: (reversedMessages || []).map(m => ({ senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name, text: m.text || '[음성 메시지]' })),
+          targetLanguage: languageMap[language] || 'Korean'
       });
       setSuggestions(result.suggestions);
     } catch (error) {

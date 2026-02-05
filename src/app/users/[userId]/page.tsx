@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
@@ -45,7 +46,7 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
 const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User, potentialMatch: User }) => {
   const [aiReason, setAiReason] = useState<string | null>(null);
   const [isAiReasonLoading, setIsAiReasonLoading] = useState(true);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     const fetchReason = async () => {
@@ -71,10 +72,13 @@ const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User,
         // Remove non-serializable fields if they exist
         delete (potentialMatchWithDefaults as Partial<User>).createdAt;
         delete (currentUserWithDefaults as Partial<User>).createdAt;
+        
+        const languageMap: { [key: string]: string } = { ko: 'Korean', en: 'English', es: 'Spanish', ja: 'Japanese' };
 
         const result = await getAIRecommendationReason({ 
             currentUser: currentUserWithDefaults, 
-            potentialMatch: potentialMatchWithDefaults 
+            potentialMatch: potentialMatchWithDefaults,
+            targetLanguage: languageMap[language] || 'Korean'
         });
         setAiReason(result.reason);
       } catch (error) {
@@ -85,7 +89,7 @@ const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User,
       }
     }
     fetchReason();
-  }, [currentUser, potentialMatch, t]);
+  }, [currentUser, potentialMatch, t, language]);
 
   return (
     <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4 min-h-[120px] flex flex-col relative">

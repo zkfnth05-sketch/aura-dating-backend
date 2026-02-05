@@ -47,7 +47,7 @@ export default function DateCourseForm() {
   const [result, setResult] = useState<DateCourseOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(true);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const partySizes = [t('date_course_party_size_2'), t('date_course_party_size_3_4'), t('date_course_party_size_5_plus')];
   const transportations = [t('date_course_transport_public'), t('date_course_transport_rent'), t('date_course_transport_private'), t('date_course_transport_flight'), t('date_course_transport_walk'), t('date_course_transport_any')];
@@ -73,7 +73,11 @@ export default function DateCourseForm() {
     setShowForm(false);
 
     try {
-        const response = await getDateCourse(values);
+        const languageMap: { [key: string]: string } = { ko: 'Korean', en: 'English', es: 'Spanish', ja: 'Japanese' };
+        const response = await getDateCourse({
+            ...values,
+            targetLanguage: languageMap[language] || 'Korean',
+        });
         setResult(response);
     } catch (error) {
         toast({

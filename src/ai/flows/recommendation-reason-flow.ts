@@ -26,11 +26,12 @@ const UserProfileSchema = z.object({
 const RecommendationReasonInputSchema = z.object({
   currentUser: UserProfileSchema,
   potentialMatch: UserProfileSchema,
+  targetLanguage: z.string().describe("The target language for the recommendation reason."),
 });
 export type RecommendationReasonInput = z.infer<typeof RecommendationReasonInputSchema>;
 
 const RecommendationReasonOutputSchema = z.object({
-  reason: z.string().describe("A personalized and compelling reason, in Korean, explaining why the two users are a good match, based on their shared interests, hobbies, and values. The tone should be friendly and encouraging."),
+  reason: z.string().describe("A personalized and compelling reason, in the requested language, explaining why the two users are a good match, based on their shared interests, hobbies, and values. The tone should be friendly and encouraging."),
 });
 export type RecommendationReasonOutput = z.infer<typeof RecommendationReasonOutputSchema>;
 
@@ -56,7 +57,7 @@ const recommendationReasonFlow = ai.defineFlow(
     const { output } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash'),
         prompt: `You are an AI dating assistant. Your task is to explain why two people would be a good match based on their profiles.
-The explanation must be in Korean. Be specific, warm, and encouraging. Highlight 2-3 key commonalities.
+The explanation must be in ${input.targetLanguage}. Be specific, warm, and encouraging. Highlight 2-3 key commonalities.
 
 User 1 Profile (${input.currentUser.name}):
 - Bio: ${input.currentUser.bio}
@@ -73,7 +74,7 @@ User 2 Profile (${input.potentialMatch.name}):
 - Lifestyle: ${input.potentialMatch.lifestyle?.join(', ') || 'Not specified'}
 
 Based on these profiles, generate a compelling reason for why they should connect.
-Example Output:
+Example Output (if target language is Korean):
 {
   "reason": "${input.potentialMatch.name}님과 ${input.currentUser.name}님은 '음악 감상'과 '영화 감상'이라는 공통된 취미를 가지고 있어, 함께 문화생활을 즐기며 즐거운 시간을 보낼 수 있을 거예요. 두 분 모두 '진솔함'을 중요하게 생각하는 만큼, 깊고 의미 있는 대화를 나눌 수 있는 관계로 발전할 가능성이 높습니다. 새로운 인연을 시작해보는 건 어떠신가요?"
 }

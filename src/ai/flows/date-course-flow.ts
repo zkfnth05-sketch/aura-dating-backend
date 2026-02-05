@@ -20,6 +20,7 @@ const DateCourseInputSchema = z.object({
   transportation: z.string().describe('The mode of transportation.'),
   cost: z.string().describe('The budget per person for the date.'),
   dateType: z.string().describe('The preferred type of date.'),
+  targetLanguage: z.string().describe('The language for the date course.'),
 });
 export type DateCourseInput = z.infer<typeof DateCourseInputSchema>;
 
@@ -62,7 +63,7 @@ const dateCourseTextFlow = ai.defineFlow(
   async (input) => {
     const { output } = await ai.generate({
       model: googleAI.model('gemini-2.5-flash'),
-      prompt: `Create a date course JSON based on these preferences. The response must be in Korean.
+      prompt: `Create a date course JSON based on these preferences. The response must be in ${input.targetLanguage}.
 - Destination: ${input.destination}
 - People: ${input.partySize}
 - Duration: ${input.duration}

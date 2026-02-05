@@ -28,11 +28,12 @@ const ChatReplyInputSchema = z.object({
   currentUser: UserProfileSchema,
   matchUser: UserProfileSchema,
   messages: z.array(MessageSchema),
+  targetLanguage: z.string().describe("The language for the reply suggestions."),
 });
 export type ChatReplyInput = z.infer<typeof ChatReplyInputSchema>;
 
 const ChatReplyOutputSchema = z.object({
-  suggestions: z.array(z.string()).length(3).describe("An array of three distinct, natural, and engaging chat reply suggestions in Korean."),
+  suggestions: z.array(z.string()).length(3).describe("An array of three distinct, natural, and engaging chat reply suggestions in the requested language."),
 });
 export type ChatReplyOutput = z.infer<typeof ChatReplyOutputSchema>;
 
@@ -63,7 +64,7 @@ const chatReplyFlow = ai.defineFlow(
         model: googleAI.model('gemini-2.5-flash'),
         prompt: `You are an expert dating coach AI. Your goal is to help your client, ${input.currentUser.name}, win the heart of their match, ${input.matchUser.name}, and successfully arrange a date. This is a dating app where the ultimate goal is to meet in person.
 
-Analyze the user profiles and conversation history to generate three highly effective, charming, and strategic replies. The replies must be in Korean.
+Analyze the user profiles and conversation history to generate three highly effective, charming, and strategic replies. The replies must be in ${input.targetLanguage}.
 
 Your strategy should adapt to the conversation stage:
 1.  **Early Stage (Getting to know each other):** Build rapport. Ask thoughtful questions about their profile, share common interests, and give genuine compliments.
