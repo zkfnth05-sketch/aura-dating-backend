@@ -1,51 +1,48 @@
-// This service worker file is intentionally kept simple for clarity.
-// In a real-world application, you might add more logic for caching, etc.
 
-self.addEventListener('push', function(event) {
-  // Parse the incoming data. We expect a JSON payload.
-  const data = event.data ? event.data.json() : {};
-  
-  const title = data.title || 'Aura';
+// Listen for push events from the server
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() ?? {};
+  const title = data.title || "Aura";
   const options = {
-    body: data.body || '새로운 알림이 도착했습니다.',
-    icon: data.icon || '/icon.svg', // A default icon
-    badge: '/icon.svg', // Icon for the notification tray on Android
+    body: data.body || "새로운 알림이 있습니다.",
+    icon: data.icon || "/icon.svg",
     data: {
       url: data.url || '/' // The URL to open when the notification is clicked
     }
   };
 
-  // Tell the browser to show the notification.
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
-self.addEventListener('notificationclick', function(event) {
-  // Close the notification
-  event.notification.close();
-  
-  const urlToOpen = event.notification.data.url || '/';
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close(); // Close the notification
 
-  // This looks at all open tabs and windows of our app
-  // and focuses one if it's already open. Otherwise, it opens a new one.
+  const urlToOpen = new URL(event.notification.data.url || '/', self.location.origin).href;
+
   event.waitUntil(
     clients.matchAll({
       type: 'window',
       includeUncontrolled: true
-    }).then(function(clientList) {
-      if (clientList.length > 0) {
-        let client = clientList[0];
-        // Focus the already-focused window if available
-        for (let i = 0; i < clientList.length; i++) {
-          if (clientList[i].focused) {
-            client = clientList[i];
-          }
+    }).then((windowClients) => {
+      // Check if there's already a window open with the target URL
+      for (const client of windowClients) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
         }
-        client.focus();
-        // Navigate to the specified URL
-        return client.navigate(urlToOpen);
       }
-      // If no window is open, open a new one
-      return clients.openWindow(urlToOpen);
+      
+      // If not, check if any window is open and navigate it
+      if (windowClients.length > 0 && 'navigate' in windowClients[0]) {
+          return windowClients[0].navigate(urlToOpen).then(client => client.focus());
+      }
+      
+      // Otherwise, open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
     })
   );
 });
