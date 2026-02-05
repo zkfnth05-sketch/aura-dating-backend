@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import type { Match, Message, User } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Send, Sparkles, Loader2, UserX } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -446,7 +446,9 @@ export default function ChatPage() {
             </div>
         )}
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}><Sparkles className="h-6 w-6 text-primary" /></Button>
+          <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}>
+            <span className="text-2xl">✨</span>
+          </Button>
           <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={t('chat_input_placeholder')} autoComplete="off" />
           {newMessage.trim() ? (<Button type="submit" size="icon"><Send className="h-6 w-6 text-primary" /></Button>) : (
             <Button type="button" size="icon" variant={isRecording ? 'destructive' : 'ghost'} onMouseDown={handleMicPress} onMouseUp={handleMicRelease} onTouchStart={handleMicPress} onTouchEnd={handleMicRelease}><MicIcon className="h-6 w-6 text-primary" /></Button>
