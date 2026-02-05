@@ -272,15 +272,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return acc;
   }, 0);
 
-  const updateUser = useCallback(async (newUserData: Partial<User>) => {
-    if (!authUser || !firestore) return Promise.reject(new Error("User not authenticated."));
+  const updateUser = useCallback((newUserData: Partial<User>): Promise<void> => {
+    if (!authUser || !firestore) {
+      return Promise.reject(new Error("User not authenticated."));
+    }
     const userRef = doc(firestore, 'users', authUser.uid);
     const dataToSave: any = { ...newUserData, id: authUser.uid };
     if (newUserData.createdAt === "serverTimestamp") {
-        dataToSave.createdAt = serverTimestamp();
+      dataToSave.createdAt = serverTimestamp();
     }
-    // Fire-and-forget: we don't wait for the write to complete to unblock UI
-    setDocumentNonBlocking(userRef, dataToSave, { merge: true });
+    // Return the promise from the non-blocking call
+    return setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);
   
 
