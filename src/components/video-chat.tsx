@@ -31,9 +31,10 @@ export default function VideoChat({
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
+    let userStream: MediaStream | null = null;
     const getMedia = async () => {
       try {
-        const userStream = await navigator.mediaDevices.getUserMedia({
+        userStream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true,
         });
@@ -62,8 +63,8 @@ export default function VideoChat({
 
     return () => {
       // Clean up the stream when the component unmounts
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      if (userStream) {
+        userStream.getTracks().forEach((track) => track.stop());
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
