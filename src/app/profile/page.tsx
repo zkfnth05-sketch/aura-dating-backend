@@ -23,10 +23,10 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
   </div>
 );
 
-const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false }: { label: string, id: string, checked: boolean, onCheckedChange: (checked: boolean) => void, isLast?: boolean }) => (
+const ProfileToggle = ({ label, id, checked, onCheckedChange, isLast = false, disabled = false }: { label: string, id: string, checked: boolean, onCheckedChange: (checked: boolean) => void, isLast?: boolean, disabled?: boolean }) => (
     <div className={cn("flex items-center justify-between py-4", !isLast && "border-b")}>
-      <label htmlFor={id} className="text-foreground/80">{label}</label>
-      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
+      <label htmlFor={id} className={cn("text-foreground/80", disabled && "opacity-50")}>{label}</label>
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} />
     </div>
   );
 
@@ -35,28 +35,33 @@ export default function ProfilePage() {
   const { user: currentUser, notificationSettings, updateNotificationSettings, subscribeToPushNotifications } = useUser();
   const [isCarouselOpen, setIsCarouselOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isSubscribing, setIsSubscribing] = useState(false);
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  const handleSettingChange = (id: keyof typeof notificationSettings) => (checked: boolean) => {
+  const handleSettingChange = async (id: keyof typeof notificationSettings, checked: boolean) => {
     updateNotificationSettings({ [id]: checked });
 
     // If the main "all notifications" toggle is turned on, initiate push subscription
     if (id === 'all' && checked) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            subscribeToPushNotifications();
-          } else {
-             toast({
-                variant: 'destructive',
-                title: t('push_noti_denied_title'),
-                description: t('push_noti_denied_desc'),
-            });
-          }
-        });
-      } else if (Notification.permission === 'granted') {
-        subscribeToPushNotifications();
+      if (Notification.permission === 'granted') {
+        setIsSubscribing(true);
+        await subscribeToPushNotifications();
+        setIsSubscribing(false);
+      } else if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          setIsSubscribing(true);
+          await subscribeToPushNotifications();
+          setIsSubscribing(false);
+        } else {
+           toast({
+              variant: 'destructive',
+              title: t('push_noti_denied_title'),
+              description: t('push_noti_denied_desc'),
+          });
+          updateNotificationSettings({ all: false }); // Revert toggle if permission denied
+        }
       } else {
         // Permission is denied
         toast({
@@ -64,6 +69,7 @@ export default function ProfilePage() {
             title: t('push_noti_denied_title'),
             description: t('push_noti_denied_desc'),
         });
+        updateNotificationSettings({ all: false }); // Revert toggle if permission denied
       }
     }
   };
@@ -134,7 +140,7 @@ export default function ProfilePage() {
                   <MapPin className="h-4 w-4 text-blue-300" />
                   <span>{t('profile_location_sharing_on_desc')}</span>
                 </div>
-                <button onClick={() => handleSettingChange('locationShared')(false)} className="text-blue-300 hover:text-white">
+                <button onClick={() => handleSettingChange('locationShared', false)} className="text-blue-300 hover:text-white">
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -211,31 +217,32 @@ export default function ProfilePage() {
                     id="location"
                     label={t('profile_location_sharing')} 
                     checked={notificationSettings.locationShared}
-                    onCheckedChange={handleSettingChange('locationShared')}
+                    onCheckedChange={(checked) => handleSettingChange('locationShared', checked)}
                   />
                   <ProfileToggle 
                     id="notifications"
                     label={t('profile_notifications')} 
                     checked={notificationSettings.all}
-                    onCheckedChange={handleSettingChange('all')}
+                    onCheckedChange={(checked) => handleSettingChange('all', checked)}
+                    disabled={isSubscribing}
                   />
                   <ProfileToggle 
                     id="newMatch"
-                    label={t('profile_new_match_noti')}
+                    label={t('profile_new_match_noti')} 
                     checked={notificationSettings.newMatch}
-                    onCheckedChange={handleSettingChange('newMatch')}
+                    onCheckedChange={(checked) => handleSettingChange('newMatch', checked)}
                   />
                   <ProfileToggle 
                     id="newMessage"
                     label={t('profile_new_message_noti')} 
                     checked={notificationSettings.newMessage}
-                    onCheckedChange={handleSettingChange('newMessage')}
+                    onCheckedChange={(checked) => handleSettingChange('newMessage', checked)}
                   />
                   <ProfileToggle 
                     id="videoCall"
                     label={t('profile_video_call_noti')} 
                     checked={notificationSettings.videoCall}
-                    onCheckedChange={handleSettingChange('videoCall')}
+                    onCheckedChange={(checked) => handleSettingChange('videoCall', checked)}
                     isLast={true}
                   />
               </ProfileSection>
