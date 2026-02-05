@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import { useLanguage } from '@/contexts/language-context';
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ReauthDialog from './reauth-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TranslationKeys } from '@/lib/locales';
 
 const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
   switch (code) {
@@ -69,15 +70,6 @@ const TagButton = ({ label, isSelected, onClick }: { label: string, isSelected: 
   </Button>
 );
 
-const allValues = {
-  relationship: ['진지한 관계', '가벼운 만남', '새로운 친구', '대화 상대'],
-  values: ['모험', '안정', '창의성', '성장', '진정성', '열정', '평온함', '유머'],
-  communication: ['깊은 대화', '유머러스', '진솔함', '따뜻함', '직설적'],
-  lifestyle: ['활동적', '집순이', '예술가', '웰빙', '탐험가', '미니멀리스트'],
-  hobbies: ['영화 감상', '음악 듣기', '운동', '요리', '독서', '여행', '게임', '캠핑', '수채화', '베이킹', '코딩', '피아노 연주', '스쿠버 다이빙', '명상'],
-  interests: ['맛집 탐방', '카페 투어', '사진 촬영', '패션', '뷰티', '재테크', '자기계발', '그림 그리기', '독서', '등산', '클래식 음악', '요가']
-};
-
 type LanguageCode = 'ko' | 'en' | 'es' | 'ja';
 
 
@@ -112,6 +104,15 @@ export default function ProfileEditForm() {
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
   const [isReauthDialogOpen, setIsReauthDialogOpen] = useState(false);
+
+  const allValues = useMemo(() => ({
+    relationship: [t('relationship_section_title_serious'), t('relationship_section_title_casual'), t('relationship_section_title_friends'), t('relationship_section_title_chat')],
+    values: [t('values_section_title_adventure'), t('values_section_title_stability'), t('values_section_title_creativity'), t('values_section_title_growth'), t('values_section_title_authenticity'), t('values_section_title_passion'), t('values_section_title_calmness'), t('values_section_title_humor')],
+    communication: [t('communication_section_title_deep'), t('communication_section_title_witty'), t('communication_section_title_sincere'), t('communication_section_title_warm'), t('communication_section_title_direct')],
+    lifestyle: [t('lifestyle_section_title_active'), t('lifestyle_section_title_homebody'), t('lifestyle_section_title_artist'), t('lifestyle_section_title_wellness'), t('lifestyle_section_title_explorer'), t('lifestyle_section_title_minimalist')],
+    hobbies: [t('hobbies_section_title_movies'), t('hobbies_section_title_music'), t('hobbies_section_title_exercise'), t('hobbies_section_title_cooking'), t('hobbies_section_title_reading'), t('hobbies_section_title_travel'), t('hobbies_section_title_games'), t('hobbies_section_title_camping'), t('hobbies_section_title_watercolor'), t('hobbies_section_title_baking'), t('hobbies_section_title_coding'), t('hobbies_section_title_piano'), t('hobbies_section_title_scuba'), t('hobbies_section_title_meditation')],
+    interests: [t('interests_section_title_foodie'), t('interests_section_title_cafe'), t('interests_section_title_photo'), t('interests_section_title_fashion'), t('interests_section_title_beauty'), t('interests_section_title_finance'), t('interests_section_title_self_dev'), t('interests_section_title_drawing'), t('interests_section_title_reading'), t('interests_section_title_hiking'), t('interests_section_title_classical'), t('interests_section_title_yoga')]
+  }), [t]);
 
   useEffect(() => {
     if (currentUser) {
@@ -163,8 +164,8 @@ export default function ProfileEditForm() {
     if (isEnhancing) {
         toast({
             variant: "destructive",
-            title: "AI 보정 중",
-            description: "사진 보정이 완료될 때까지 기다려주세요.",
+            title: t('ai_enhancing_toast_title'),
+            description: t('ai_enhancing_toast_desc'),
         });
         return;
     }
@@ -175,16 +176,16 @@ export default function ProfileEditForm() {
         age: parseInt(profile.age) || currentUser.age,
     }).then(() => {
         toast({
-          title: "프로필 저장됨",
-          description: "프로필이 성공적으로 업데이트되었습니다.",
+          title: t('profile_updated_title'),
+          description: t('profile_updated_desc'),
         });
         router.push('/profile');
     }).catch((error) => {
         console.error("Failed to update profile:", error);
         toast({
           variant: "destructive",
-          title: "업데이트 실패",
-          description: "프로필을 업데이트하는 데 실패했습니다. 다시 시도해주세요."
+          title: t('profile_update_failed_title'),
+          description: t('profile_update_failed_desc')
         });
     }).finally(() => {
         setIsSaving(false);
@@ -206,8 +207,8 @@ export default function ProfileEditForm() {
             console.error("AI photo enhancement failed:", error);
             toast({
                 variant: "destructive",
-                title: "AI 보정 실패",
-                description: "Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.",
+                title: t('ai_enhance_failed_title'),
+                description: t('ai_enhance_failed_desc'),
             });
         }
     }
@@ -218,8 +219,8 @@ export default function ProfileEditForm() {
         console.error("Failed to update user with new photo:", error);
         toast({
           variant: "destructive",
-          title: "사진 추가 실패",
-          description: "프로필에 사진을 추가하는 중 오류가 발생했습니다.",
+          title: t('photo_add_failed_title'),
+          description: t('photo_add_failed_desc'),
         });
     } finally {
         setIsEnhancing(false);
