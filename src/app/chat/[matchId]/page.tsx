@@ -15,8 +15,9 @@ import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions, getChatTranslation } from '@/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from '@/components/video-chat';
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useDoc, useMemoFirebase, useStorage } from '@/firebase';
 import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp, limit } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useLanguage } from '@/contexts/language-context';
@@ -72,6 +73,7 @@ export default function ChatPage() {
   const router = useRouter();
   const matchId = params.matchId as string;
   const firestore = useFirestore();
+  const storage = useStorage();
   const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const { t, language } = useLanguage();
   const { toast } = useToast();
@@ -237,32 +239,42 @@ export default function ChatPage() {
     setSuggestions([]);
   };
 
-  const handleSendAudio = (audioUrl: string) => {
-    if (!firestore || !currentUser || !otherUser) return;
-    const batch = writeBatch(firestore);
+  const handleSendAudio = async (audioBlob: Blob) => {
+    if (!firestore || !currentUser || !otherUser || !storage) return;
 
-    const messageRef = doc(messagesColRef!);
-    const messageData: Omit<Message, 'id'> = {
-      senderId: currentUser.id, 
-      audioUrl: audioUrl, 
-      timestamp: serverTimestamp(),
-      senderLanguage: currentUser.language || 'ko',
-    };
-    batch.set(messageRef, messageData);
+    const audioFileRef = storageRef(storage, `audio_messages/${matchId}/${new Date().getTime()}.webm`);
 
-    const matchUpdateData = {
-        lastMessage: '음성 메시지', lastMessageTimestamp: serverTimestamp(),
-        [`unreadCounts.${otherUser.id}`]: increment(1)
-    };
-    batch.update(matchRef!, matchUpdateData);
+    try {
+        const snapshot = await uploadBytes(audioFileRef, audioBlob);
+        const downloadURL = await getDownloadURL(snapshot.ref);
 
-    batch.commit().catch(error => {
-      if (error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          operation: 'write', path: `matches/${matchId}`, requestResourceData: { message: messageData, matchUpdate: matchUpdateData },
-        }));
-      }
-    });
+        const batch = writeBatch(firestore);
+        const messageRef = doc(messagesColRef!);
+        const messageData: Omit<Message, 'id'> = {
+          senderId: currentUser.id, 
+          audioUrl: downloadURL, 
+          timestamp: serverTimestamp(),
+          senderLanguage: currentUser.language || 'ko',
+        };
+        batch.set(messageRef, messageData);
+    
+        const matchUpdateData = {
+            lastMessage: '음성 메시지', 
+            lastMessageTimestamp: serverTimestamp(),
+            [`unreadCounts.${otherUser.id}`]: increment(1)
+        };
+        batch.update(matchRef!, matchUpdateData);
+    
+        await batch.commit();
+
+    } catch (error: any) {
+        console.error("Error uploading audio or sending message:", error);
+        if (error.code === 'storage/unauthorized' || error.code?.includes('permission-denied')) {
+             toast({ variant: "destructive", title: "전송 실패", description: "음성 메시지를 보낼 권한이 없습니다." });
+        } else {
+             toast({ variant: "destructive", title: "음성 메시지 전송 실패", description: "오류가 발생했습니다." });
+        }
+    }
   };
 
   const handleGetSuggestions = async () => {
@@ -283,16 +295,18 @@ export default function ChatPage() {
     }
   };
   
-    const startRecording = async () => {
+  const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      mediaRecorderRef.current.ondataavailable = (event) => audioChunksRef.current.push(event.data);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+        }
+      };
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = () => handleSendAudio(reader.result as string);
+        handleSendAudio(audioBlob);
         audioChunksRef.current = [];
         stream.getTracks().forEach(track => track.stop());
       };
@@ -302,6 +316,7 @@ export default function ChatPage() {
       toast({ variant: 'destructive', title: t('chat_mic_permission_failed_title'), description: t('chat_mic_permission_failed_desc') })
     }
   };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
