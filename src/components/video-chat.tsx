@@ -7,6 +7,7 @@ import { PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { useLanguage } from '@/contexts/language-context';
 
 interface VideoChatProps {
   localUser: User;
@@ -20,6 +21,7 @@ export default function VideoChat({
   onEndCall,
 }: VideoChatProps) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   
@@ -50,8 +52,8 @@ export default function VideoChat({
         setHasPermissions(false);
         toast({
             variant: "destructive",
-            title: "카메라/마이크 권한 필요",
-            description: "화상 통화를 사용하려면 설정에서 권한을 허용해주세요."
+            title: t('camera_permission_denied_title'),
+            description: t('camera_permission_denied_desc')
         });
       }
     };
@@ -112,9 +114,9 @@ export default function VideoChat({
                 <p className="mt-4 text-xl font-semibold">{remoteUser.name}</p>
                 {!hasPermissions && (
                     <Alert variant="destructive" className="mt-8 max-w-sm">
-                        <AlertTitle>카메라 접근 불가</AlertTitle>
+                        <AlertTitle>{t('camera_access_required')}</AlertTitle>
                         <AlertDescription>
-                            화상 통화를 위해 카메라와 마이크 권한을 허용해주세요.
+                            {t('camera_allow_access')}
                         </AlertDescription>
                     </Alert>
                 )}

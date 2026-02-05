@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { useLanguage } from '@/contexts/language-context';
 
 type CameraDialogProps = {
   isOpen: boolean;
@@ -14,6 +15,7 @@ type CameraDialogProps = {
 
 export default function CameraDialog({ isOpen, onClose, onPhotoTaken }: CameraDialogProps) {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
@@ -34,8 +36,8 @@ export default function CameraDialog({ isOpen, onClose, onPhotoTaken }: CameraDi
           setHasCameraPermission(false);
           toast({
             variant: 'destructive',
-            title: '카메라 접근 거부됨',
-            description: '브라우저 설정에서 카메라 권한을 허용해주세요.',
+            title: t('camera_access_denied_title'),
+            description: t('camera_access_denied_desc'),
           });
         }
       } else {
@@ -78,7 +80,7 @@ export default function CameraDialog({ isOpen, onClose, onPhotoTaken }: CameraDi
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md bg-card border-primary/20">
         <DialogHeader>
-          <DialogTitle>사진 촬영</DialogTitle>
+          <DialogTitle>{t('take_photo')}</DialogTitle>
         </DialogHeader>
         <div className="py-4">
           <div className="relative w-full aspect-[3/4] rounded-md overflow-hidden bg-black">
@@ -87,22 +89,20 @@ export default function CameraDialog({ isOpen, onClose, onPhotoTaken }: CameraDi
           </div>
           {!hasCameraPermission && (
             <Alert variant="destructive" className="mt-4">
-              <AlertTitle>카메라 접근 필요</AlertTitle>
+              <AlertTitle>{t('camera_access_required')}</AlertTitle>
               <AlertDescription>
-                이 기능을 사용하려면 카메라 접근을 허용해주세요.
+                {t('camera_allow_access')}
               </AlertDescription>
             </Alert>
           )}
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={onClose}>취소</Button>
+          <Button variant="secondary" onClick={onClose}>{t('cancel_button')}</Button>
           <Button onClick={handleCapture} disabled={!hasCameraPermission}>
-            촬영하기
+            {t('take_photo')}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    

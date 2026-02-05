@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+import { useLanguage } from '@/contexts/language-context';
 
 
 const PREFETCH_THRESHOLD = 5;
@@ -45,6 +46,7 @@ export default function HomePageClient() {
     isLikesLoading,
     filters,
   } = useUser();
+  const { t } = useLanguage();
   
   const router = useRouter();
   const firestore = useFirestore();
@@ -316,9 +318,9 @@ export default function HomePageClient() {
             })
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
-                <h2 className="text-xl font-bold">주변에 새로운 인연이 없어요.</h2>
-                <p className="mt-2 text-sm text-muted-foreground">필터를 변경하거나 다시 시도해주세요.</p>
-                <Button onClick={initializeRecommendations} className="mt-4">새로고침</Button>
+                <h2 className="text-xl font-bold">{t('no_recommendations_title')}</h2>
+                <p className="mt-2 text-sm text-muted-foreground">{t('no_recommendations_subtitle')}</p>
+                <Button onClick={initializeRecommendations} className="mt-4">{t('refresh_button')}</Button>
             </div>
           )}
            {(isRecommendedUsersLoading && visibleCards.length === 0) && (
