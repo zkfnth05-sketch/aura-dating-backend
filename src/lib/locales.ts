@@ -70,6 +70,13 @@ export const translations = {
 
     // Profile Edit
     'edit_profile_title': '프로필 수정',
+    'profile_settings_section': '프로필 설정',
+    'profile_location_sharing': '위치 정보 공유',
+    'profile_notifications': '푸시 알림 받기',
+    'profile_new_match_noti': '새로운 매치 알림',
+    'profile_new_message_noti': '새 메시지 알림',
+    'profile_video_call_noti': '영상 통화 수신 알림',
+    'profile_edit_button': '프로필 수정하기',
     'language_section_title': '언어',
     'language_section_description': '앱에서 사용할 언어를 선택하세요.',
     'save_button': '저장',
@@ -278,7 +285,7 @@ export const translations = {
     'block_success_title': '차단 완료',
     'block_success_desc': '%s님을 차단했습니다.',
     'report_select_reason': '신고 사유를 선택해주세요.',
-    'match_score': '%s% 일치',
+    'match_score': '궁합 %s%',
     'common_points': '공통점 %s개',
     'no_photo': '사진 없음',
     'gallery_title': '프로필 이미지 갤러리',
@@ -492,6 +499,13 @@ export const translations = {
 
     // Profile Edit
     'edit_profile_title': 'Edit Profile',
+    'profile_settings_section': 'Profile Settings',
+    'profile_location_sharing': 'Share Location Information',
+    'profile_notifications': 'Receive Push Notifications',
+    'profile_new_match_noti': 'New Match Notifications',
+    'profile_new_message_noti': 'New Message Notifications',
+    'profile_video_call_noti': 'Video Call Notifications',
+    'profile_edit_button': 'Edit Profile',
     'language_section_title': 'Language',
     'language_section_description': 'Select the language to use in the app.',
     'save_button': 'Save',
@@ -913,6 +927,13 @@ export const translations = {
 
     // Profile Edit
     'edit_profile_title': 'プロフィール編集',
+    'profile_settings_section': 'プロフィール設定',
+    'profile_location_sharing': '位置情報の共有',
+    'profile_notifications': 'プッシュ通知を受け取る',
+    'profile_new_match_noti': '新しいマッチの通知',
+    'profile_new_message_noti': '新しいメッセージの通知',
+    'profile_video_call_noti': 'ビデオ通話の着信通知',
+    'profile_edit_button': 'プロフィールを編集',
     'language_section_title': '言語',
     'language_section_description': 'アプリで使用する言語を選択してください。',
     'save_button': '保存',
@@ -1273,6 +1294,7 @@ export const translations = {
     'admin_sidebar_user_management': 'ユーザー管理',
   },
   es: {
+    // Signup Flow
     'app_title': 'Aura',
     'app_tagline': 'Descubre tu destino',
     'continue_with_phone': 'Continuar con número de teléfono',
@@ -1281,7 +1303,16 @@ export const translations = {
     'terms_agree_prefix': 'Al continuar, aceptas los ',
     'terms_agree_suffix': ' de Aura.',
     'and': ' y ',
+    // Profile Edit
     'edit_profile_title': 'Editar Perfil',
+    'profile_settings_section': 'Configuración de Perfil',
+    'profile_location_sharing': 'Compartir Ubicación',
+    'profile_notifications': 'Recibir Notificaciones Push',
+    'profile_new_match_noti': 'Notificaciones de Nuevos Matches',
+    'profile_new_message_noti': 'Notificaciones de Nuevos Mensajes',
+    'profile_video_call_noti': 'Notificaciones de Videollamadas',
+    'profile_edit_button': 'Editar Perfil',
+    // ... other spanish translations
     'match_score': '%s% de compatibilidad',
     'common_points': '%s puntos en común',
     'no_photo': 'Sin Foto',
