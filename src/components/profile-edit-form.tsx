@@ -78,7 +78,7 @@ const allValueKeys = {
   communication: ['communication_section_title_deep', 'communication_section_title_witty', 'communication_section_title_sincere', 'communication_section_title_warm', 'communication_section_title_direct'] as const,
   lifestyle: ['lifestyle_section_title_active', 'lifestyle_section_title_homebody', 'lifestyle_section_title_artist', 'lifestyle_section_title_wellness', 'lifestyle_section_title_explorer', 'lifestyle_section_title_minimalist'] as const,
   hobbies: ['hobbies_section_title_movies', 'hobbies_section_title_music', 'hobbies_section_title_exercise', 'hobbies_section_title_cooking', 'hobbies_section_title_reading', 'hobbies_section_title_travel', 'hobbies_section_title_games', 'hobbies_section_title_camping', 'hobbies_section_title_watercolor', 'hobbies_section_title_baking', 'hobbies_section_title_coding', 'hobbies_section_title_piano', 'hobbies_section_title_scuba', 'hobbies_section_title_meditation'] as const,
-  interests: ['interests_section_title_foodie', 'interests_section_title_cafe', 'interests_section_title_photo', 'interests_section_title_fashion', 'interests_section_title_beauty', 'interests_section_title_finance', 'interests_section_title_self_dev', 'interests_section_title_drawing', 'interests_section_title_reading', 'interests_section_title_hiking', 'interests_section_title_classical', 'interests_section_title_yoga'] as const
+  interests: ['interests_section_title_foodie', 'interests_section_title_cafe', 'interests_section_title_photo', 'interests_section_title_fashion', 'interests_section_title_beauty', 'interests_section_title_finance', 'interests_section_title_self_dev', 'interests_section_title_drawing', 'interests_section_title_hiking', 'interests_section_title_classical', 'interests_section_title_yoga'] as const
 };
 
 export default function ProfileEditForm() {
@@ -256,29 +256,24 @@ export default function ProfileEditForm() {
     if (!authUser || !firestore) return;
   
     try {
-      // Step 1: Try deleting the user from Firebase Auth
       await deleteUser(authUser);
-  
-      // Step 2: If successful, delete the user document from Firestore
       const userDocRef = doc(firestore, 'users', authUser.uid);
       await deleteDoc(userDocRef);
   
       toast({
-        title: "계정이 삭제되었습니다.",
-        description: "이용해주셔서 감사합니다.",
+        title: t('account_deleted_message'),
+        description: t('delete_account_confirm_description'),
       });
       router.push('/signup');
     } catch (error: any) {
       console.error("Failed to delete account:", error);
       if (error.code === 'auth/requires-recent-login') {
-        // If re-authentication is required, open the dialog.
-        // The dialog will re-call this function upon success.
         setIsReauthDialogOpen(true);
       } else {
         toast({
           variant: "destructive",
-          title: "오류",
-          description: "계정 삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+          title: t('delete_account_error'),
+          description: error.message,
         });
       }
     }

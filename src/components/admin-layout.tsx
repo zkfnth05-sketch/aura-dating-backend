@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -16,12 +16,20 @@ import { useLanguage } from '@/contexts/language-context';
 
 const AdminSidebarContent = () => {
     const pathname = usePathname();
+    const router = useRouter();
     const { t } = useLanguage();
 
     const navItems = [
         { href: '/admin/dashboard', label: t('admin_sidebar_dashboard') },
         { href: '/admin', label: t('admin_sidebar_user_management') },
     ];
+    
+    const handleLogout = () => {
+        sessionStorage.removeItem('isAdminAuthenticated');
+        router.push('/admin');
+        // We might need to force a reload or state change to properly re-render the login page.
+        window.location.reload();
+    }
 
     return (
         <>
@@ -56,7 +64,7 @@ const AdminSidebarContent = () => {
                 </ul>
             </nav>
             <div className="flex-shrink-0 px-4">
-                <Button variant="destructive" className="w-full">
+                <Button variant="destructive" className="w-full" onClick={handleLogout}>
                     {t('admin_logout_button')}
                 </Button>
             </div>

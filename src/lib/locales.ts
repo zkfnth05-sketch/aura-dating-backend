@@ -48,6 +48,9 @@ export const translations = {
     'gender_male': '남성',
     'gender_other': '기타',
     'next_button': '다음',
+    'profile_creation_toast_title': '입력 필요',
+    'profile_creation_toast_desc': '이름, 나이, 도시를 모두 입력해주세요.',
+
 
     // Photo Upload
     'add_profile_photo_title': '대표 사진을 등록해주세요.',
@@ -428,6 +431,10 @@ export const translations = {
     'admin_logout_button': '로그아웃',
     'admin_sidebar_dashboard': '대시보드',
     'admin_sidebar_user_management': '사용자 관리',
+    'delete_account_title': '계정 삭제',
+    'account_deleted_message': '계정이 성공적으로 삭제되었습니다.',
+    'reauth_error': '재인증에 실패했습니다. 다시 시도해주세요.',
+    'delete_account_error': '계정 삭제 중 오류가 발생했습니다.'
   },
   en: {
     // Signup Flow
@@ -467,6 +474,9 @@ export const translations = {
     'gender_male': 'Male',
     'gender_other': 'Other',
     'next_button': 'Next',
+    'profile_creation_toast_title': 'Input Required',
+    'profile_creation_toast_desc': 'Please enter your name, age, and city.',
+
 
     // Photo Upload
     'add_profile_photo_title': 'Please register your main profile picture.',
@@ -751,16 +761,8 @@ export const translations = {
     'delete_account_page_info3': 'Deleting your account will permanently remove all your profile information, photos, chat history, and match records, and cannot be recovered.',
     'delete_account_page_info4': 'If you have any questions, please contact our customer support.',
     'go_home_button': 'Back to Home',
-    
-    // Profile Page
-    'profile_settings_section': 'Settings',
-    'profile_location_sharing': 'Live Location Sharing',
-    'profile_notifications': 'Notifications',
-    'profile_new_match_noti': 'New Matches',
-    'profile_new_message_noti': 'New Messages',
-    'profile_video_call_noti': 'Video Call Requests',
-    'profile_location_sharing_on_desc': 'Live location sharing is active.',
-    'profile_edit_button': 'Edit Profile',
+    'delete_account_title': 'Delete Account',
+    'account_deleted_message': 'Your account has been successfully deleted.',
     
     // Reauth
     'reauth_title': 'Security Re-authentication',
@@ -777,6 +779,8 @@ export const translations = {
     'reauth_verify_success_title': 'Verification Successful',
     'reauth_verify_success_desc': 'Your identity has been verified. Proceeding with account deletion.',
     'reauth_submit_button': 'Verify & Delete Account',
+    'reauth_error': 'Re-authentication failed. Please try again.',
+
     
     // Auth
     'auth_phone_invalid': 'Please enter a valid phone number.',
@@ -785,6 +789,8 @@ export const translations = {
     'auth_sms_error': 'Failed to send SMS. Please check the phone number.',
     'auth_error_title': 'Authentication Error',
     'auth_error_desc': 'Could not find user authentication information.',
+    'delete_account_error': 'An error occurred while deleting the account.',
+
 
     // Admin
     'admin_dashboard_title': 'Dashboard',
@@ -882,6 +888,9 @@ export const translations = {
     'gender_male': 'Hombre',
     'gender_other': 'Otro',
     'next_button': 'Siguiente',
+    'profile_creation_toast_title': 'Entrada requerida',
+    'profile_creation_toast_desc': 'Por favor, introduce tu nombre, edad y ciudad.',
+
     
     'add_profile_photo_title': 'Por favor, sube tu foto de perfil principal.',
     'ai_enhancement': 'Mejora con IA',
@@ -1165,20 +1174,12 @@ export const translations = {
     'delete_account_page_info3': 'Al eliminar tu cuenta se borrará toda tu información, fotos, historial de chat y matches, y no se podrá recuperar.',
     'delete_account_page_info4': 'Si tienes alguna pregunta, contacta con nuestro soporte.',
     'go_home_button': 'Volver al Inicio',
-    
-    // Profile Page
-    'profile_settings_section': 'Ajustes',
-    'profile_location_sharing': 'Compartir ubicación en vivo',
-    'profile_notifications': 'Notificaciones',
-    'profile_new_match_noti': 'Nuevos Matches',
-    'profile_new_message_noti': 'Nuevos Mensajes',
-    'profile_video_call_noti': 'Llamadas de Video',
-    'profile_location_sharing_on_desc': 'La compartición de ubicación en vivo está activa.',
-    'profile_edit_button': 'Editar Perfil',
+    'delete_account_title': 'Eliminar Cuenta',
+    'account_deleted_message': 'Tu cuenta ha sido eliminada con éxito.',
     
     // Reauth
     'reauth_title': 'Re-autenticación de Seguridad',
-    'reauth_desc': 'Para eliminar tu cuenta, debes volver a verificar tu identidad. Introduce el código enviado a tu teléfono.',
+    'reauth_desc': 'Para eliminar tu cuenta, debes volver a verificar tu identidad por seguridad. Introduce el código enviado a tu teléfono.',
     'reauth_no_phone_title': 'Sin Número de Teléfono',
     'reauth_no_phone_desc': 'No se puede proceder con la verificación ya que no hay un número de teléfono registrado.',
     'reauth_code_sent_title': 'Código de Verificación Enviado',
@@ -1191,6 +1192,8 @@ export const translations = {
     'reauth_verify_success_title': 'Verificación Exitosa',
     'reauth_verify_success_desc': 'Tu identidad ha sido verificada. Procediendo con la eliminación de la cuenta.',
     'reauth_submit_button': 'Verificar y Eliminar Cuenta',
+    'reauth_error': 'Re-autenticación fallida. Por favor, inténtalo de nuevo.',
+
     
     // Auth
     'auth_phone_invalid': 'Por favor, introduce un número de teléfono válido.',
@@ -1199,6 +1202,8 @@ export const translations = {
     'auth_sms_error': 'Fallo al enviar SMS. Por favor, comprueba el número de teléfono.',
     'auth_error_title': 'Error de Autenticación',
     'auth_error_desc': 'No se pudo encontrar la información de autenticación del usuario.',
+    'delete_account_error': 'Ocurrió un error al eliminar la cuenta.',
+
 
     // Admin
     'admin_dashboard_title': 'Panel de Control',
@@ -1299,6 +1304,9 @@ export const translations = {
     'gender_male': '男性',
     'gender_other': 'その他',
     'next_button': '次へ',
+    'profile_creation_toast_title': '入力が必要です',
+    'profile_creation_toast_desc': '名前、年齢、都市を入力してください。',
+
 
     // Photo Upload
     'add_profile_photo_title': 'メインのプロフィール写真を登録してください。',
@@ -1583,17 +1591,9 @@ export const translations = {
     'delete_account_page_info3': 'アカウントを削除すると、すべてのプロフィール情報、写真、チャット履歴、マッチ記録が完全に削除され、復元できなくなります。',
     'delete_account_page_info4': 'ご不明な点がございましたら、カスタマーサポートまでお問い合わせください。',
     'go_home_button': 'ホームに戻る',
-    
-    // Profile Page
-    'profile_settings_section': '設定',
-    'profile_location_sharing': 'リアルタイム位置情報の共有',
-    'profile_notifications': '通知設定',
-    'profile_new_match_noti': '新しいマッチ',
-    'profile_new_message_noti': '新しいメッセージ',
-    'profile_video_call_noti': 'ビデオ通話リクエスト',
-    'profile_location_sharing_on_desc': 'リアルタイム位置情報の共有が有効です。',
-    'profile_edit_button': 'プロフィール編集',
-    
+    'delete_account_title': 'アカウント削除',
+    'account_deleted_message': 'アカウントが正常に削除されました。',
+
     // Reauth
     'reauth_title': 'セキュリティ再認証',
     'reauth_desc': 'アカウントを削除するには、セキュリティのため本人確認を再度行う必要があります。登録した電話번호に送信されたコードを入力してください。',
@@ -1609,7 +1609,8 @@ export const translations = {
     'reauth_verify_success_title': '認証成功',
     'reauth_verify_success_desc': '本人確認が完了しました。アカウントの削除を進めます。',
     'reauth_submit_button': '認証してアカウントを削除',
-    
+    'reauth_error': '再認証に失敗しました。もう一度お試しください。',
+
     // Auth
     'auth_phone_invalid': '有効な電話番号を入力してください。',
     'auth_otp_invalid': '6桁の認証コードを入力してください。',
@@ -1617,7 +1618,8 @@ export const translations = {
     'auth_sms_error': 'SMSの送信に失敗しました。電話番号を確認してください。',
     'auth_error_title': '認証エラー',
     'auth_error_desc': 'ユーザー認証情報が見つかりませんでした。',
-    
+    'delete_account_error': 'アカウントの削除中にエラーが発生しました。',
+
     // Admin
     'admin_dashboard_title': 'ダッシュボード',
     'admin_dashboard_subtitle': '日次/月次の新規ユーザー登録状況を確認します。',

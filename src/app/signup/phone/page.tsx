@@ -11,11 +11,13 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { countryCodes } from '@/lib/country-codes';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PhonePage() {
   const router = useRouter();
   const { phoneAuth } = useUser();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const {
     phoneNumber,
     setPhoneNumber,
@@ -44,7 +46,7 @@ export default function PhonePage() {
 
   const handleSendCode = async () => {
     if (!/^\d{8,15}$/.test(phoneNumber.replace(/^0+/, ''))) {
-        alert("유효한 전화번호를 입력해주세요.");
+        toast({ variant: 'destructive', description: t('auth_phone_invalid') });
         return;
     }
     await sendVerificationCode();

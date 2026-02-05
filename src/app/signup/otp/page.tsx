@@ -9,19 +9,21 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 export default function OtpPage() {
   const router = useRouter();
   const [otp, setOtp] = useState('');
   const { phoneAuth } = useUser();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const { phoneNumber, countryCode, verifyOtp, isVerifyingOtp, sendVerificationCode } = phoneAuth;
 
   const handleVerify = async () => {
     if (otp.length === 6) {
       await verifyOtp(otp);
     } else {
-      alert("6자리 인증 코드를 입력해주세요.");
+      toast({ variant: 'destructive', description: t('auth_otp_invalid') });
     }
   };
 

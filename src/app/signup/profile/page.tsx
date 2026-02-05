@@ -50,16 +50,16 @@ export default function CreateProfilePage() {
     if (!name || !age || !city) {
       toast({
         variant: "destructive",
-        title: "입력 필요",
-        description: "이름, 나이, 도시를 모두 입력해주세요.",
+        title: t('profile_creation_toast_title'),
+        description: t('profile_creation_toast_desc'),
       });
       return;
     }
     if (!authUser) {
         toast({
             variant: "destructive",
-            title: "인증 오류",
-            description: "사용자 인증 정보를 찾을 수 없습니다.",
+            title: t('auth_error_title'),
+            description: t('auth_error_desc'),
         });
         return;
     }
@@ -77,7 +77,7 @@ export default function CreateProfilePage() {
       email: authUser.email || '',
       hobbies: ['hobbies_section_title_reading', 'hobbies_section_title_movies'],
       interests: ['interests_section_title_foodie', 'interests_section_title_cafe'],
-      bio: '새로운 만남을 기다립니다!',
+      bio: t('bio_placeholder'),
       lat: 37.5665,
       lng: 126.9780,
       createdAt: "serverTimestamp", // Special marker for the context

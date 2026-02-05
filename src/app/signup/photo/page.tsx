@@ -58,8 +58,8 @@ export default function UploadPhotoPage() {
         console.error("AI photo enhancement failed:", error);
         toast({
             variant: "destructive",
-            title: "AI 보정 실패",
-            description: "Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.",
+            title: t('ai_enhance_failed_title'),
+            description: t('ai_enhance_failed_desc'),
         });
         setPhoto({ uri: compressedForUpload, isEnhancing: false });
       }
@@ -92,8 +92,8 @@ export default function UploadPhotoPage() {
     if (!photo.uri) {
       toast({
         variant: "destructive",
-        title: "사진 필요",
-        description: "프로필 사진을 등록해주세요.",
+        title: t('photo_required_title'),
+        description: t('photo_required_desc'),
       });
       return;
     }
@@ -110,8 +110,8 @@ export default function UploadPhotoPage() {
       console.error("Failed to complete signup:", error);
       toast({
         variant: "destructive",
-        title: "등록 실패",
-        description: "프로필을 완성하는 데 실패했습니다. 다시 시도해주세요."
+        title: t('signup_failed_title'),
+        description: t('signup_failed_desc')
       });
       setIsSubmitting(false); // Re-enable button on error
     }
