@@ -7,6 +7,7 @@ import { calculateCompatibility } from '@/lib/utils';
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/language-context';
+import { TranslationKeys } from '@/lib/locales';
 
 type ProfileCardProps = {
   currentUser: User;
@@ -109,7 +110,7 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
             <div className="flex flex-wrap gap-2 mt-4">
                 {allTags.slice(0, 4).map((item) => (
                 <Badge key={item} variant="secondary" className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full border-0">
-                    {item}
+                    {t(item as TranslationKeys)}
                 </Badge>
                 ))}
             </div>

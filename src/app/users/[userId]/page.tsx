@@ -30,6 +30,8 @@ import {
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { useLanguage } from '@/contexts/language-context';
+import { TranslationKeys } from '@/lib/locales';
 
 
 // Helper components for page structure
@@ -43,6 +45,7 @@ const ProfileSection = ({ title, children }: { title: string; children: React.Re
 const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User, potentialMatch: User }) => {
   const [aiReason, setAiReason] = useState<string | null>(null);
   const [isAiReasonLoading, setIsAiReasonLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchReason = async () => {
@@ -76,25 +79,25 @@ const AIReasonComponent = ({ currentUser, potentialMatch }: { currentUser: User,
         setAiReason(result.reason);
       } catch (error) {
         console.error("Failed to get AI recommendation reason:", error);
-        setAiReason("추천 이유를 불러오는 데 실패했습니다.");
+        setAiReason(t('ai_rec_reason_failed'));
       } finally {
         setIsAiReasonLoading(false);
       }
     }
     fetchReason();
-  }, [currentUser, potentialMatch]);
+  }, [currentUser, potentialMatch, t]);
 
   return (
     <div className="my-6 bg-primary/5 border border-primary/30 rounded-lg p-4 min-h-[120px] flex flex-col relative">
         <h3 className="flex items-center font-semibold text-primary text-sm">
             <Sparkles className="h-4 w-4 mr-2 text-primary/80" />
-            AI 추천 이유
+            {t('ai_rec_reason_title')}
         </h3>
         <div className="flex-grow flex items-center justify-center pt-2">
             {isAiReasonLoading ? (
                 <div className="text-center">
                     <Loader2 className="h-6 w-6 animate-spin text-primary/80 mx-auto" />
-                    <p className="text-sm text-foreground/70 mt-2">AI 추천 이유 생성 중...</p>
+                    <p className="text-sm text-foreground/70 mt-2">{t('ai_rec_reason_loading')}</p>
                 </div>
             ) : (
                 <p className="text-sm text-foreground/80 text-center">{aiReason}</p>
@@ -112,6 +115,7 @@ function UserProfilePageContent() {
   const source = searchParams.get('from');
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const { user: currentUser, isLoaded, matches, peopleILiked, updateUser } = useUser();
   
@@ -126,7 +130,7 @@ function UserProfilePageContent() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const [reportReason, setReportReason] = useState("");
-  const reportReasons = ["스팸 또는 광고", "음란물", "사기 또는 거짓 정보", "괴롭힘 또는 증오심 표현", "프로필 정보 불일치", "기타"];
+  const reportReasons = ["spam", "explicit", "scam", "harassment", "mismatch", "other"];
 
   const isAlreadyMatched = useMemo(() => {
     if (!matches || !user) return null;
@@ -243,8 +247,8 @@ function UserProfilePageContent() {
     updateUser({ blockedUsers: newBlockedList });
 
     toast({
-        title: "차단 완료",
-        description: `${user.name}님을 차단했습니다.`,
+        title: t('block_success_title'),
+        description: t('block_success_desc').replace('%s', user.name),
     });
     router.back();
   };
@@ -253,7 +257,7 @@ function UserProfilePageContent() {
     if (!reportReason) {
       toast({
         variant: "destructive",
-        title: "신고 사유를 선택해주세요.",
+        title: t('report_select_reason'),
       });
       return;
     }
@@ -272,15 +276,15 @@ function UserProfilePageContent() {
       });
   
       toast({
-        title: "신고 접수 완료",
-        description: "신고가 성공적으로 접수되었습니다. 관리자가 검토 후 조치하겠습니다.",
+        title: t('report_submitted_title'),
+        description: t('report_submitted_desc'),
       });
     } catch (error) {
       console.error("Error submitting report:", error);
       toast({
         variant: "destructive",
-        title: "신고 실패",
-        description: "신고를 접수하는 중 오류가 발생했습니다.",
+        title: t('report_failed_title'),
+        description: t('report_failed_desc'),
       });
     }
   };
@@ -297,11 +301,11 @@ function UserProfilePageContent() {
     return (
         <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
             <UserX className="h-16 w-16 text-muted-foreground mb-4" />
-            <h1 className="text-2xl font-bold">사용자를 찾을 수 없습니다.</h1>
-            <p className="text-muted-foreground mt-2">삭제되었거나 존재하지 않는 프로필입니다.</p>
+            <h1 className="text-2xl font-bold">{t('user_profile_not_found_title')}</h1>
+            <p className="text-muted-foreground mt-2">{t('user_profile_not_found_subtitle')}</p>
             <Button onClick={() => router.back()} className="mt-8">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                뒤로 가기
+                {t('back_button')}
             </Button>
         </div>
     );
@@ -352,7 +356,7 @@ function UserProfilePageContent() {
             </div>
             <div className="text-left mt-4">
                 <h1 className="text-3xl font-bold">
-                    {user.name}, {user.age}, {user.gender}
+                    {user.name}, {user.age}, {t(user.gender as TranslationKeys) || user.gender}
                 </h1>
                 <p className="text-muted-foreground">{user.location}</p>
             </div>
@@ -362,65 +366,65 @@ function UserProfilePageContent() {
             {source === 'ai' && currentUser && <AIReasonComponent currentUser={currentUser} potentialMatch={user} />}
             <div className="bg-card p-4 rounded-lg">
 
-              <ProfileSection title="소개">
+              <ProfileSection title={t('bio_section_title')}>
                 <p className="text-sm text-foreground/80">{user.bio}</p>
               </ProfileSection>
 
               {user.relationship && user.relationship.length > 0 && (
-                <ProfileSection title="찾는 관계">
+                <ProfileSection title={t('relationship_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {user.relationship.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
               )}
 
               {user.values && user.values.length > 0 && (
-                <ProfileSection title="가치관">
+                <ProfileSection title={t('values_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {user.values.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
               )}
 
               {user.communication && user.communication.length > 0 && (
-                <ProfileSection title="소통 스타일">
+                <ProfileSection title={t('communication_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {user.communication.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
               )}
 
               {user.lifestyle && user.lifestyle.length > 0 && (
-                <ProfileSection title="라이프스타일">
+                <ProfileSection title={t('lifestyle_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {user.lifestyle.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
               )}
 
               {user.interests && user.interests.length > 0 && (
-                <ProfileSection title="관심사">
+                <ProfileSection title={t('interests_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {user.interests.map(interest => (
-                      <Badge key={interest} variant="secondary" className="bg-accent text-accent-foreground font-normal">{interest}</Badge>
+                      <Badge key={interest} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(interest as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
               )}
               
               {user.hobbies && user.hobbies.length > 0 && (
-                <ProfileSection title="취미">
+                <ProfileSection title={t('hobbies_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {user.hobbies.map(hobby => (
-                      <Badge key={hobby} variant="secondary" className="bg-accent text-accent-foreground font-normal">{hobby}</Badge>
+                      <Badge key={hobby} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(hobby as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
@@ -431,20 +435,20 @@ function UserProfilePageContent() {
               <AlertDialog>
                   <AlertDialogTrigger asChild>
                       <Button variant="outline" className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground">
-                          차단하기
+                          {t('block_user_button')}
                       </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                       <AlertDialogHeader>
-                          <AlertDialogTitle>정말로 차단하시겠습니까?</AlertDialogTitle>
+                          <AlertDialogTitle>{t('block_confirm_title')}</AlertDialogTitle>
                           <AlertDialogDescription>
-                          차단하면 이 사용자의 프로필이 더 이상 표시되지 않으며, 상대방도 회원님의 프로필을 볼 수 없게 됩니다.
+                          {t('block_confirm_desc')}
                           </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                          <AlertDialogCancel>취소</AlertDialogCancel>
+                          <AlertDialogCancel>{t('cancel_button')}</AlertDialogCancel>
                           <AlertDialogAction onClick={handleBlock} className={cn(buttonVariants({ variant: "destructive" }))}>
-                          차단하기
+                          {t('block_user_button')}
                           </AlertDialogAction>
                       </AlertDialogFooter>
                   </AlertDialogContent>
@@ -452,28 +456,28 @@ function UserProfilePageContent() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" className="w-full">
-                    신고하기
+                    {t('report_user_button')}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>{user.name}님을 신고하시겠습니까?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('report_confirm_title').replace('%s', user.name)}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      신고 사유를 선택해주세요. 허위 신고는 서비스 이용에 불이익을 받을 수 있습니다.
+                      {t('report_confirm_desc')}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <RadioGroup value={reportReason} onValueChange={setReportReason} className="py-2 space-y-2">
-                    {reportReasons.map((reason) => (
-                      <div key={reason} className="flex items-center space-x-2">
-                        <RadioGroupItem value={reason} id={`r-${reason}`} />
-                        <Label htmlFor={`r-${reason}`} className="font-normal">{reason}</Label>
+                    {reportReasons.map((reasonKey) => (
+                      <div key={reasonKey} className="flex items-center space-x-2">
+                        <RadioGroupItem value={t(`report_reason_${reasonKey}` as TranslationKeys)} id={`r-${reasonKey}`} />
+                        <Label htmlFor={`r-${reasonKey}`} className="font-normal">{t(`report_reason_${reasonKey}` as TranslationKeys)}</Label>
                       </div>
                     ))}
                   </RadioGroup>
                   <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setReportReason("")}>취소</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => setReportReason("")}>{t('cancel_button')}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleReport} disabled={!reportReason}>
-                      신고하기
+                      {t('report_user_button')}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -510,5 +514,3 @@ export default function UserProfilePage() {
     </Suspense>
   )
 }
-
-    

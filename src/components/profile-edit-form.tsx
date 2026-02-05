@@ -36,7 +36,7 @@ import { TranslationKeys } from '@/lib/locales';
 const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
   switch (code) {
     case 'ko':
-        return <svg viewBox="0 0 900 600" {...props}><path fill="#fff" d="M0 0h900v600H0z"/><g transform="translate(450 300)"><circle r="150" fill="#cd2e3a"/><path d="M0-150a150 150 0 0 0 0 300 75 75 0 0 1 0-150Z" fill="#0047a0"/></g><g fill="#000"><g transform="translate(193.2 143.2)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g><g transform="translate(193.2 456.8)rotate(-33.69)"><path d="M-75-25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150z"/></g><g transform="translate(706.8 143.2)rotate(-33.69)"><path d="M-75-25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50z"/></g><g transform="translate(706.8 456.8)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g></g></svg>;
+        return <svg viewBox="0 0 900 600" {...props}><path fill="#fff" d="M0 0h900v600H0z"/><g transform="translate(450 300)"><circle r="150" fill="#cd2e3a"/><path d="M-150 0a150 150 0 0 0 300 0 75 75 0 0 1-150 0Z" fill="#0047a0"/></g><g fill="#000"><g transform="translate(193.2 143.2)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g><g transform="translate(193.2 456.8)rotate(-33.69)"><path d="M-75-25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150z"/></g><g transform="translate(706.8 143.2)rotate(-33.69)"><path d="M-75-25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50z"/></g><g transform="translate(706.8 456.8)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g></g></svg>;
     case 'en':
       return <svg viewBox="0 0 38 20" {...props}><path fill="#B22234" d="m0,0H38V20H0"/><path stroke="#fff" strokeWidth="2" d="m0,2H38m0,4H0m0,4H38m0,4H0"/><path fill="#3C3B6E" d="m0,0H18V10H0"/></svg>;
     case 'es':
@@ -72,6 +72,14 @@ const TagButton = ({ label, isSelected, onClick }: { label: string, isSelected: 
 
 type LanguageCode = 'ko' | 'en' | 'es' | 'ja';
 
+const allValueKeys = {
+  relationship: ['relationship_section_title_serious', 'relationship_section_title_casual', 'relationship_section_title_friends', 'relationship_section_title_chat'] as const,
+  values: ['values_section_title_adventure', 'values_section_title_stability', 'values_section_title_creativity', 'values_section_title_growth', 'values_section_title_authenticity', 'values_section_title_passion', 'values_section_title_calmness', 'values_section_title_humor'] as const,
+  communication: ['communication_section_title_deep', 'communication_section_title_witty', 'communication_section_title_sincere', 'communication_section_title_warm', 'communication_section_title_direct'] as const,
+  lifestyle: ['lifestyle_section_title_active', 'lifestyle_section_title_homebody', 'lifestyle_section_title_artist', 'lifestyle_section_title_wellness', 'lifestyle_section_title_explorer', 'lifestyle_section_title_minimalist'] as const,
+  hobbies: ['hobbies_section_title_movies', 'hobbies_section_title_music', 'hobbies_section_title_exercise', 'hobbies_section_title_cooking', 'hobbies_section_title_reading', 'hobbies_section_title_travel', 'hobbies_section_title_games', 'hobbies_section_title_camping', 'hobbies_section_title_watercolor', 'hobbies_section_title_baking', 'hobbies_section_title_coding', 'hobbies_section_title_piano', 'hobbies_section_title_scuba', 'hobbies_section_title_meditation'] as const,
+  interests: ['interests_section_title_foodie', 'interests_section_title_cafe', 'interests_section_title_photo', 'interests_section_title_fashion', 'interests_section_title_beauty', 'interests_section_title_finance', 'interests_section_title_self_dev', 'interests_section_title_drawing', 'interests_section_title_reading', 'interests_section_title_hiking', 'interests_section_title_classical', 'interests_section_title_yoga'] as const
+};
 
 export default function ProfileEditForm() {
   const router = useRouter();
@@ -104,15 +112,6 @@ export default function ProfileEditForm() {
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
   const [isReauthDialogOpen, setIsReauthDialogOpen] = useState(false);
-
-  const allValues = useMemo(() => ({
-    relationship: [t('relationship_section_title_serious'), t('relationship_section_title_casual'), t('relationship_section_title_friends'), t('relationship_section_title_chat')],
-    values: [t('values_section_title_adventure'), t('values_section_title_stability'), t('values_section_title_creativity'), t('values_section_title_growth'), t('values_section_title_authenticity'), t('values_section_title_passion'), t('values_section_title_calmness'), t('values_section_title_humor')],
-    communication: [t('communication_section_title_deep'), t('communication_section_title_witty'), t('communication_section_title_sincere'), t('communication_section_title_warm'), t('communication_section_title_direct')],
-    lifestyle: [t('lifestyle_section_title_active'), t('lifestyle_section_title_homebody'), t('lifestyle_section_title_artist'), t('lifestyle_section_title_wellness'), t('lifestyle_section_title_explorer'), t('lifestyle_section_title_minimalist')],
-    hobbies: [t('hobbies_section_title_movies'), t('hobbies_section_title_music'), t('hobbies_section_title_exercise'), t('hobbies_section_title_cooking'), t('hobbies_section_title_reading'), t('hobbies_section_title_travel'), t('hobbies_section_title_games'), t('hobbies_section_title_camping'), t('hobbies_section_title_watercolor'), t('hobbies_section_title_baking'), t('hobbies_section_title_coding'), t('hobbies_section_title_piano'), t('hobbies_section_title_scuba'), t('hobbies_section_title_meditation')],
-    interests: [t('interests_section_title_foodie'), t('interests_section_title_cafe'), t('interests_section_title_photo'), t('interests_section_title_fashion'), t('interests_section_title_beauty'), t('interests_section_title_finance'), t('interests_section_title_self_dev'), t('interests_section_title_drawing'), t('interests_section_title_reading'), t('interests_section_title_hiking'), t('interests_section_title_classical'), t('interests_section_title_yoga')]
-  }), [t]);
 
   useEffect(() => {
     if (currentUser) {
@@ -434,34 +433,15 @@ export default function ProfileEditForm() {
             className="bg-zinc-900 border-zinc-800 h-24" />
         </Section>
         
-        <Section title={t('relationship_section_title')}>
-            <div className="flex flex-wrap gap-2">
-                {allValues.relationship.map(item => (
-                    <TagButton 
-                        key={item}
-                        label={item}
-                        isSelected={(profile.relationship as string[]).includes(item)}
-                        onClick={() => handleMultiSelect('relationship', item)}
-                    />
-                ))}
-            </div>
-        </Section>
-
-        {Object.entries({
-            'values_section_title': 'values', 
-            'communication_section_title': 'communication',
-            'lifestyle_section_title': 'lifestyle',
-            'hobbies_section_title': 'hobbies',
-            'interests_section_title': 'interests'
-        }).map(([titleKey, key]) => (
-            <Section key={key} title={t(titleKey as TranslationKeys)} description={t('multiple_selection_description')}>
+        {Object.entries(allValueKeys).map(([key, value]) => (
+            <Section key={key} title={t(`${key}_section_title` as TranslationKeys)} description={t('multiple_selection_description')}>
                 <div className="flex flex-wrap gap-2">
-                    {allValues[key as keyof typeof allValues].map(item => (
+                    {value.map(itemKey => (
                         <TagButton 
-                            key={item}
-                            label={item}
-                            isSelected={(profile[key as keyof typeof profile] as string[]).includes(item)}
-                            onClick={() => handleMultiSelect(key as keyof typeof profile, item)}
+                            key={itemKey}
+                            label={t(itemKey as TranslationKeys)}
+                            isSelected={(profile[key as keyof typeof profile] as string[]).includes(itemKey)}
+                            onClick={() => handleMultiSelect(key as keyof typeof profile, itemKey)}
                         />
                     ))}
                 </div>
@@ -471,7 +451,7 @@ export default function ProfileEditForm() {
       </main>
 
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-zinc-800">
-        <div className="flex w-full gap-2">
+        <div className="flex w-full gap-2 max-w-screen-sm mx-auto">
             <Button variant="secondary" onClick={() => router.back()} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">{t('cancel_button')}</Button>
             <Button onClick={handleSave} disabled={isSaving || isEnhancing} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">
                 {(isSaving || isEnhancing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

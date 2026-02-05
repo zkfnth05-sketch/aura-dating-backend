@@ -13,6 +13,7 @@ import ImageCarouselDialog from '@/components/image-carousel-dialog';
 import Header from '@/components/layout/header';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/language-context';
+import { TranslationKeys } from '@/lib/locales';
 
 // Helper components for page structure
 const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -120,7 +121,7 @@ export default function ProfilePage() {
             </div>
             <div className="text-left mt-4">
                 <h1 className="text-3xl font-bold">
-                    {currentUser.name}, {currentUser.age}, {currentUser.gender}
+                    {currentUser.name}, {currentUser.age}, {t(currentUser.gender as TranslationKeys) || currentUser.gender}
                 </h1>
                 <p className="text-muted-foreground">{currentUser.location}</p>
             </div>
@@ -149,7 +150,7 @@ export default function ProfilePage() {
                 <ProfileSection title={t('relationship_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {currentUser.relationship.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
@@ -159,7 +160,7 @@ export default function ProfilePage() {
                 <ProfileSection title={t('values_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {currentUser.values.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
@@ -169,7 +170,7 @@ export default function ProfilePage() {
                 <ProfileSection title={t('communication_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {currentUser.communication.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
@@ -179,27 +180,31 @@ export default function ProfilePage() {
                 <ProfileSection title={t('lifestyle_section_title')}>
                   <div className="flex flex-wrap gap-2">
                     {currentUser.lifestyle.map(item => (
-                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{item}</Badge>
+                      <Badge key={item} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(item as TranslationKeys)}</Badge>
                     ))}
                   </div>
                 </ProfileSection>
               )}
 
-              <ProfileSection title={t('interests_section_title')}>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.interests.map(interest => (
-                    <Badge key={interest} variant="secondary" className="bg-accent text-accent-foreground font-normal">{interest}</Badge>
-                  ))}
-                </div>
-              </ProfileSection>
+              {currentUser.interests && currentUser.interests.length > 0 && (
+                <ProfileSection title={t('interests_section_title')}>
+                  <div className="flex flex-wrap gap-2">
+                    {currentUser.interests.map(interest => (
+                      <Badge key={interest} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(interest as TranslationKeys)}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
 
-              <ProfileSection title={t('hobbies_section_title')}>
-                <div className="flex flex-wrap gap-2">
-                  {currentUser.hobbies.map(hobby => (
-                    <Badge key={hobby} variant="secondary" className="bg-accent text-accent-foreground font-normal">{hobby}</Badge>
-                  ))}
-                </div>
-              </ProfileSection>
+              {currentUser.hobbies && currentUser.hobbies.length > 0 && (
+                <ProfileSection title={t('hobbies_section_title')}>
+                  <div className="flex flex-wrap gap-2">
+                    {currentUser.hobbies.map(hobby => (
+                      <Badge key={hobby} variant="secondary" className="bg-accent text-accent-foreground font-normal">{t(hobby as TranslationKeys)}</Badge>
+                    ))}
+                  </div>
+                </ProfileSection>
+              )}
 
               <ProfileSection title={t('profile_settings_section')}>
                   <ProfileToggle 
