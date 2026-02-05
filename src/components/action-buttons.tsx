@@ -14,8 +14,7 @@ export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = 
     <div className="flex items-center justify-center gap-6 z-10">
       {/* Dislike Button */}
       <Button 
-        onClick={onDislike} 
-        variant="ghost" 
+        onClick={onDislike}
         size="icon" 
         className="w-20 h-20 rounded-full bg-button-bg text-button-dislike hover:bg-neutral-700"
       >
@@ -25,9 +24,8 @@ export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = 
       {/* Message Button */}
       <Button 
         onClick={onMessage} 
-        variant="ghost" 
         size="icon" 
-        className="w-16 h-16 rounded-full bg-button-bg text-blue-400 hover:bg-neutral-700"
+        className="w-16 h-16 rounded-full bg-button-bg text-button-superlike hover:bg-neutral-700"
       >
         <MessageCircle className="w-8 h-8" />
       </Button>
@@ -35,7 +33,6 @@ export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = 
       {/* Like Button */}
       <Button 
         onClick={onLike} 
-        variant="ghost" 
         size="icon" 
         className={cn(
             "w-20 h-20 rounded-full bg-button-bg text-button-like hover:bg-neutral-700",
