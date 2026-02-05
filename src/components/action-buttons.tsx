@@ -11,7 +11,7 @@ type ActionButtonsProps = {
 
 export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = false }: ActionButtonsProps) {
   return (
-    <div className="flex items-center justify-center gap-6 z-10">
+    <div className="flex items-center justify-center gap-7 z-10">
       {/* Dislike Button */}
       <Button 
         onClick={onDislike}
