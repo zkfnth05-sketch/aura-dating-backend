@@ -348,25 +348,17 @@ export default function ChatPage() {
   const handleMicRelease = () => stopRecording();
 
   const handleInitiateCall = () => {
-    // 1. 함수가 호출되는지 확인
-    console.log("통화 버튼 눌림!"); 
-
     if(!currentUser || !firestore || !otherUser) {
-        // 2. 왜 중단됐는지 확인
-        console.log("조건 미달:", { currentUser: !!currentUser, firestore: !!firestore, otherUser: !!otherUser });
         return;
     }
 
     if (!matchRef) {
-        console.log("matchRef가 없습니다. 업데이트를 중단합니다.");
         return;
     }
 
-    console.log("DB 업데이트 시도 중...");
     const callData = { callStatus: 'ringing' as const, callerId: currentUser.id };
     
     updateDoc(matchRef, callData)
-        .then(() => console.log("DB 업데이트 완료!"))
         .catch((err) => console.error("DB 업데이트 실패 에러:", err));
   };
 
@@ -419,7 +411,7 @@ export default function ChatPage() {
   }
 
   if (isCallActive) {
-    return <VideoChat localUser={currentUser} remoteUser={otherUser} onEndCall={handleEndCall} />;
+    return <VideoChat localUser={currentUser} remoteUser={otherUser} matchId={matchId} onEndCall={handleEndCall} />;
   }
 
   return (

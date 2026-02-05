@@ -111,6 +111,13 @@ service cloud.firestore {
         allow update: if false; // Messages are immutable
         allow delete: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) && resource.data.senderId == request.auth.uid;
       }
+
+      /**
+       * @description WebRTC signaling candidates for video calls.
+       */
+      match /candidates/{candidateId} {
+        allow read, write: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId)));
+      }
     }
 
     /**
