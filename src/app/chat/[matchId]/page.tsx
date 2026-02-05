@@ -150,10 +150,9 @@ export default function ChatPage() {
     // Listen for call status changes to show/hide the call UI
     const unsubscribe = onSnapshot(matchRef, (doc) => {
         const data = doc.data() as Match | undefined;
-        if (data?.callStatus === 'active') {
+        if (data?.callStatus === 'active' || data?.callStatus === 'ringing') {
             setIsCallActive(true);
         } else {
-            // This ensures the call screen closes if status is 'idle' or 'ringing'
             setIsCallActive(false);
         }
     });
@@ -349,31 +348,28 @@ export default function ChatPage() {
   const handleMicRelease = () => stopRecording();
 
   const handleInitiateCall = () => {
-    if(!currentUser || !firestore || !otherUser || !matchRef) return;
+    // 1. 함수가 호출되는지 확인
+    console.log("통화 버튼 눌림!"); 
+
+    if(!currentUser || !firestore || !otherUser) {
+        // 2. 왜 중단됐는지 확인
+        console.log("조건 미달:", { currentUser: !!currentUser, firestore: !!firestore, otherUser: !!otherUser });
+        return;
+    }
+
+    if (!matchRef) {
+        console.log("matchRef가 없습니다. 업데이트를 중단합니다.");
+        return;
+    }
+
+    console.log("DB 업데이트 시도 중...");
     const callData = { callStatus: 'ringing' as const, callerId: currentUser.id };
-    updateDoc(matchRef, callData).then(() => {
-      toast({ title: t('chat_connecting'), description: t('chat_connecting_desc').replace('%s', otherUser.name) });
-      setTimeout(async () => {
-          const currentMatchSnap = await getDoc(matchRef);
-          if (currentMatchSnap.exists()) {
-              const currentMatchData = currentMatchSnap.data() as Match;
-              if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
-                  const resetData = { callStatus: 'idle' as const, callerId: null };
-                  updateDoc(matchRef, resetData).catch(e => {
-                      if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: resetData }));
-                  });
-                  toast({ variant: 'destructive', title: t('chat_no_answer_title'), description: t('chat_no_answer_desc').replace('%s', otherUser.name) });
-              }
-          }
-      }, 20000);
-    }).catch(error => {
-      if (error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: callData }));
-      } else {
-        toast({ variant: "destructive", title: t('chat_call_failed_title'), description: t('chat_call_failed_desc') });
-      }
-    });
-  }
+    
+    updateDoc(matchRef, callData)
+        .then(() => console.log("DB 업데이트 완료!"))
+        .catch((err) => console.error("DB 업데이트 실패 에러:", err));
+  };
+
 
   const handleEndCall = () => {
       if (!matchRef) return;
