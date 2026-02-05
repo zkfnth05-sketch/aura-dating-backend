@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
-import { getAIChatReplySuggestions } from '@/actions/ai-actions';
+import { getAIChatReplySuggestions, getChatTranslation } from '@/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from '@/components/video-chat';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
@@ -19,6 +19,7 @@ import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, upda
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useLanguage } from '@/contexts/language-context';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -56,6 +57,14 @@ const formatMessageTime = (timestamp: Timestamp | any, locale: string): string =
       hour12: true,
     });
 };
+
+const languageMap: { [key: string]: string } = {
+  ko: 'Korean',
+  en: 'English',
+  es: 'Spanish',
+  ja: 'Japanese',
+};
+
 
 export default function ChatPage() {
   const params = useParams();
@@ -164,15 +173,38 @@ export default function ChatPage() {
     }
   }, [otherUser, t, language]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() === '' || !firestore || !currentUser || !otherUser) return;
 
+    const currentUserLang = currentUser.language || 'ko';
+    const otherUserLang = otherUser.language || 'ko';
+    let translations = {};
+
+    if (currentUserLang !== otherUserLang) {
+        try {
+            const result = await getChatTranslation({
+                text: newMessage,
+                targetLanguage: languageMap[otherUserLang] || 'English',
+            });
+            if (result.translatedText) {
+                translations = { [otherUserLang]: result.translatedText };
+            }
+        } catch (error) {
+            console.error("Chat translation failed:", error);
+            // Fail silently, message will be sent untranslated
+        }
+    }
+    
     const batch = writeBatch(firestore);
 
     const messageRef = doc(messagesColRef!);
     const messageData: Omit<Message, 'id'> = {
-      senderId: currentUser.id, text: newMessage, timestamp: serverTimestamp(),
+      senderId: currentUser.id, 
+      text: newMessage, 
+      timestamp: serverTimestamp(),
+      senderLanguage: currentUserLang,
+      translations: translations,
     };
     batch.set(messageRef, messageData);
 
@@ -200,7 +232,10 @@ export default function ChatPage() {
 
     const messageRef = doc(messagesColRef!);
     const messageData: Omit<Message, 'id'> = {
-      senderId: currentUser.id, audioUrl: audioUrl, timestamp: serverTimestamp(),
+      senderId: currentUser.id, 
+      audioUrl: audioUrl, 
+      timestamp: serverTimestamp(),
+      senderLanguage: currentUser.language || 'ko',
     };
     batch.set(messageRef, messageData);
 
@@ -354,19 +389,42 @@ export default function ChatPage() {
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
         <div className="space-y-4">
           {areMessagesLoading && messages?.length === 0 && <div className="text-center text-muted-foreground">{t('chat_loading_messages')}</div>}
-          {reversedMessages && reversedMessages.map((message) => (
-            <div key={message.id} className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'justify-end' : 'justify-start')}>
-              {message.senderId !== currentUser.id && (
-                <Avatar className="h-8 w-8 self-start"><AvatarImage src={otherUser.photoUrls?.[0]} /><AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback></Avatar>
-              )}
-              <div className={cn('flex items-end gap-2', message.senderId === currentUser.id ? 'flex-row-reverse' : 'flex-row')}>
-                <div className={cn('max-w-xs md:max-w-md px-4 py-2 rounded-2xl', message.senderId === currentUser.id ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-accent text-accent-foreground rounded-bl-none')}>
-                  {message.audioUrl ? (<audio controls src={message.audioUrl} className="h-10" />) : (<p className="text-sm break-words">{message.text}</p>)}
+          {reversedMessages && reversedMessages.map((message) => {
+              const isMyMessage = message.senderId === currentUser.id;
+              const currentUserLang = currentUser.language || 'ko';
+              const messageLang = message.senderLanguage || 'ko'; // Fallback for older messages
+              
+              const isTranslated = !isMyMessage && messageLang !== currentUserLang && !!message.translations?.[currentUserLang];
+              
+              const displayText = isTranslated 
+                  ? message.translations![currentUserLang]!
+                  : (message.text || '');
+              
+              return (
+                <div key={message.id} className={cn('flex items-end gap-2', isMyMessage ? 'justify-end' : 'justify-start')}>
+                  {!isMyMessage && (
+                    <Avatar className="h-8 w-8 self-start"><AvatarImage src={otherUser.photoUrls?.[0]} /><AvatarFallback>{otherUser.name?.charAt(0)}</AvatarFallback></Avatar>
+                  )}
+                  <div className={cn('flex items-end gap-2', isMyMessage ? 'flex-row-reverse' : 'flex-row')}>
+                    <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className={cn('max-w-xs md:max-w-md px-4 py-2 rounded-2xl', isMyMessage ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-accent text-accent-foreground rounded-bl-none')}>
+                                {message.audioUrl ? (<audio controls src={message.audioUrl} className="h-10" />) : (<p className="text-sm break-words">{displayText}</p>)}
+                                </div>
+                            </TooltipTrigger>
+                            {isTranslated && (
+                                <TooltipContent>
+                                <p><strong>Original:</strong> {message.text}</p>
+                                </TooltipContent>
+                            )}
+                        </Tooltip>
+                    </TooltipProvider>
+                    <span className="text-xs text-muted-foreground pb-1">{formatMessageTime(message.timestamp, language)}</span>
+                  </div>
                 </div>
-                <span className="text-xs text-muted-foreground pb-1">{formatMessageTime(message.timestamp, language)}</span>
-              </div>
-            </div>
-          ))}
+              );
+          })}
         </div>
       </ScrollArea>
 

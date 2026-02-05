@@ -43,6 +43,13 @@ export type Message = {
   text?: string;
   audioUrl?: string;
   timestamp: Timestamp | any;
+  senderLanguage?: 'ko' | 'en' | 'es' | 'ja';
+  translations?: {
+    ko?: string;
+    en?: string;
+    es?: string;
+    ja?: string;
+  };
 };
 
 export type Like = {

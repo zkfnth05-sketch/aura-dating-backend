@@ -21,6 +21,11 @@ import {
     ChatReplyInput,
     ChatReplyOutput,
 } from '@/ai/flows/chat-reply-flow';
+import {
+    translateChatText,
+    TranslateChatInput,
+    TranslateChatOutput,
+} from '@/ai/flows/translate-chat-flow';
 
 export async function getEnhancedPhoto(
     input: EnhancePhotoInput
@@ -64,5 +69,17 @@ export async function getAIChatReplySuggestions(
     } catch (error) {
         console.error('AI Chat Reply suggestion failed:', error);
         throw new Error('Failed to get AI chat reply suggestions.');
+    }
+}
+
+export async function getChatTranslation(
+    input: TranslateChatInput
+): Promise<TranslateChatOutput> {
+    try {
+        const result = await translateChatText(input);
+        return result;
+    } catch (error) {
+        console.error('AI Chat Translation failed:', error);
+        throw new Error('Failed to get chat translation.');
     }
 }
