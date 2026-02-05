@@ -1,16 +1,16 @@
-
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { PhoneOff, Mic, MicOff, Video, VideoOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc, onSnapshot, collection, addDoc, getDoc, writeBatch, getDocs, deleteDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase'; 
+import { doc, updateDoc, onSnapshot, collection, addDoc, getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { useLanguage } from '@/contexts/language-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
+// WebRTC 설정: 다른 네트워크 간 연결을 위해 STUN/TURN 서버 필수
 const configuration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -32,23 +32,111 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
+  const pc = useRef<RTCPeerConnection | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [hasPermissions, setHasPermissions] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isConnecting, setIsConnecting] = useState(true);
 
   useEffect(() => {
-    const setupCall = async () => {
-      if (!firestore) return;
+    const initWebRTC = async () => {
+      if (!firestore || !matchId) return;
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localStreamRef.current = stream;
+        // 1. 미디어 장치(카메라, 마이크) 가져오기
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' }, 
+          audio: true 
+        });
+        streamRef.current = stream;
         setHasPermissions(true);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+
+        // 2. PeerConnection 초기화
+        pc.current = new RTCPeerConnection(configuration);
+
+        // 내 트랙 추가
+        stream.getTracks().forEach(track => {
+          if (pc.current && streamRef.current) {
+            pc.current.addTrack(track, streamRef.current);
+          }
+        });
+
+        // 상대방 트랙 수신 시 비디오 연결
+        pc.current.ontrack = (event) => {
+          console.log('상대방 스트림 수신 성공');
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = event.streams[0];
+            setIsConnecting(false);
+          }
+        };
+
+        const matchRef = doc(firestore, 'matches', matchId);
+        const candidatesCol = collection(matchRef, 'candidates');
+
+        // ICE Candidate(연결 경로) 생성 시 DB 저장
+        pc.current.onicecandidate = (event) => {
+          if (event.candidate) {
+            addDoc(candidatesCol, { 
+              ...event.candidate.toJSON(), 
+              senderId: localUser.id 
+            });
+          }
+        };
+
+        // 3. 역할(Caller/Callee)에 따른 시그널링
+        const matchSnap = await getDoc(matchRef);
+        const isCaller = matchSnap.data()?.callerId === localUser.id;
+
+        if (isCaller) {
+          // [전화 건 사람] Offer 생성
+          const offer = await pc.current.createOffer();
+          await pc.current.setLocalDescription(offer);
+          await updateDoc(matchRef, { 
+            offer: { type: offer.type, sdp: offer.sdp } 
+          });
+
+          // 상대방의 Answer 대기
+          onSnapshot(matchRef, async (snapshot) => {
+            const data = snapshot.data();
+            if (data?.answer && pc.current && !pc.current.currentRemoteDescription) {
+              await pc.current.setRemoteDescription(new RTCSessionDescription(data.answer));
+            }
+          });
+        } else {
+          // [전화 받은 사람] Offer 수신 후 Answer 생성
+          const data = matchSnap.data();
+          if (data?.offer) {
+            await pc.current.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.current.createAnswer();
+            await pc.current.setLocalDescription(answer);
+            await updateDoc(matchRef, { 
+              answer: { type: answer.type, sdp: answer.sdp },
+              callStatus: 'active' 
+            });
+          }
+        }
+
+        // 4. 상대방의 ICE Candidate 실시간 감지 및 추가
+        onSnapshot(candidatesCol, (snapshot) => {
+          snapshot.docChanges().forEach(async (change) => {
+            if (change.type === 'added') {
+              const candidateData = change.doc.data();
+              if (candidateData.senderId !== localUser.id && pc.current) {
+                try {
+                  await pc.current.addIceCandidate(new RTCIceCandidate(candidateData));
+                } catch (e) {
+                  console.error('ICE Candidate 추가 실패', e);
+                }
+              }
+            }
+          });
+        });
+
       } catch (err: any) {
+        console.warn('WebRTC 초기화 에러:', err);
         setHasPermissions(false);
         if (err.name === 'NotFoundError') {
           toast({
@@ -63,79 +151,19 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
               description: t('camera_permission_denied_desc')
           });
         }
-        return;
       }
-      
-      const pc = new RTCPeerConnection(configuration);
-      peerConnectionRef.current = pc;
-
-      localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current!));
-
-      pc.ontrack = (event) => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
-      };
-
-      const matchRef = doc(firestore, 'matches', matchId);
-      const candidatesCol = collection(matchRef, 'candidates');
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          addDoc(candidatesCol, { ...event.candidate.toJSON(), userId: localUser.id });
-        }
-      };
-
-      const matchSnap = await getDoc(matchRef);
-      const isCaller = matchSnap.data()?.callerId === localUser.id;
-
-      if (isCaller) {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await updateDoc(matchRef, { offer: { type: offer.type, sdp: offer.sdp } });
-
-        onSnapshot(matchRef, async (snapshot) => {
-          const data = snapshot.data();
-          if (!pc.currentRemoteDescription && data?.answer) {
-            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-          }
-        });
-      } else {
-        const offer = matchSnap.data()?.offer;
-        if (offer) {
-          await pc.setRemoteDescription(new RTCSessionDescription(offer));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await updateDoc(matchRef, { answer: { type: answer.type, sdp: answer.sdp }, callStatus: 'active' });
-        }
-      }
-
-      onSnapshot(candidatesCol, (snapshot) => {
-        snapshot.docChanges().forEach(async (change) => {
-          if (change.type === 'added' && change.doc.data().userId !== localUser.id) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-            } catch (error) {
-              console.error("Error adding received ice candidate", error);
-            }
-          }
-        });
-      });
     };
 
-    setupCall();
+    initWebRTC();
 
     return () => {
-      localStreamRef.current?.getTracks().forEach(track => track.stop());
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      pc.current?.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firestore, matchId, localUser.id]);
   
-  const cleanupCallData = async () => {
+  const cleanupCallData = useCallback(async () => {
       if (!firestore) return;
       const matchRef = doc(firestore, 'matches', matchId);
       const candidatesCol = collection(matchRef, 'candidates');
@@ -157,87 +185,103 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
       } catch (error) {
         console.error("Error cleaning up call data:", error);
       }
-  };
+  }, [firestore, matchId]);
   
-  const handleEndCall = async () => {
+  const handleEndCall = useCallback(async () => {
       await cleanupCallData();
       onEndCall();
-  };
+  }, [cleanupCallData, onEndCall]);
   
   const toggleMic = () => {
-    if (localStreamRef.current) {
-        localStreamRef.current.getAudioTracks().forEach(track => {
-            track.enabled = !isMicOn;
-        });
-        setIsMicOn(!isMicOn);
+    if (streamRef.current) {
+        const enabled = !isMicOn;
+        streamRef.current.getAudioTracks().forEach(t => t.enabled = enabled);
+        setIsMicOn(enabled);
     }
   };
 
   const toggleCamera = () => {
-     if (localStreamRef.current) {
-        localStreamRef.current.getVideoTracks().forEach(track => {
-            track.enabled = !isCameraOn;
-        });
-        setIsCameraOn(!isCameraOn);
+     if (streamRef.current) {
+        const enabled = !isCameraOn;
+        streamRef.current.getVideoTracks().forEach(t => t.enabled = enabled);
+        setIsCameraOn(enabled);
     }
   };
 
   return (
-    <div className="relative flex flex-col h-screen w-full bg-black text-white">
-      <div className="absolute inset-0 z-0">
-         <video
-           ref={remoteVideoRef}
-           autoPlay
-           playsInline
-           className="h-full w-full object-cover"
-         />
-        {!hasPermissions && (
-          <div className="h-full w-full bg-zinc-900 flex flex-col items-center justify-center">
-            <Alert variant="destructive" className="mt-8 max-w-sm">
-                <AlertTitle>{t('camera_access_required')}</AlertTitle>
+    <div className="relative h-screen w-full bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
+      {/* 상대방 영상 (전체화면) */}
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {!hasPermissions && (
+          <div className="absolute inset-0 h-full w-full bg-zinc-900 flex flex-col items-center justify-center p-4 z-20">
+            <Alert variant="destructive" className="max-w-sm">
+                <AlertTitle>{t('camera_permission_denied_title')}</AlertTitle>
                 <AlertDescription>
-                    {t('camera_allow_access')}
+                    {t('media_device_not_found_desc')}
                 </AlertDescription>
             </Alert>
           </div>
         )}
-        <div className="absolute inset-0 bg-black/30" />
-      </div>
 
-      <div className="absolute top-4 right-4 h-48 w-36 rounded-lg overflow-hidden border-2 border-primary z-10 bg-zinc-800">
-         {hasPermissions ? (
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`h-full w-full object-cover scale-x-[-1] ${isCameraOn ? 'opacity-100' : 'opacity-0'}`}
-            />
-         ) : null}
-         {!isCameraOn &&
-            <div className="h-full w-full flex items-center justify-center">
-                <VideoOff className="w-8 h-8 text-zinc-500"/>
-            </div>
-         }
-      </div>
-
-      <div className="absolute bottom-10 left-0 right-0 z-10">
-        <div className="flex items-center justify-center gap-4">
-          <Button variant="ghost" size="icon" onClick={toggleMic} className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur" disabled={!hasPermissions}>
-            {isMicOn ? <Mic className="w-7 h-7" /> : <MicOff className="w-7 h-7" />}
-          </Button>
-          <Button variant="ghost" size="icon" onClick={toggleCamera} className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur" disabled={!hasPermissions}>
-            {isCameraOn ? <Video className="w-7 h-7" /> : <VideoOff className="w-7 h-7" />}
-          </Button>
-          <Button
-            variant="destructive"
-            size="icon"
-            onClick={handleEndCall}
-            className="w-16 h-16 rounded-full"
-          >
-            <PhoneOff className="w-7 h-7" />
-          </Button>
+      {isConnecting && hasPermissions && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-20">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+          <p className="text-white text-lg font-medium">{t('chat_connecting').replace('...','')}</p>
         </div>
+      )}
+
+      {/* 내 영상 (우측 상단 팝업) */}
+      <div className="absolute top-6 right-6 w-32 h-44 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-30 bg-zinc-900">
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover scale-x-[-1]"
+        />
+        {!isCameraOn && (
+          <div className="absolute inset-0 flex items-center justify-center bg-zinc-800">
+            <VideoOff className="w-8 h-8 text-zinc-500" />
+          </div>
+        )}
+      </div>
+
+      {/* 하단 컨트롤 바 */}
+      <div className="absolute bottom-12 flex items-center gap-6 z-40">
+        <Button 
+          onClick={toggleMic} 
+          variant="outline" 
+          size="icon" 
+          disabled={!hasPermissions}
+          className={`w-14 h-14 rounded-full border-none ${isMicOn ? 'bg-white/10 hover:bg-white/20' : 'bg-red-500 hover:bg-red-600'} text-white backdrop-blur-md`}
+        >
+          {isMicOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+        </Button>
+
+        <Button 
+          onClick={handleEndCall} 
+          variant="destructive" 
+          size="icon" 
+          className="w-16 h-16 rounded-full shadow-lg shadow-red-500/40"
+        >
+          <PhoneOff className="w-8 h-8 fill-current" />
+        </Button>
+
+        <Button 
+          onClick={toggleCamera} 
+          variant="outline" 
+          size="icon" 
+          disabled={!hasPermissions}
+          className={`w-14 h-14 rounded-full border-none ${isCameraOn ? 'bg-white/10 hover:bg-white/20' : 'bg-red-500 hover:bg-red-600'} text-white backdrop-blur-md`}
+        >
+          {isCameraOn ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+        </Button>
       </div>
     </div>
   );

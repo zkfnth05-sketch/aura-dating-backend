@@ -348,33 +348,14 @@ export default function ChatPage() {
   const handleMicRelease = () => stopRecording();
 
   const handleInitiateCall = () => {
-    console.log("통화 버튼 눌림!");
-
-    if(!currentUser || !firestore || !otherUser) {
-        console.log("조건 미달:", { currentUser: !!currentUser, firestore: !!firestore, otherUser: !!otherUser });
-        return;
-    }
-
-    if (!matchRef) {
-        console.log("matchRef가 없습니다.");
-        return;
-    }
-
-    console.log("DB 업데이트 시도 중...");
+    if(!currentUser || !firestore || !otherUser || !matchRef) return;
     const callData = { callStatus: 'ringing' as const, callerId: currentUser.id };
-    
-    updateDoc(matchRef, callData)
-        .then(() => console.log("DB 업데이트 완료!"))
-        .catch((err) => console.error("DB 업데이트 실패 에러:", err));
+    updateDoc(matchRef, callData).catch((err) => console.error("DB 업데이트 실패 에러:", err));
   };
 
-
   const handleEndCall = () => {
-      if (!matchRef) return;
-      const endCallData = { callStatus: 'idle' as const, callerId: null };
-      updateDoc(matchRef, endCallData).catch(e => {
-          if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: endCallData }));
-      });
+      // The cleanup logic is now inside the VideoChat component, 
+      // but we still need to set the local state.
       setIsCallActive(false);
   }
 
