@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -17,8 +17,10 @@ export function IncomingCallToast() {
   const router = useRouter();
   const { t } = useLanguage();
 
+  const knownRingingIds = useRef<Set<string>>(new Set());
+  const isInitialLoad = useRef(true);
+
   const activeMatchesQuery = useMemoFirebase(() => {
-    // Ensure currentUser and its id are available before creating the query
     if (!currentUser?.id || !firestore) {
       return null;
     }
@@ -31,59 +33,102 @@ export function IncomingCallToast() {
 
   const { data: ringingMatches } = useCollection<Match>(activeMatchesQuery);
 
-  useEffect(() => {
-    if (ringingMatches && ringingMatches.length > 0 && firestore) {
-      const incomingCall = ringingMatches[0]; // Handle first incoming call
-      if (incomingCall.callerId !== currentUser?.id) {
-        
-        const showCallToast = async () => {
-          if (!incomingCall.callerId) return;
+  const showCallToast = useCallback(async (incomingCall: Match) => {
+    if (!firestore || !incomingCall.callerId) return;
 
-          const callerRef = doc(firestore, 'users', incomingCall.callerId);
-          const callerSnap = await getDoc(callerRef);
-          if (!callerSnap.exists()) return;
+    try {
+      const callerRef = doc(firestore, 'users', incomingCall.callerId);
+      const callerSnap = await getDoc(callerRef);
+      if (!callerSnap.exists()) return;
 
-          const caller = callerSnap.data() as User;
+      const caller = callerSnap.data() as User;
 
-          const { id: toastId } = toast({
-              duration: Infinity, // Keep toast open until user interacts
-              title: t('incoming_call_title'),
-              description: (
-                <div className="flex items-center gap-3 mt-2">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={caller.photoUrls?.[0]} alt={caller.name} />
-                    <AvatarFallback>{caller.name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span>{t('incoming_call_desc').replace('%s', caller.name)}</span>
-                </div>
-              ),
-              action: (
-                <div className="flex gap-2 mt-4">
-                  <Button variant="destructive" size="sm" onClick={async () => {
-                      const matchRef = doc(firestore, 'matches', incomingCall.id);
-                      await updateDoc(matchRef, { callStatus: 'idle', callerId: null });
-                      dismiss(toastId);
-                  }}>
-                    {t('reject_call')}
-                  </Button>
-                  <Button variant="default" size="sm" onClick={async () => {
-                      const matchRef = doc(firestore, 'matches', incomingCall.id);
-                      await updateDoc(matchRef, { callStatus: 'active' });
-                      dismiss(toastId);
-                      router.push(`/chat/${incomingCall.id}`);
-                  }}>
-                    {t('accept_call')}
-                  </Button>
-                </div>
-              ),
+      const notificationTitle = t('incoming_call_title');
+      const notificationBody = t('incoming_call_desc').replace('%s', caller.name);
+      
+      // If tab is in background, use system notification
+      if (document.hidden && Notification.permission === 'granted') {
+          const notification = new Notification(notificationTitle, {
+              body: notificationBody,
+              icon: caller.photoUrls?.[0] || '/icon.svg',
+              tag: `call-${incomingCall.id}`, // Tag to prevent multiple notifications for same call
           });
-        };
-
-        showCallToast();
+          
+          notification.onclick = () => {
+              window.focus();
+              const matchRef = doc(firestore, 'matches', incomingCall.id);
+              updateDoc(matchRef, { callStatus: 'active' });
+              router.push(`/chat/${incomingCall.id}`);
+          };
       }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ringingMatches, currentUser, firestore, router, toast, dismiss, t]);
+      
+      // Always show an in-app toast
+      const { id: toastId } = toast({
+          duration: 20000, // Ringing duration
+          title: notificationTitle,
+          description: (
+            <div className="flex items-center gap-3 mt-2">
+              <Avatar className="h-10 w-10"><AvatarImage src={caller.photoUrls?.[0]} alt={caller.name} /><AvatarFallback>{caller.name?.charAt(0)}</AvatarFallback></Avatar>
+              <span>{notificationBody}</span>
+            </div>
+          ),
+          action: (
+            <div className="flex gap-2 mt-4">
+              <Button variant="destructive" size="sm" onClick={async () => {
+                  const matchRef = doc(firestore, 'matches', incomingCall.id);
+                  await updateDoc(matchRef, { callStatus: 'idle', callerId: null });
+                  dismiss(toastId);
+              }}>
+                {t('reject_call')}
+              </Button>
+              <Button variant="default" size="sm" onClick={async () => {
+                  const matchRef = doc(firestore, 'matches', incomingCall.id);
+                  await updateDoc(matchRef, { callStatus: 'active' });
+                  dismiss(toastId);
+                  router.push(`/chat/${incomingCall.id}`);
+              }}>
+                {t('accept_call')}
+              </Button>
+            </div>
+          ),
+      });
+      
 
-  return null; // This component does not render anything itself
+    } catch (error) {
+        console.error("Failed to fetch caller's profile for toast:", error);
+    }
+  }, [firestore, toast, dismiss, router, t]);
+
+  useEffect(() => {
+    if (!ringingMatches || !currentUser) {
+      return;
+    }
+
+    if (isInitialLoad.current) {
+      ringingMatches.forEach(match => {
+        if (match.callerId !== currentUser.id) {
+          knownRingingIds.current.add(match.id);
+        }
+      });
+      isInitialLoad.current = false;
+      return;
+    }
+
+    ringingMatches.forEach(incomingCall => {
+      if (incomingCall.callerId !== currentUser.id && !knownRingingIds.current.has(incomingCall.id)) {
+        showCallToast(incomingCall);
+        knownRingingIds.current.add(incomingCall.id);
+      }
+    });
+
+    const currentRingingIds = new Set(ringingMatches.map(m => m.id));
+    knownRingingIds.current.forEach(id => {
+      if (!currentRingingIds.has(id)) {
+        knownRingingIds.current.delete(id);
+      }
+    });
+    
+  }, [ringingMatches, currentUser, showCallToast]);
+
+  return null;
 }
