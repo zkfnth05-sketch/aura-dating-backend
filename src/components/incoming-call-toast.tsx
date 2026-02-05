@@ -1,7 +1,9 @@
+
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser } from '@/contexts/user-context';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
@@ -9,6 +11,9 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 import type { Match, User } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 export function IncomingCallToast() {
   const { user: currentUser } = useUser();
@@ -57,7 +62,10 @@ export function IncomingCallToast() {
           notification.onclick = () => {
               window.focus();
               const matchRef = doc(firestore, 'matches', incomingCall.id);
-              updateDoc(matchRef, { callStatus: 'active' });
+              const updateData = { callStatus: 'active' as const };
+              updateDoc(matchRef, updateData).catch(e => {
+                 if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: updateData }));
+              });
               router.push(`/chat/${incomingCall.id}`);
           };
       }
@@ -74,16 +82,22 @@ export function IncomingCallToast() {
           ),
           action: (
             <div className="flex gap-2 mt-4">
-              <Button variant="destructive" size="sm" onClick={async () => {
+              <Button variant="destructive" size="sm" onClick={() => {
                   const matchRef = doc(firestore, 'matches', incomingCall.id);
-                  await updateDoc(matchRef, { callStatus: 'idle', callerId: null });
+                  const updateData = { callStatus: 'idle' as const, callerId: null };
+                  updateDoc(matchRef, updateData).catch(e => {
+                     if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: updateData }));
+                  });
                   dismiss(toastId);
               }}>
                 {t('reject_call')}
               </Button>
-              <Button variant="default" size="sm" onClick={async () => {
+              <Button variant="default" size="sm" onClick={() => {
                   const matchRef = doc(firestore, 'matches', incomingCall.id);
-                  await updateDoc(matchRef, { callStatus: 'active' });
+                  const updateData = { callStatus: 'active' as const };
+                  updateDoc(matchRef, updateData).catch(e => {
+                     if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: updateData }));
+                  });
                   dismiss(toastId);
                   router.push(`/chat/${incomingCall.id}`);
               }}>

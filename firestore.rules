@@ -1,3 +1,4 @@
+
 /**
  * This ruleset enforces a strict, user-centric security model for a dating application.
  *
@@ -68,8 +69,8 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       // Allow any signed-in user (like an admin) to create a new user document.
       allow create: if isSignedIn(); 
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
     
     // --------------------------------
@@ -123,5 +124,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

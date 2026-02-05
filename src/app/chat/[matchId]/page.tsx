@@ -133,11 +133,10 @@ export default function ChatPage() {
   }, [reversedMessages]);
 
   useEffect(() => {
-    if (!firestore || !currentUser?.id || !match || !matchRef) return;
-  
-    // Reset unread count
-    const currentUnreadCount = match.unreadCounts?.[currentUser.id] || 0;
-    if (currentUnreadCount > 0) {
+    if (!firestore || !currentUser?.id || !matchRef) return;
+
+    // Reset unread count when user enters chat
+    if (match && match.unreadCounts?.[currentUser.id] > 0) {
       updateDoc(matchRef, { [`unreadCounts.${currentUser.id}`]: 0 }).catch(e => {
         if (e.code === 'permission-denied') {
           const contextualError = new FirestorePermissionError({
@@ -147,22 +146,19 @@ export default function ChatPage() {
         }
       });
     }
-  
-    // Listen for call status changes and update the UI accordingly.
+
+    // Listen for call status changes to show/hide the call UI
     const unsubscribe = onSnapshot(matchRef, (doc) => {
         const data = doc.data() as Match | undefined;
-        // The component should render the video chat only when the call is 'active'.
         if (data?.callStatus === 'active') {
             setIsCallActive(true);
         } else {
-            // If the call status is 'ringing', 'idle', or undefined, ensure the video chat UI is not active.
-            // This fixes the bug where the call screen would not close when the other user hangs up.
+            // This ensures the call screen closes if status is 'idle' or 'ringing'
             setIsCallActive(false);
         }
     });
-  
+
     return () => unsubscribe();
-  
   }, [firestore, match, currentUser?.id, matchRef]);
 
 
@@ -353,18 +349,18 @@ export default function ChatPage() {
   const handleMicRelease = () => stopRecording();
 
   const handleInitiateCall = () => {
-    if(!currentUser || !firestore || !otherUser) return;
-    const callData = { callStatus: 'ringing', callerId: currentUser.id };
-    updateDoc(matchRef!, callData).then(() => {
+    if(!currentUser || !firestore || !otherUser || !matchRef) return;
+    const callData = { callStatus: 'ringing' as const, callerId: currentUser.id };
+    updateDoc(matchRef, callData).then(() => {
       toast({ title: t('chat_connecting'), description: t('chat_connecting_desc').replace('%s', otherUser.name) });
       setTimeout(async () => {
-          const currentMatchSnap = await getDoc(matchRef!);
+          const currentMatchSnap = await getDoc(matchRef);
           if (currentMatchSnap.exists()) {
               const currentMatchData = currentMatchSnap.data() as Match;
               if (currentMatchData.callStatus === 'ringing' && currentMatchData.callerId === currentUser.id) {
-                  const resetData = { callStatus: 'idle', callerId: null };
-                  updateDoc(matchRef!, resetData).catch(e => {
-                      if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef!.path, requestResourceData: resetData }));
+                  const resetData = { callStatus: 'idle' as const, callerId: null };
+                  updateDoc(matchRef, resetData).catch(e => {
+                      if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: resetData }));
                   });
                   toast({ variant: 'destructive', title: t('chat_no_answer_title'), description: t('chat_no_answer_desc').replace('%s', otherUser.name) });
               }
@@ -372,7 +368,7 @@ export default function ChatPage() {
       }, 20000);
     }).catch(error => {
       if (error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef!.path, requestResourceData: callData }));
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: callData }));
       } else {
         toast({ variant: "destructive", title: t('chat_call_failed_title'), description: t('chat_call_failed_desc') });
       }
@@ -380,9 +376,10 @@ export default function ChatPage() {
   }
 
   const handleEndCall = () => {
-      const endCallData = { callStatus: 'idle', callerId: null };
-      updateDoc(matchRef!, endCallData).catch(e => {
-          if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef!.path, requestResourceData: endCallData }));
+      if (!matchRef) return;
+      const endCallData = { callStatus: 'idle' as const, callerId: null };
+      updateDoc(matchRef, endCallData).catch(e => {
+          if (e.code === 'permission-denied') errorEmitter.emit('permission-error', new FirestorePermissionError({ operation: 'update', path: matchRef.path, requestResourceData: endCallData }));
       });
       setIsCallActive(false);
   }
