@@ -73,8 +73,8 @@ export function calculateCompatibility(user1: User, user2: User): { score: numbe
     relationship: 10
   };
 
-  const findCommon = (arr1?: string[], arr2?: string[]) => {
-    if (!arr1 || !arr2) return [];
+  const findCommon = (arr1?: string[] | null, arr2?: string[] | null) => {
+    if (!Array.isArray(arr1) || !Array.isArray(arr2)) return [];
     const set1 = new Set(arr1);
     return arr2.filter(item => set1.has(item));
   };

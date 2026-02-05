@@ -1,8 +1,8 @@
 export const supportedLanguages = [
   { code: 'ko', name: '한국어' },
   { code: 'en', name: 'English' },
-  { code: 'es', name: 'Español' },
   { code: 'ja', name: '日本語' },
+  { code: 'es', name: 'Español' },
 ];
 
 export const defaultLang = 'ko';
@@ -72,6 +72,7 @@ export const translations = {
     'edit_profile_title': '프로필 수정',
     'profile_settings_section': '프로필 설정',
     'profile_location_sharing': '위치 정보 공유',
+    'profile_location_sharing_on_desc': '지도에 내 위치가 표시되고 있어요.',
     'profile_notifications': '푸시 알림 받기',
     'profile_new_match_noti': '새로운 매치 알림',
     'profile_new_message_noti': '새 메시지 알림',
@@ -502,6 +503,7 @@ export const translations = {
     'edit_profile_title': 'Edit Profile',
     'profile_settings_section': 'Profile Settings',
     'profile_location_sharing': 'Share Location Information',
+    'profile_location_sharing_on_desc': 'Your location is being shared on the map.',
     'profile_notifications': 'Receive Push Notifications',
     'profile_new_match_noti': 'New Match Notifications',
     'profile_new_message_noti': 'New Message Notifications',
@@ -659,7 +661,7 @@ export const translations = {
     'date_course_travel_label': 'Directions',
     'date_course_cost_per_person_label': 'Cost',
     'date_course_tip_label': '💖 Tip',
-
+    
     // Chat
     'chat_user_not_found_title': 'User not found.',
     'chat_user_not_found_subtitle': 'This conversation is deleted or does not exist.',
@@ -806,14 +808,13 @@ export const translations = {
     'auth_error_desc': 'Could not find user authentication information.',
     'delete_account_error': 'An error occurred while deleting the account.',
 
-
     // Admin
     'admin_dashboard_title': 'Dashboard',
     'admin_dashboard_subtitle': 'Check daily/monthly new user registration status.',
     'admin_total_users': 'Total Users',
     'admin_total_male_users': 'Total Male Users',
     'admin_total_female_users': 'Total Female Users',
-    'admin_new_users_7_days': 'New Users (Last 7 Days)',
+    'admin_new_users_7_days': 'New Users (Last 7 days)',
     'admin_daily_new_users': 'Daily New Users',
     'admin_monthly_new_users': 'Monthly New Users',
     'admin_daily_trend_desc': 'Daily new user registration trend for the last period.',
@@ -930,6 +931,7 @@ export const translations = {
     'edit_profile_title': 'プロフィール編集',
     'profile_settings_section': 'プロフィール設定',
     'profile_location_sharing': '位置情報の共有',
+    'profile_location_sharing_on_desc': '地図にあなたの位置情報が表示されています。',
     'profile_notifications': 'プッシュ通知を受け取る',
     'profile_new_match_noti': '新しいマッチの通知',
     'profile_new_message_noti': '新しいメッセージの通知',
@@ -1356,6 +1358,7 @@ export const translations = {
     'edit_profile_title': 'Editar Perfil',
     'profile_settings_section': 'Configuración de Perfil',
     'profile_location_sharing': 'Compartir Ubicación',
+    'profile_location_sharing_on_desc': 'Tu ubicación se está compartiendo en el mapa.',
     'profile_notifications': 'Recibir Notificaciones Push',
     'profile_new_match_noti': 'Notificaciones de Nuevos Matches',
     'profile_new_message_noti': 'Notificaciones de Nuevos Mensajes',
