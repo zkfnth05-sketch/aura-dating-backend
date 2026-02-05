@@ -2,21 +2,22 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, doc, getDoc, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import Link from 'next/link';
 import type { Match, User } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
+import { usePathname } from 'next/navigation';
 
 export function NewMatchToast() {
   const { user: currentUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const { t } = useLanguage();
-  
-  const knownMatchIds = useRef<Set<string>>(new Set());
-  const isInitialLoad = useRef(true);
+  const pathname = usePathname();
+
+  const lastSeenMatchTimestamp = useRef<Timestamp | null>(null);
 
   const matchesQuery = useMemoFirebase(() => {
     if (!currentUser?.id || !firestore) {
@@ -24,14 +25,20 @@ export function NewMatchToast() {
     }
     return query(
       collection(firestore, 'matches'),
-      where('users', 'array-contains', currentUser.id)
+      where('users', 'array-contains', currentUser.id),
+      orderBy('matchDate', 'desc'),
+      limit(1)
     );
-  }, [firestore, currentUser]);
+  }, [firestore, currentUser?.id]);
 
-  const { data: matches } = useCollection<Match>(matchesQuery);
+  const { data: recentMatches } = useCollection<Match>(matchesQuery);
 
   const showMatchToast = useCallback(async (match: Match) => {
     if (!currentUser || !firestore) return;
+    
+    // Don't show toast if user is already on the chat page for this match
+    if (pathname === `/chat/${match.id}`) return;
+
     const otherUserId = match.users.find(id => id !== currentUser.id);
     if (!otherUserId) return;
 
@@ -60,27 +67,26 @@ export function NewMatchToast() {
     } catch (e) {
         console.error("Failed to show match toast", e);
     }
-  }, [currentUser, firestore, toast, t]);
+  }, [currentUser, firestore, toast, t, pathname]);
 
   useEffect(() => {
-    if (!matches || !currentUser) {
-      return;
-    }
-
-    if (isInitialLoad.current) {
-      matches.forEach(match => knownMatchIds.current.add(match.id));
-      isInitialLoad.current = false;
-      return;
-    }
-
-    matches.forEach(match => {
-      if (!knownMatchIds.current.has(match.id)) {
-        showMatchToast(match);
-        knownMatchIds.current.add(match.id);
+    if (recentMatches && recentMatches.length > 0) {
+      const latestMatch = recentMatches[0];
+      
+      // On the very first load, set the initial timestamp without showing a toast.
+      if (lastSeenMatchTimestamp.current === null) {
+          if (latestMatch && latestMatch.matchDate) {
+              lastSeenMatchTimestamp.current = latestMatch.matchDate;
+          }
+          return;
       }
-    });
-    
-  }, [matches, currentUser, showMatchToast]);
+      
+      if (latestMatch && latestMatch.matchDate && (lastSeenMatchTimestamp.current.seconds < latestMatch.matchDate.seconds)) {
+        showMatchToast(latestMatch);
+        lastSeenMatchTimestamp.current = latestMatch.matchDate;
+      }
+    }
+  }, [recentMatches, showMatchToast]);
 
   return null;
 }

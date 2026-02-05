@@ -29,7 +29,7 @@ export function IncomingCallToast() {
       where('users', 'array-contains', currentUser.id),
       where('callStatus', '==', 'ringing')
     );
-  }, [firestore, currentUser]);
+  }, [firestore, currentUser?.id]);
 
   const { data: ringingMatches } = useCollection<Match>(activeMatchesQuery);
 
@@ -100,7 +100,7 @@ export function IncomingCallToast() {
   }, [firestore, toast, dismiss, router, t]);
 
   useEffect(() => {
-    if (!ringingMatches || !currentUser) {
+    if (!ringingMatches || !currentUser?.id) {
       return;
     }
 
@@ -128,7 +128,7 @@ export function IncomingCallToast() {
       }
     });
     
-  }, [ringingMatches, currentUser, showCallToast]);
+  }, [ringingMatches, currentUser?.id, showCallToast]);
 
   return null;
 }
