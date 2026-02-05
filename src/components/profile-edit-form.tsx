@@ -272,20 +272,6 @@ export default function ProfileEditForm() {
   return (
     <>
       <main className="container px-4 pb-24">
-        
-        <Section title={t('language_section_title')} description={t('language_section_description')}>
-            <Select value={profile.language} onValueChange={(value: LanguageCode) => handleSingleSelect('language', value)}>
-                <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
-                    <SelectValue placeholder="언어 선택" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 text-white border-zinc-800">
-                    {supportedLanguages.map(lang => (
-                        <SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </Section>
-        
         <Section title="사진 및 동영상">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm">AI 보정</span>
@@ -357,6 +343,19 @@ export default function ProfileEditForm() {
         </Section>
         
         <CameraDialog isOpen={isCameraDialogOpen} onClose={() => setIsCameraDialogOpen(false)} onPhotoTaken={handlePhotoTaken} />
+
+        <Section title={t('language_section_title')} description={t('language_section_description')}>
+            <Select value={profile.language} onValueChange={(value: LanguageCode) => handleSingleSelect('language', value)}>
+                <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
+                    <SelectValue placeholder="언어 선택" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 text-white border-zinc-800">
+                    {supportedLanguages.map(lang => (
+                        <SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </Section>
 
         <Section title="이름">
           <Input 
