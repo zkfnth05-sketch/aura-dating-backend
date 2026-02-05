@@ -36,11 +36,17 @@ const translateChatFlow = ai.defineFlow(
     // Using gemini-2.5-flash as it is fast and cost-effective for simple translation tasks.
     const { output } = await ai.generate({
         model: googleAI.model('gemini-2.5-flash'),
-        prompt: `Translate the following text into ${input.targetLanguage}. Provide only the translated text, without any additional explanations or context.
+        prompt: `You are a translation agent. Your task is to translate the given text into the specified target language.
+Your response MUST be a valid JSON object that conforms to the provided schema, containing only the translated text. Do not include any extra explanations, formatting, or markdown.
+
+Target Language: ${input.targetLanguage}
 Text to translate: "${input.text}"`,
         output: { schema: TranslateChatOutputSchema },
         retries: 2, // Add retries for robustness
     });
+    
+    // If the model fails to produce valid output, it will throw an error which is caught by the Server Action.
+    // We expect the calling function to handle this gracefully.
     return output!;
   }
 );
