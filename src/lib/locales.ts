@@ -1174,7 +1174,7 @@ export const translations = {
     'camera_access_required': 'カメラへのアクセスが必要です',
     'camera_allow_access': 'この機能を使用するには、カメラへのアクセスを許可してください。',
     'push_noti_denied_title': '通知の許可が拒否されました',
-    'push_noti_denied_desc': 'プッシュ通知を受け取るには、設定で有効にしてください。',
+    'push_noti_denied_desc': 'プッシュ通知を受け取るには、ブラウザまたはデバイスの設定で通知権限を有効にしてください。',
     'push_noti_subscribed_title': '通知が設定されました。',
     'push_noti_subscribe_failed_title': '購読失敗',
     'push_noti_subscribe_failed_desc': 'プッシュ通知の購読に失敗しました。もう一度お試しください。',
