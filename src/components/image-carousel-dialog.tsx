@@ -15,6 +15,7 @@ import {
 import Image from 'next/image';
 import type { EmblaCarouselType } from 'embla-carousel-react'
 import { useEffect, useState } from 'react';
+import { useLanguage } from '@/contexts/language-context';
 
 type ImageCarouselDialogProps = {
   isOpen: boolean;
@@ -25,6 +26,7 @@ type ImageCarouselDialogProps = {
 
 export default function ImageCarouselDialog({ isOpen, onClose, images, startIndex = 0 }: ImageCarouselDialogProps) {
   const [api, setApi] = useState<EmblaCarouselType | undefined>()
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!api) {
@@ -39,7 +41,7 @@ export default function ImageCarouselDialog({ isOpen, onClose, images, startInde
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="p-0 border-0 bg-transparent w-full h-full max-w-none sm:rounded-none flex items-center justify-center">
-        <DialogTitle className="sr-only">프로필 이미지 갤러리</DialogTitle>
+        <DialogTitle className="sr-only">{t('gallery_title')}</DialogTitle>
         <div className="relative w-full h-full">
           <Carousel 
             className="w-full h-full"

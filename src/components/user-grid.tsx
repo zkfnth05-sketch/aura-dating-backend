@@ -4,11 +4,13 @@ import type { User } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card } from './ui/card';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function UserGrid({ users }: { users: User[] }) {
+  const { t } = useLanguage();
   
   if (users.length === 0) {
-    return <div className="text-center text-muted-foreground mt-8">목록이 비어있습니다.</div>;
+    return <div className="text-center text-muted-foreground mt-8">{t('no_users_in_list')}</div>;
   }
 
   return (
@@ -32,7 +34,7 @@ export default function UserGrid({ users }: { users: User[] }) {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
-                  <span className="text-muted-foreground">사진 없음</span>
+                  <span className="text-muted-foreground">{t('no_photo')}</span>
                 </div>
               )}
               <div className="absolute bottom-0 left-0 right-0 p-3 text-white [text-shadow:0_2px_4px_rgba(0,0,0,0.7)] bg-gradient-to-t from-black/60 to-transparent">

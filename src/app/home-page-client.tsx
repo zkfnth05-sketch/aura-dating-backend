@@ -1,128 +1,185 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Header from '@/components/layout/header';
 import ActionButtons from '@/components/action-buttons';
 import ProfileCard from '@/components/profile-card';
 import { useUser } from '@/contexts/user-context';
-import type { User } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, addDoc, Query, orderBy, limit, startAfter, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, addDoc, query, where, getDocs, limit, orderBy, startAfter, DocumentData, QueryDocumentSnapshot, Query, documentId, startAt } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { User } from '@/lib/types';
+import { Skeleton } from './ui/skeleton';
+import { useLanguage } from '@/contexts/language-context';
 
-const FETCH_LIMIT = 20;
+
+const PREFETCH_THRESHOLD = 5;
+const FETCH_LIMIT = 20; // Fetch more to account for client-side filtering
+
+const CardSkeleton = () => (
+    <div className="absolute inset-0 w-full h-full">
+        <Skeleton className="w-full h-full rounded-2xl" />
+    </div>
+);
+
+function generateRandomFirestoreId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let autoId = '';
+    for (let i = 0; i < 20; i++) {
+      autoId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return autoId;
+}
+
 
 export default function HomePageClient() {
-  const { user: currentUser, filters, isLoaded, peopleILiked } = useUser();
+  const { 
+    user: currentUser, 
+    isLoaded,
+    matches,
+    peopleILiked,
+    isLikesLoading,
+    filters,
+  } = useUser();
+  const { t } = useLanguage();
+  
   const router = useRouter();
   const firestore = useFirestore();
 
-  const [displayedUsers, setDisplayedUsers] = useState<User[]>([]);
+  const [recommendedUsers, setRecommendedUsers] = useState<User[]>([]);
+  const [isRecommendedUsersLoading, setIsRecommendedUsersLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
-  
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-
   const [swipeState, setSwipeState] = useState<'left' | 'right' | null>(null);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMoreUsers, setHasMoreUsers] = useState(true);
-  
-  const fetchUsers = useCallback(async (lastVisibleDoc: QueryDocumentSnapshot<DocumentData> | null = null) => {
-    if (!isLoaded || !currentUser || !firestore || isLoadingMore) return;
 
-    if (lastVisibleDoc === null) {
-      setIsLoadingUsers(true);
-    } else {
-      setIsLoadingMore(true);
+  const lastVisibleRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const hasMoreRef = useRef(true);
+  const isLoadingMoreRef = useRef(false);
+  const prevFiltersRef = useRef(JSON.stringify(filters));
+
+  const fetchNextRecommendedUsers = useCallback(async (isInitial = false) => {
+    if (!firestore || !currentUser || peopleILiked === null) return;
+    if ((isLoadingMoreRef.current || !hasMoreRef.current) && !isInitial) {
+      return;
     }
-
-    let usersQuery: Query<DocumentData>;
-    const baseUsersRef = collection(firestore, 'users');
     
-    // --- Server-side Filtering ---
-    let queryConstraints: any[] = [orderBy('createdAt', 'desc')];
-    
-    const genderFilter = filters.gender;
-    if (genderFilter.length > 0) {
-        queryConstraints.push(where('gender', 'in', genderFilter));
-    } else {
-        if (currentUser.gender === '남성') {
-            queryConstraints.push(where('gender', '==', '여성'));
-        } else if (currentUser.gender === '여성') {
-            queryConstraints.push(where('gender', '==', '남성'));
-        }
-        // If currentUser.gender is '기타', no default gender filter is applied.
+    isLoadingMoreRef.current = true;
+    if (isInitial) {
+        setIsRecommendedUsersLoading(true);
     }
-    // --- End Server-side Filtering ---
     
-    let baseQuery = query(baseUsersRef, ...queryConstraints);
-
-    // Add pagination
-    if (lastVisibleDoc) {
-      usersQuery = query(baseQuery, startAfter(lastVisibleDoc), limit(FETCH_LIMIT));
-    } else {
-      usersQuery = query(baseQuery, limit(FETCH_LIMIT));
-    }
-
     try {
-        const snapshot = await getDocs(usersQuery);
+        const interactedUserIds = new Set(peopleILiked.map(u => u.id));
+        interactedUserIds.add(currentUser.id);
+
+        let constraints: any[] = [orderBy(documentId())];
+    
+        if (isInitial) {
+            const randomId = generateRandomFirestoreId();
+            constraints.push(startAt(randomId));
+        } else if (lastVisibleRef.current) {
+          constraints.push(startAfter(lastVisibleRef.current));
+        }
+    
+        constraints.push(limit(FETCH_LIMIT));
+    
+        const snapshot = await getDocs(query(collection(firestore, 'users'), ...constraints));
         
-        const applyClientSideFilters = (users: User[]): User[] => {
-            const likedUserIds = new Set((peopleILiked || []).map(u => u.id));
+        let fetchedDocs = snapshot.docs;
 
-            return users.filter(user => {
-                if (user.id === currentUser.id) return false;
-                if (likedUserIds.has(user.id)) return false;
+        // If initial random query yields nothing, we might be at the end.
+        // Wrap around and query from the beginning.
+        if (isInitial && snapshot.empty) {
+            const wrapAroundSnapshot = await getDocs(query(collection(firestore, 'users'), orderBy(documentId()), limit(FETCH_LIMIT)));
+            fetchedDocs = wrapAroundSnapshot.docs;
+        }
+        
+        if (fetchedDocs.length === 0) {
+            hasMoreRef.current = false;
+        } else {
+            lastVisibleRef.current = fetchedDocs[fetchedDocs.length - 1];
+        }
 
-                // Age and Tag filters remain on client-side for simplicity
-                if (user.age < filters.ageRange.min || user.age > filters.ageRange.max) return false;
-                
-                const checkTags = (userTags: string[] = [], filterTags: string[]) => {
-                    if (filterTags.length === 0) return true;
-                    return filterTags.every(tag => userTags.includes(tag));
-                };
+        const genderFilter = filters.gender.length > 0 
+            ? filters.gender 
+            : (currentUser.gender === '남성' ? ['여성'] : ['남성']);
 
-                if (!checkTags(user.relationship, filters.relationship)) return false;
-                if (!checkTags(user.values, filters.values)) return false;
-                if (!checkTags(user.communication, filters.communication)) return false;
-                if (!checkTags(user.lifestyle, filters.lifestyle)) return false;
-                if (!checkTags(user.hobbies, filters.hobbies)) return false;
-                if (!checkTags(user.interests, filters.interests)) return false;
-                
+        const filtered = fetchedDocs
+            .map(d => d.data() as User)
+            .filter(u => {
+                if (!genderFilter.includes(u.gender)) return false; // Client-side gender filter
+                if (interactedUserIds.has(u.id)) return false;
+                if (currentUser.blockedUsers?.includes(u.id)) return false;
+                if (u.blockedUsers?.includes(currentUser.id)) return false;
+                if (u.age < filters.ageRange.min || u.age > filters.ageRange.max) return false;
                 return true;
             });
-        };
 
-        const newUsers = snapshot.docs.map(doc => doc.data() as User);
-        const filteredNewUsers = applyClientSideFilters(newUsers);
-
-        setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
-        setHasMoreUsers(snapshot.docs.length === FETCH_LIMIT);
+        if (filtered.length > 0) {
+            setRecommendedUsers(prev => {
+                if (isInitial) return filtered;
+                const existingIds = new Set(prev.map(u => u.id));
+                const uniqueNewUsers = filtered.filter(u => !existingIds.has(u.id));
+                return [...prev, ...uniqueNewUsers];
+            });
+        }
         
-        setDisplayedUsers(prev => lastVisibleDoc ? [...prev, ...filteredNewUsers] : filteredNewUsers);
-
     } catch (e) {
-        console.error("Error fetching users:", e);
+        console.error("Error fetching recommended users:", e);
     } finally {
-        setIsLoadingUsers(false);
-        setIsLoadingMore(false);
+        isLoadingMoreRef.current = false;
+        if(isInitial) {
+            setIsRecommendedUsersLoading(false);
+        }
     }
-  }, [isLoaded, currentUser, firestore, isLoadingMore, filters, peopleILiked]);
+  }, [currentUser, firestore, peopleILiked, filters]);
+
+  const initializeRecommendations = useCallback(() => {
+    if (!isLoaded || !currentUser || peopleILiked === null) return;
+
+    setIsRecommendedUsersLoading(true);
+    setRecommendedUsers([]);
+    setCurrentIndex(0);
+    lastVisibleRef.current = null;
+    hasMoreRef.current = true;
+    
+    fetchNextRecommendedUsers(true);
+  }, [isLoaded, currentUser, peopleILiked, fetchNextRecommendedUsers]);
 
   useEffect(() => {
-    // Initial fetch
-    if(isLoaded && currentUser) {
-      fetchUsers(null);
+    const currentFiltersJSON = JSON.stringify(filters);
+    if (isLoaded && currentUser && peopleILiked !== null) {
+      if (prevFiltersRef.current !== currentFiltersJSON) {
+        prevFiltersRef.current = currentFiltersJSON;
+        initializeRecommendations();
+      } else if (recommendedUsers.length === 0 && hasMoreRef.current && !isLoadingMoreRef.current) {
+        initializeRecommendations();
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, currentUser, filters]);
+  }, [isLoaded, currentUser, peopleILiked, filters, initializeRecommendations, recommendedUsers.length]);
+
+  useEffect(() => {
+    if (!isRecommendedUsersLoading && hasMoreRef.current && recommendedUsers.length - currentIndex <= PREFETCH_THRESHOLD) {
+      fetchNextRecommendedUsers();
+    }
+  }, [currentIndex, recommendedUsers.length, isRecommendedUsersLoading, fetchNextRecommendedUsers]);
 
 
-  const activeUser = displayedUsers[currentIndex];
+  const visibleCards = useMemo(() => {
+    return recommendedUsers.slice(currentIndex, currentIndex + 2).reverse();
+  }, [recommendedUsers, currentIndex]);
+
+  const activeUser = recommendedUsers[currentIndex];
+
+  const isAlreadyMatched = useMemo(() => {
+    if (!matches || !activeUser) return null;
+    return matches.find(m => m.users.includes(activeUser.id)) || null;
+  }, [matches, activeUser]);
+
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || !activeUser || !firestore || swipeState) return;
@@ -130,6 +187,11 @@ export default function HomePageClient() {
     const targetUserId = activeUser.id;
   
     if (action === 'message') {
+      if (isAlreadyMatched) {
+        router.push(`/chat/${isAlreadyMatched.id}`);
+        return;
+      }
+      
       const matchQuery = query(
         collection(firestore, 'matches'),
         where('users', 'in', [[currentUser.id, targetUserId], [targetUserId, currentUser.id]])
@@ -148,6 +210,7 @@ export default function HomePageClient() {
           matchDate: serverTimestamp(),
           lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
           lastMessageTimestamp: serverTimestamp(),
+          lastMessageSenderId: 'system',
           unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
           callStatus: 'idle' as const,
           callerId: null,
@@ -168,7 +231,7 @@ export default function HomePageClient() {
               });
               errorEmitter.emit('permission-error', contextualError);
             }
-        });
+          });
           router.push(`/chat/${newMatchRef.id}`);
         }).catch(e => {
           if (e.code === 'permission-denied') {
@@ -207,85 +270,75 @@ export default function HomePageClient() {
         });
         errorEmitter.emit('permission-error', contextualError);
       } else {
-        console.error("Failed to record like:", e);
+        console.error("Failed to record action:", e);
       }
     });
 
     setTimeout(() => {
-      if (currentIndex === displayedUsers.length - 1 && hasMoreUsers) {
-        fetchUsers(lastDoc);
-      }
       setCurrentIndex(prev => prev + 1);
       setSwipeState(null);
-    }, 500);
+    }, 400); // Animation time
   };
   
-  if (isLoadingUsers) {
-      return (
-        <div className="flex flex-col h-screen bg-background">
-          <Header />
-          <main className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          </main>
-        </div>
-      );
-  }
+  const isLikedByMe = peopleILiked?.some(u => u.id === activeUser?.id);
   
-  const hasLiked = peopleILiked?.some(u => u.id === activeUser?.id);
+  const isReallyLoading = !isLoaded || isLikesLoading || (isRecommendedUsersLoading && recommendedUsers.length === 0);
+
+  if (isReallyLoading) {
+    return (
+      <div className="flex flex-col h-screen bg-background">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-full bg-background">
       <Header />
-      <main className="flex-1 flex flex-col items-center pt-4">
-        <div className="relative w-full max-w-sm h-[70vh] max-h-[600px] flex items-center justify-center">
-            {(!isLoaded || !currentUser) ? (
-                <div className="text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <main className="relative flex-1 flex items-center justify-center p-4">
+        <div className="relative w-full aspect-[3/4.5] max-w-[400px] perspective-1000">
+          {visibleCards.length > 0 ? (
+            visibleCards.map((user, index) => {
+              const isTop = index === 1;
+              
+              return (
+                <ProfileCard
+                  key={user.id}
+                  currentUser={currentUser!}
+                  potentialMatch={user}
+                  isActive={isTop}
+                  zIndex={isTop ? 50 : 20}
+                  swipeState={isTop ? swipeState : null}
+                  depth={isTop ? 0 : 1}
+                />
+              );
+            })
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card rounded-3xl shadow-sm p-6 text-center border">
+                <h2 className="text-xl font-bold">{t('no_recommendations_title')}</h2>
+                <p className="mt-2 text-sm text-muted-foreground">{t('no_recommendations_subtitle')}</p>
+                <Button onClick={initializeRecommendations} className="mt-4">{t('refresh_button')}</Button>
+            </div>
+          )}
+           {(isRecommendedUsersLoading && visibleCards.length === 0) && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <CardSkeleton />
                 </div>
-            ) : !activeUser ? (
-                <div className="text-center p-8 bg-card rounded-2xl shadow-lg">
-                <h2 className="text-2xl font-bold text-primary">추천 상대가 없어요!</h2>
-                <p className="text-muted-foreground mt-2">필터 조건을 수정하거나 나중에 다시 확인해주세요.</p>
-                <Button onClick={() => fetchUsers()} className="mt-6">
-                    다시 시도
-                </Button>
-                </div>
-            ) : (
-                <>
-                {displayedUsers.map((user, index) => {
-                    if (index < currentIndex) return null;
-                    const isTop = index === currentIndex;
-                    return (
-                        <ProfileCard
-                            key={user.id}
-                            currentUser={currentUser}
-                            potentialMatch={user}
-                            isActive={isTop}
-                            swipeState={isTop ? swipeState : null}
-                            zIndex={displayedUsers.length - index}
-                        />
-                    )
-                })}
-                {(isLoadingMore) && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-2xl z-50">
-                        <Loader2 className="h-12 w-12 animate-spin text-white" />
-                    </div>
-                )}
-                </>
             )}
         </div>
       </main>
 
       {activeUser && (
-        <footer className="fixed bottom-24 left-0 right-0 z-20">
-            <div className="flex justify-center">
-                <ActionButtons 
-                    onDislike={() => handleAction('dislike')}
-                    onMessage={() => handleAction('message')}
-                    onLike={() => handleAction('like')}
-                    showLike={!hasLiked}
-                />
-            </div>
+        <footer className="relative z-30 h-28 flex items-center justify-center pb-6">
+            <ActionButtons 
+                onDislike={() => handleAction('dislike')}
+                onMessage={() => handleAction('message')}
+                onLike={() => handleAction('like')}
+                isLiked={isLikedByMe}
+            />
         </footer>
       )}
     </div>

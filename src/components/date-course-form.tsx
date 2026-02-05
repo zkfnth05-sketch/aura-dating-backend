@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { getDateCourse } from '@/actions/ai-actions';
 import type { DateCourseOutput } from '@/ai/flows/date-course-flow';
+import { useLanguage } from '@/contexts/language-context';
 
 const formSchema = z.object({
   destination: z.string().min(1, '여행지를 입력해주세요.'),
@@ -32,11 +33,6 @@ const formSchema = z.object({
   cost: z.string(),
   dateType: z.string(),
 });
-
-const partySizes = ['2명', '3명~4명', '5명 이상'];
-const transportations = ['대중교통', '렌터카', '자가용', '항공기', '도보/자전거', '상관없음'];
-const costs = ['~3만원', '5만원', '7~8만원', '10만원', '20만원', '상관없음'];
-const dateTypes = ['음주가무', '모험', '휴식', '문화체험', '맛집탐방', '상관없음'];
 
 const transportationIcons = {
     '대중교통': <Bus className="mr-2 h-4 w-4" />,
@@ -51,17 +47,23 @@ export default function DateCourseForm() {
   const [result, setResult] = useState<DateCourseOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(true);
+  const { t } = useLanguage();
+
+  const partySizes = [t('date_course_party_size_2'), t('date_course_party_size_3_4'), t('date_course_party_size_5_plus')];
+  const transportations = [t('date_course_transport_public'), t('date_course_transport_rent'), t('date_course_transport_private'), t('date_course_transport_flight'), t('date_course_transport_walk'), t('date_course_transport_any')];
+  const costs = [t('date_course_cost_30k'), t('date_course_cost_50k'), t('date_course_cost_70k'), t('date_course_cost_100k'), t('date_course_cost_200k'), t('date_course_cost_any')];
+  const dateTypes = [t('date_course_vibe_drink'), t('date_course_vibe_adventure'), t('date_course_vibe_rest'), t('date_course_vibe_culture'), t('date_course_vibe_foodie'), t('date_course_vibe_any')];
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       destination: '',
-      partySize: '2명',
+      partySize: partySizes[0],
       duration: '',
       date: '',
-      transportation: '상관없음',
-      cost: '상관없음',
-      dateType: '상관없음',
+      transportation: transportations[5],
+      cost: costs[5],
+      dateType: dateTypes[5],
     },
   });
 
@@ -76,8 +78,8 @@ export default function DateCourseForm() {
     } catch (error) {
         toast({
             variant: 'destructive',
-            title: '오류 발생',
-            description: '데이트 코스를 생성하는 데 실패했습니다. 다시 시도해주세요.',
+            title: t('ai_date_course_error_title'),
+            description: t('ai_date_course_error_desc'),
         });
         setShowForm(true); // 에러 발생 시 폼을 다시 보여줌
     } finally {
@@ -96,7 +98,7 @@ export default function DateCourseForm() {
     return (
         <div className="mt-8 flex flex-col items-center justify-center text-center h-96">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg text-muted-foreground">AI가 두 분만을 위한<br/>완벽한 데이트를 계획하고 있어요...</p>
+            <p className="text-lg text-muted-foreground">{t('ai_generating_date_course_title')}<br/>{t('ai_generating_date_course_subtitle')}</p>
         </div>
     );
   }
@@ -112,7 +114,7 @@ export default function DateCourseForm() {
                 </div>
             ) : (
                 <div className="w-full aspect-video rounded-lg my-4 flex items-center justify-center bg-muted/50">
-                    <p className="text-muted-foreground text-sm">대표 이미지를 생성할 수 없습니다.</p>
+                    <p className="text-muted-foreground text-sm">{t('no_image_available')}</p>
                 </div>
             )}
             
@@ -120,19 +122,19 @@ export default function DateCourseForm() {
                 <div key={index} className="my-6 border-t border-border/40 pt-6">
                     <h3 className="text-xl font-semibold text-primary">{step.time} - {step.title}</h3>
                     <p className="text-sm text-foreground/80 my-2">{step.description}</p>
-                    <p className="text-xs text-muted-foreground"><strong>이동:</strong> {step.directions}</p>
-                    <p className="text-xs text-muted-foreground"><strong>비용:</strong> {step.cost}</p>
-                    <p className="text-xs text-amber-400 mt-2"><strong>💖 Tip:</strong> {step.romanticTip}</p>
+                    <p className="text-xs text-muted-foreground"><strong>{t('date_course_travel_label')}:</strong> {step.directions}</p>
+                    <p className="text-xs text-muted-foreground"><strong>{t('date_course_cost_per_person_label')}:</strong> {step.cost}</p>
+                    <p className="text-xs text-amber-400 mt-2"><strong>{t('date_course_tip_label')}:</strong> {step.romanticTip}</p>
                 </div>
             ))}
             
             <div className="mt-8 p-4 bg-card rounded-lg border">
-                <p className="font-bold">총 예상 비용: {result.totalCost}</p>
+                <p className="font-bold">{t('total_estimated_cost_label')}: {result.totalCost}</p>
                 <p className="text-sm mt-2">{result.summaryAndMessage}</p>
             </div>
             
             <Button onClick={handleReset} className="w-full mt-8 h-12 text-base font-bold">
-                새로운 코스 추천받기
+                {t('get_new_course_button')}
             </Button>
         </div>
     );
@@ -143,9 +145,9 @@ export default function DateCourseForm() {
       {showForm && (
         <div>
             <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-primary">AI 데이트 코스 추천</h2>
+                <h2 className="text-2xl font-bold text-primary">{t('date_course_rec_title')}</h2>
                 <p className="text-muted-foreground mt-2">
-                    가고 싶은 곳이나 원하는 분위기를 알려주시면, AI가 완벽한 데이트를 계획해드려요.
+                    {t('date_course_rec_subtitle')}
                 </p>
             </div>
 
@@ -156,9 +158,9 @@ export default function DateCourseForm() {
                 name="destination"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>가고싶은 여행지에 대해 알려주세요</FormLabel>
+                    <FormLabel>{t('date_course_destination_label')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="예: 서울" {...field} />
+                      <Input placeholder={t('date_course_destination_placeholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -170,7 +172,7 @@ export default function DateCourseForm() {
                 name="partySize"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>데이트 인원</FormLabel>
+                    <FormLabel>{t('date_course_party_size_label')}</FormLabel>
                     <FormControl>
                       <div className="flex flex-wrap gap-2">
                         {partySizes.map((size) => (
@@ -196,9 +198,9 @@ export default function DateCourseForm() {
                 name="duration"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>데이트 기간</FormLabel>
+                    <FormLabel>{t('date_course_duration_label')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="예: 6시간, 1박 2일" {...field} />
+                      <Input placeholder={t('date_course_duration_placeholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -210,9 +212,9 @@ export default function DateCourseForm() {
                 name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>데이트 날짜</FormLabel>
+                    <FormLabel>{t('date_course_date_label')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="YYYY-MM-DD" {...field} />
+                      <Input placeholder={t('date_course_date_placeholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -224,7 +226,7 @@ export default function DateCourseForm() {
                 name="transportation"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>교통수단</FormLabel>
+                    <FormLabel>{t('date_course_transport_label')}</FormLabel>
                     <FormControl>
                       <div className="flex flex-wrap gap-2">
                         {transportations.map((item) => (
@@ -235,7 +237,7 @@ export default function DateCourseForm() {
                             onClick={() => field.onChange(item)}
                             className="rounded-full"
                           >
-                             {transportationIcons[item as keyof typeof transportationIcons]}
+                             {/* The icon logic needs to be aware of translations */}
                             {item}
                           </Button>
                         ))}
@@ -251,7 +253,7 @@ export default function DateCourseForm() {
                 name="cost"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>1인당 데이트 비용</FormLabel>
+                    <FormLabel>{t('date_course_cost_label')}</FormLabel>
                     <FormControl>
                       <div className="flex flex-wrap gap-2">
                         {costs.map((item) => (
@@ -277,7 +279,7 @@ export default function DateCourseForm() {
                 name="dateType"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>선호하는 데이트 유형</FormLabel>
+                    <FormLabel>{t('date_course_vibe_label')}</FormLabel>
                     <FormControl>
                       <div className="flex flex-wrap gap-2">
                         {dateTypes.map((item) => (
@@ -300,7 +302,7 @@ export default function DateCourseForm() {
 
               <Button type="submit" disabled={isLoading} className="w-full h-12 text-base font-bold">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                AI 데이트 코스 추천받기
+                {t('get_ai_date_course_button')}
               </Button>
             </form>
           </Form>

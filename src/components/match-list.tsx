@@ -7,6 +7,7 @@ import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { useMemo } from 'react';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from './ui/skeleton';
+import { useLanguage } from '@/contexts/language-context';
 
 
 const MatchListItem = ({match}: {match: Match}) => {
@@ -82,6 +83,7 @@ const MatchListItem = ({match}: {match: Match}) => {
 
 
 export default function MatchList({ matches }: { matches: Match[] }) {
+    const { t } = useLanguage();
 
     const sortedMatches = useMemo(() => {
         if (!matches) return [];
@@ -93,7 +95,7 @@ export default function MatchList({ matches }: { matches: Match[] }) {
     }, [matches]);
 
     if (matches.length === 0) {
-        return <div className="text-center text-muted-foreground mt-8">아직 대화 상대가 없습니다.</div>;
+        return <div className="text-center text-muted-foreground mt-8">{t('no_matches')}</div>;
     }
 
   return (

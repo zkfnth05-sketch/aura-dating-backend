@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function Header() {
   const router = useRouter();
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const { t } = useLanguage();
 
   const handlePressStart = () => {
     pressTimer.current = setTimeout(() => {
@@ -32,7 +34,7 @@ export default function Header() {
               className="flex items-center gap-1 font-semibold text-muted-foreground hover:text-primary transition-colors text-sm"
             >
                 <span>✨</span>
-                <span>AI 추천</span>
+                <span>{t('ai_rec_button')}</span>
             </Link>
         </div>
         <div 

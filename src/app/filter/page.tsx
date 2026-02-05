@@ -3,8 +3,10 @@
 import FilterClient from '@/components/filter-client';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function FilterPage() {
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -12,7 +14,7 @@ export default function FilterPage() {
             <Link href="/" className="mr-2 p-2">
                 <ArrowLeft className="h-5 w-5" />
             </Link>
-            <h1 className="text-xl font-bold text-center flex-1">필터</h1>
+            <h1 className="text-xl font-bold text-center flex-1">{t('filter_title')}</h1>
             <div className="w-10"></div>
         </header>
         <FilterClient />

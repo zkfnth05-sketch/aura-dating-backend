@@ -13,6 +13,7 @@ import DateCourseForm from '@/components/date-course-form';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { calculateCompatibility } from '@/lib/utils';
+import { useLanguage } from '@/contexts/language-context';
 
 
 const UserGridSkeleton = () => (
@@ -32,6 +33,7 @@ export default function AiPage() {
   const [isLoading, setIsLoading] = useState(true);
   const firestore = useFirestore();
   const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const { t } = useLanguage();
 
   const loadRecommendations = useCallback(async () => {
       if (!currentUser || !firestore) {
@@ -134,13 +136,13 @@ export default function AiPage() {
               value="ideal-type"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground"
             >
-              AI 추천 이상형찾기
+              {t('ai_rec_ideal_type_tab')}
             </TabsTrigger>
             <TabsTrigger
               value="date-course"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground"
             >
-              AI 추천 데이트 코스
+              {t('ai_rec_date_course_tab')}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="ideal-type" className="mt-6 pb-8">
@@ -151,13 +153,13 @@ export default function AiPage() {
                     <AiPageClient recommendedUsers={recommendedUsers} currentUser={currentUser} />
                     <Button onClick={handleRefresh} className="w-full mt-6">
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        새로운 추천 보기
+                        {t('show_new_recommendations_button')}
                     </Button>
                 </>
             )}
             { !isLoading && recommendedUsers.length === 0 && (
                 <div className="text-center py-10">
-                    <p className="text-muted-foreground">추천할 사용자가 없습니다.</p>
+                    <p className="text-muted-foreground">{t('no_ai_recommendations')}</p>
                 </div>
             )}
           </TabsContent>

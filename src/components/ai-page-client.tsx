@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { calculateCompatibility } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/contexts/language-context';
 
 interface AiPageClientProps {
   recommendedUsers: User[];
@@ -16,6 +17,7 @@ interface AiPageClientProps {
 
 const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: User }) => {
   const { score, commonalities } = calculateCompatibility(currentUser, user);
+  const { t } = useLanguage();
   
   return (
     <Link 
@@ -35,12 +37,12 @@ const RecommendedUserCard = ({ user, currentUser }: { user: User, currentUser: U
 
         <div className="absolute top-2 left-2 right-2 flex items-start justify-between gap-2">
           <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
-            {score}% 일치
+            {t('match_score').replace('%s', score.toString())}
           </Badge>
 
           {commonalities.length > 0 && (
             <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
-              공통점 {commonalities.length}개
+              {t('common_points').replace('%s', commonalities.length.toString())}
             </Badge>
           )}
         </div>

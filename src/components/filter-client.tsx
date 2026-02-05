@@ -8,17 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
-
-const allValues = {
-  relationship: ['진지한 관계', '가벼운 만남', '새로운 친구', '대화 상대'],
-  values: ['모험', '안정', '창의성', '성장', '진정성', '열정', '평온함', '유머'],
-  communication: ['깊은 대화', '유머러스', '진솔함', '따뜻함', '직설적'],
-  lifestyle: ['활동적', '집순이', '예술가', '웰빙', '탐험가', '미니멀리스트'],
-  hobbies: ['영화 감상', '음악 듣기', '운동', '요리', '독서', '여행', '게임', '캠핑', '수채화', '베이킹', '코딩', '피아노 연주', '스쿠버 다이빙', '명상'],
-  interests: ['맛집 탐방', '카페 투어', '사진 촬영', '패션', '뷰티', '재테크', '자기계발', '그림 그리기', '독서', '등산', '클래식 음악', '요가']
-};
-const genderOptions: ('남성' | '여성' | '기타')[] = ['남성', '여성', '기타'];
-
+import { useLanguage } from '@/contexts/language-context';
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <div className="py-5">
@@ -43,8 +33,20 @@ const TagButton = ({ label, isSelected, onClick }: { label: string, isSelected: 
 export default function FilterClient() {
     const router = useRouter();
     const { filters, updateFilters, resetFilters: resetGlobalFilters, isLoaded, user } = useUser();
+    const { t } = useLanguage();
     
     const [localFilters, setLocalFilters] = useState<FilterSettings | null>(null);
+
+    const allValues = {
+      relationship: [t('relationship_section_title_serious'), t('relationship_section_title_casual'), t('relationship_section_title_friends'), t('relationship_section_title_chat')],
+      values: [t('values_section_title_adventure'), t('values_section_title_stability'), t('values_section_title_creativity'), t('values_section_title_growth'), t('values_section_title_authenticity'), t('values_section_title_passion'), t('values_section_title_calmness'), t('values_section_title_humor')],
+      communication: [t('communication_section_title_deep'), t('communication_section_title_witty'), t('communication_section_title_sincere'), t('communication_section_title_warm'), t('communication_section_title_direct')],
+      lifestyle: [t('lifestyle_section_title_active'), t('lifestyle_section_title_homebody'), t('lifestyle_section_title_artist'), t('lifestyle_section_title_wellness'), t('lifestyle_section_title_explorer'), t('lifestyle_section_title_minimalist')],
+      hobbies: [t('hobbies_section_title_movies'), t('hobbies_section_title_music'), t('hobbies_section_title_exercise'), t('hobbies_section_title_cooking'), t('hobbies_section_title_reading'), t('hobbies_section_title_travel'), t('hobbies_section_title_games'), t('hobbies_section_title_camping'), t('hobbies_section_title_watercolor'), t('hobbies_section_title_baking'), t('hobbies_section_title_coding'), t('hobbies_section_title_piano'), t('hobbies_section_title_scuba'), t('hobbies_section_title_meditation')],
+      interests: [t('interests_section_title_foodie'), t('interests_section_title_cafe'), t('interests_section_title_photo'), t('interests_section_title_fashion'), t('interests_section_title_beauty'), t('interests_section_title_finance'), t('interests_section_title_self_dev'), t('interests_section_title_drawing'), t('interests_section_title_reading'), t('interests_section_title_hiking'), t('interests_section_title_classical'), t('interests_section_title_yoga')]
+    };
+    const genderOptions: ('남성' | '여성' | '기타')[] = ['남성', '여성', '기타'];
+
 
     useEffect(() => {
         if (isLoaded) {
@@ -115,7 +117,7 @@ export default function FilterClient() {
 
     return (
         <main className="container pb-24 px-4">
-            <Section title="나이">
+            <Section title={t('filter_age')}>
                 <div className="flex items-center gap-4">
                     <Input 
                         type="number"
@@ -133,17 +135,17 @@ export default function FilterClient() {
                 </div>
             </Section>
 
-            <Section title="성별">
+            <Section title={t('filter_gender')}>
                 <div className="flex flex-wrap gap-2">
                     <TagButton 
-                        label="전체"
+                        label={t('filter_gender_all')}
                         isSelected={localFilters.gender.length === 0 || localFilters.gender.length === genderOptions.length}
                         onClick={() => setLocalFilters(prev => prev ? {...prev, gender: []} : null)}
                     />
                     {genderOptions.map(gender => (
                         <TagButton 
                             key={gender} 
-                            label={gender}
+                            label={gender === '남성' ? t('gender_male') : gender === '여성' ? t('gender_female') : t('gender_other')}
                             isSelected={localFilters.gender.includes(gender)}
                             onClick={() => handleGenderSelect(gender)}
                         />
@@ -152,14 +154,14 @@ export default function FilterClient() {
             </Section>
             
             {Object.entries({
-                '찾는 관계': 'relationship', 
-                '가치관': 'values', 
-                '소통 스타일': 'communication',
-                '라이프스타일': 'lifestyle',
-                '취미': 'hobbies',
-                '관심사': 'interests'
-            }).map(([title, key]) => (
-                <Section key={key} title={title}>
+                'filter_relationship': 'relationship', 
+                'filter_values': 'values', 
+                'filter_communication': 'communication',
+                'filter_lifestyle': 'lifestyle',
+                'filter_hobbies': 'hobbies',
+                'filter_interests': 'interests'
+            }).map(([titleKey, key]) => (
+                <Section key={key} title={t(titleKey as any)}>
                     <div className="flex flex-wrap gap-2">
                         {allValues[key as keyof typeof allValues].map(item => (
                             <TagButton 
@@ -175,8 +177,8 @@ export default function FilterClient() {
 
              <div className="py-4">
                 <div className="flex w-full gap-2">
-                    <Button variant="secondary" onClick={handleReset} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">초기화</Button>
-                    <Button onClick={handleApply} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">적용하기</Button>
+                    <Button variant="secondary" onClick={handleReset} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">{t('filter_reset')}</Button>
+                    <Button onClick={handleApply} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">{t('filter_apply')}</Button>
                 </div>
             </div>
 

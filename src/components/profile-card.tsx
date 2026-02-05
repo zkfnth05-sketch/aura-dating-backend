@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { calculateCompatibility } from '@/lib/utils';
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/contexts/language-context';
 
 type ProfileCardProps = {
   currentUser: User;
@@ -18,6 +19,7 @@ type ProfileCardProps = {
 
 const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex, depth }: ProfileCardProps) => {
   const router = useRouter();
+  const { t } = useLanguage();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
   
   const cardStyle: React.CSSProperties = {
@@ -80,19 +82,19 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
                 />
             ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
-                    <span className="text-muted-foreground">No Photo</span>
+                    <span className="text-muted-foreground">{t('no_photo')}</span>
                 </div>
             )}
         </div>
         
         <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
             <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
-                {score}% 일치
+                {t('match_score').replace('%s', score.toString())}
             </Badge>
 
             {commonalities.length > 0 && (
                 <Badge className="bg-primary/90 text-primary-foreground text-xs py-1">
-                    공통점 {commonalities.length}개
+                    {t('common_points').replace('%s', commonalities.length.toString())}
                 </Badge>
             )}
         </div>

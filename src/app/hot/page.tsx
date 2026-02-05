@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/contexts/language-context';
 
 const UserCard = React.memo(({ user }: { user: User }) => {
   // Defensive check for photoUrls
@@ -54,6 +55,7 @@ const UserGridSkeleton = () => (
 export default function HotPage() {
   const { user: currentUser, isLoaded } = useUser();
   const firestore = useFirestore();
+  const { t } = useLanguage();
 
   const [newUsers, setNewUsers] = useState<User[]>([]);
   const [hotUsers, setHotUsers] = useState<User[]>([]);
@@ -135,13 +137,13 @@ export default function HotPage() {
               value="new" 
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground text-sm font-bold"
             >
-              NEW 회원
+              {t('new_users_tab')}
             </TabsTrigger>
             <TabsTrigger 
               value="hot"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground text-sm font-bold"
             >
-              HOT 회원
+              {t('hot_nav')}
             </TabsTrigger>
           </TabsList>
           

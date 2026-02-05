@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Search, Map, MessageSquare, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser } from '@/contexts/user-context';
+import { useLanguage } from '@/contexts/language-context';
 
 const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg 
@@ -27,17 +28,18 @@ const HotIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-const navItems = [
-  { href: '/', label: '탐색', icon: Search },
-  { href: '/map', label: '지도', icon: Map },
-  { href: '/hot', label: 'HOT 회원', icon: HotIcon },
-  { href: '/matches', label: '연결', icon: MessageSquare },
-  { href: '/profile', label: '내프로필', icon: User },
-];
-
 export default function BottomNav() {
   const pathname = usePathname();
   const { totalUnreadCount } = useUser();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { href: '/', label: t('explore_nav'), icon: Search },
+    { href: '/map', label: t('map_nav'), icon: Map },
+    { href: '/hot', label: t('hot_nav'), icon: HotIcon },
+    { href: '/matches', label: t('matches_nav'), icon: MessageSquare },
+    { href: '/profile', label: t('profile_nav'), icon: User },
+  ];
 
   const translucentPages = ['/', '/map', '/hot', '/matches'];
   const isTranslucent = translucentPages.includes(pathname);

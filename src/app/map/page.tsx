@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import type { User } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
 
 
 export default function MapPage() {
@@ -17,6 +18,7 @@ export default function MapPage() {
   const { user: currentUser, isLoaded: isUserLoaded } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { t } = useLanguage();
   const [mapUsers, setMapUsers] = useState<User[]>([]);
   const [isFetchingUsers, setIsFetchingUsers] = useState(true);
   const [center, setCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // Default to Seoul
@@ -96,9 +98,9 @@ export default function MapPage() {
       <div className="flex flex-col flex-1 h-full">
         <Header />
         <main className="container py-8 text-center">
-          <h1 className="text-2xl font-bold text-destructive">Google Maps API 키가 필요합니다.</h1>
+          <h1 className="text-2xl font-bold text-destructive">{t('no_map_api_key_title')}</h1>
           <p className="mt-4 text-muted-foreground">
-            지도 기능을 사용하려면, Google Cloud Platform에서 Google Maps API 키를 발급받아 프로젝트 루트의 <code className="bg-muted px-1 py-0.5 rounded-sm">.env</code> 파일에 추가해야 합니다.
+            {t('no_map_api_key_subtitle')}
           </p>
           <pre className="mt-4 p-4 bg-card rounded-lg text-left overflow-x-auto">
             <code>
@@ -106,7 +108,7 @@ export default function MapPage() {
             </code>
           </pre>
            <p className="mt-4 text-muted-foreground">
-            API 키를 추가한 후 개발 서버를 재시작해주세요.
+            {t('no_map_api_key_restart')}
           </p>
         </main>
       </div>

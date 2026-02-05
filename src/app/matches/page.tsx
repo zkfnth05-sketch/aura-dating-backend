@@ -7,9 +7,11 @@ import UserGrid from '@/components/user-grid';
 import { useUser } from '@/contexts/user-context';
 import { Loader2 } from 'lucide-react';
 import type { User } from '@/lib/types';
+import { useLanguage } from '@/contexts/language-context';
 
 export default function MatchesPage() {
   const { user: currentUser, isLoaded, matches, isMatchesLoading, peopleILiked, peopleWhoLikedMe, isLikesLoading } = useUser();
+  const { t } = useLanguage();
 
   const isLoading = !isLoaded || isMatchesLoading || isLikesLoading;
 
@@ -46,19 +48,19 @@ export default function MatchesPage() {
               value="chats"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground text-sm font-bold"
             >
-              대화
+              {t('chats_tab')}
             </TabsTrigger>
             <TabsTrigger
               value="liked-me"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground text-sm font-bold"
             >
-              나를 좋아요 한 사람
+              {t('liked_me_tab')}
             </TabsTrigger>
             <TabsTrigger
               value="i-liked"
               className="rounded-none data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary bg-transparent text-muted-foreground text-sm font-bold"
             >
-              내가 좋아요 한 사람
+              {t('i_liked_tab')}
             </TabsTrigger>
           </TabsList>
           
