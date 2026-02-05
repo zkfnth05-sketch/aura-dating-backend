@@ -15,6 +15,12 @@ const configuration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    // 무료 테스트용 TURN 서버 (실제 서비스 시에는 개인 서버나 유료 서비스 권장)
+    {
+      urls: 'turn:relay.metered.ca:80',
+      username: 'metered',
+      credential: 'password'
+    }
   ],
 };
 
@@ -27,8 +33,8 @@ interface VideoChatProps {
 
 export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }: VideoChatProps) {
   const { toast } = useToast();
-  const { t } = useLanguage();
   const firestore = useFirestore();
+  const { t } = useLanguage();
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
