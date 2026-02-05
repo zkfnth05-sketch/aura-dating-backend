@@ -17,7 +17,7 @@ export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = 
         onClick={onDislike} 
         variant="ghost" 
         size="icon" 
-        className="w-20 h-20 rounded-full bg-neutral-800/90 backdrop-blur-sm text-neutral-300 hover:bg-neutral-700"
+        className="w-20 h-20 rounded-full bg-button-bg text-button-dislike hover:bg-neutral-700"
       >
         <X className="w-10 h-10" />
       </Button>
@@ -27,7 +27,7 @@ export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = 
         onClick={onMessage} 
         variant="ghost" 
         size="icon" 
-        className="w-16 h-16 rounded-full bg-neutral-800/90 backdrop-blur-sm text-blue-400 hover:bg-neutral-700"
+        className="w-16 h-16 rounded-full bg-button-bg text-blue-400 hover:bg-neutral-700"
       >
         <MessageCircle className="w-8 h-8" />
       </Button>
@@ -38,7 +38,7 @@ export default function ActionButtons({ onDislike, onMessage, onLike, isLiked = 
         variant="ghost" 
         size="icon" 
         className={cn(
-            "w-20 h-20 rounded-full bg-neutral-800/90 backdrop-blur-sm text-rose-500 hover:bg-neutral-700",
+            "w-20 h-20 rounded-full bg-button-bg text-button-like hover:bg-neutral-700",
             isLiked && "cursor-not-allowed opacity-70"
         )}
         disabled={isLiked}
