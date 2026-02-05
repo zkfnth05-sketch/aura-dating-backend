@@ -31,7 +31,33 @@ const PhoneIcon = () => (
 const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
   switch (code) {
     case 'ko':
-      return <svg viewBox="0 0 36 24" {...props}><path fill="#fff" d="M0 0h36v24H0z"/><circle cx="18" cy="12" r="6" fill="#CD2E3A"/><path d="M18 12a6 6 0 0 1 0-12A6 6 0 0 0 18 12Z" fill="#0047A0"/><g fill="#000"><path d="M6 5h2v2H6zM6 8h2v2H6zM6 11h2v2H6z"/><path d="M10 5h2v2h-2zm2 3h2v2h-2zm-2 3h2v2h-2z"/><path d="M24 11h2v2h-2zm2-3h2v2h-2zm-2-3h2v2h-2z"/><path d="M30 11h2v2h-2zM28 8h2v2h-2zM30 5h2v2h-2z"/></g></svg>;
+      return <svg viewBox="0 0 900 600" {...props}>
+        <rect width="900" height="600" fill="#fff"/>
+        <g transform="translate(450,300)">
+        <circle r="150" fill="#cd2e3a"/>
+        <path d="M0-150a150 150 0 0 0 0 300 75 75 0 0 1 0-150 75 75 0 0 1 0 150" fill="#0047a0"/>
+        </g>
+        <g fill="#000" transform="translate(193.2,143.2) rotate(33.69)">
+        <path d="M-75-25h150v16.7h-150z"/>
+        <path d="M-75-8.3h150v16.7h-150z"/>
+        <path d="M-75 8.3h150v16.7h-150z"/>
+        </g>
+        <g fill="#000" transform="translate(706.8,456.8) rotate(33.69)">
+        <path d="M-75-25h50v16.7h-50zM25-25h50v16.7h-50z"/>
+        <path d="M-75-8.3h50v16.7h-50zM25-8.3h50v16.7h-50z"/>
+        <path d="M-75 8.3h50v16.7h-50zM25 8.3h50v16.7h-50z"/>
+        </g>
+        <g fill="#000" transform="translate(706.8,143.2) rotate(-33.69)">
+        <path d="M-75-25h50v16.7h-50zM25-25h50v16.7h-50z"/>
+        <path d="M-75-8.3h150v16.7h-150z"/>
+        <path d="M-75 8.3h50v16.7h-50zM25 8.3h50v16.7h-50z"/>
+        </g>
+        <g fill="#000" transform="translate(193.2,456.8) rotate(-33.69)">
+        <path d="M-75-25h150v16.7h-150z"/>
+        <path d="M-75-8.3h50v16.7h-50zM25-8.3h50v16.7h-50z"/>
+        <path d="M-75 8.3h150v16.7h-150z"/>
+        </g>
+      </svg>;
     case 'en':
       return <svg viewBox="0 0 38 20" {...props}><path fill="#B22234" d="m0,0H38V20H0"/><path stroke="#fff" strokeWidth="2" d="m0,2H38m0,4H0m0,4H38m0,4H0"/><path fill="#3C3B6E" d="m0,0H18V10H0"/></svg>;
     case 'es':
