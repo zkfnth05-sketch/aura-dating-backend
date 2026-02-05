@@ -12,6 +12,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/language-context';
 import { cn } from '@/lib/utils';
+import React from 'react';
 
 // Phone icon
 const PhoneIcon = () => (
@@ -27,6 +28,21 @@ const PhoneIcon = () => (
     </svg>
 );
 
+const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
+  switch (code) {
+    case 'ko':
+      return <svg viewBox="0 0 36 24" {...props}><path fill="#fff" d="M0 0h36v24H0z"/><circle cx="18" cy="12" r="6" fill="#CD2E3A"/><path d="M18 12a6 6 0 0 1 0-12A6 6 0 0 0 18 12Z" fill="#0047A0"/><g fill="#000"><path d="M6 5h2v2H6zM6 8h2v2H6zM6 11h2v2H6z"/><path d="M10 5h2v2h-2zm2 3h2v2h-2zm-2 3h2v2h-2z"/><path d="M24 11h2v2h-2zm2-3h2v2h-2zm-2-3h2v2h-2z"/><path d="M30 11h2v2h-2zM28 8h2v2h-2zM30 5h2v2h-2z"/></g></svg>;
+    case 'en':
+      return <svg viewBox="0 0 38 20" {...props}><path fill="#B22234" d="m0,0H38V20H0"/><path stroke="#fff" strokeWidth="2" d="m0,2H38m0,4H0m0,4H38m0,4H0"/><path fill="#3C3B6E" d="m0,0H18V10H0"/></svg>;
+    case 'es':
+      return <svg viewBox="0 0 30 20" {...props}><path fill="#C60B1E" d="M0 0h30v20H0z"/><path fill="#FFC400" d="M0 5h30v10H0z"/></svg>;
+    case 'ja':
+      return <svg viewBox="0 0 30 20" {...props}><path fill="#fff" d="M0 0h30v20H0z"/><circle cx="15" cy="10" r="6" fill="#BC002D"/></svg>;
+    default:
+      return null;
+  }
+};
+
 
 export default function SignupPage() {
   const router = useRouter();
@@ -38,7 +54,7 @@ export default function SignupPage() {
         <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
             {supportedLanguages.map(lang => (
                 <Button key={lang.code} variant="ghost" size="sm" onClick={() => setLanguage(lang.code as any)} className={cn("gap-2", language === lang.code && "bg-primary text-primary-foreground hover:bg-primary/90")}>
-                    <span>{lang.flag}</span>
+                    <FlagIcon code={lang.code} className="w-5 h-auto rounded-sm" />
                     <span>{lang.name}</span>
                 </Button>
             ))}

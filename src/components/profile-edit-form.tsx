@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
 import { useLanguage } from '@/contexts/language-context';
@@ -31,6 +31,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import ReauthDialog from './reauth-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
+  switch (code) {
+    case 'ko':
+      return <svg viewBox="0 0 36 24" {...props}><path fill="#fff" d="M0 0h36v24H0z"/><circle cx="18" cy="12" r="6" fill="#CD2E3A"/><path d="M18 12a6 6 0 0 1 0-12A6 6 0 0 0 18 12Z" fill="#0047A0"/><g fill="#000"><path d="M6 5h2v2H6zM6 8h2v2H6zM6 11h2v2H6z"/><path d="M10 5h2v2h-2zm2 3h2v2h-2zm-2 3h2v2h-2z"/><path d="M24 11h2v2h-2zm2-3h2v2h-2zm-2-3h2v2h-2z"/><path d="M30 11h2v2h-2zM28 8h2v2h-2zM30 5h2v2h-2z"/></g></svg>;
+    case 'en':
+      return <svg viewBox="0 0 38 20" {...props}><path fill="#B22234" d="m0,0H38V20H0"/><path stroke="#fff" strokeWidth="2" d="m0,2H38m0,4H0m0,4H38m0,4H0"/><path fill="#3C3B6E" d="m0,0H18V10H0"/></svg>;
+    case 'es':
+      return <svg viewBox="0 0 30 20" {...props}><path fill="#C60B1E" d="M0 0h30v20H0z"/><path fill="#FFC400" d="M0 5h30v10H0z"/></svg>;
+    case 'ja':
+      return <svg viewBox="0 0 30 20" {...props}><path fill="#fff" d="M0 0h30v20H0z"/><circle cx="15" cy="10" r="6" fill="#BC002D"/></svg>;
+    default:
+      return null;
+  }
+};
 
 
 const Section = ({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) => (
@@ -347,20 +362,22 @@ export default function ProfileEditForm() {
         <Section title={t('language_section_title')} description={t('language_section_description')}>
           <Select value={profile.language} onValueChange={(value: LanguageCode) => handleSingleSelect('language', value)}>
             <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
-              {profile.language ? (
-                <div className="flex items-center gap-2">
-                  <span>{supportedLanguages.find(l => l.code === profile.language)?.flag}</span>
-                  <span>{supportedLanguages.find(l => l.code === profile.language)?.name}</span>
-                </div>
-              ) : (
-                <SelectValue placeholder="언어 선택" />
-              )}
+                <SelectValue>
+                  {profile.language ? (
+                    <div className="flex items-center gap-2">
+                      <FlagIcon code={profile.language} className="w-5 h-auto rounded-sm" />
+                      <span>{supportedLanguages.find(l => l.code === profile.language)?.name}</span>
+                    </div>
+                  ) : (
+                    "언어 선택"
+                  )}
+                </SelectValue>
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 text-white border-zinc-800">
               {supportedLanguages.map(lang => (
                 <SelectItem key={lang.code} value={lang.code}>
                   <div className="flex items-center gap-2">
-                    <span>{lang.flag}</span>
+                    <FlagIcon code={lang.code} className="w-5 h-auto rounded-sm" />
                     <span>{lang.name}</span>
                   </div>
                 </SelectItem>
