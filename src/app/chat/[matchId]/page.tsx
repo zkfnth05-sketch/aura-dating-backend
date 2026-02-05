@@ -89,15 +89,15 @@ export default function ChatPage() {
   const audioChunksRef = useRef<Blob[]>([]);
 
   const matchRef = useMemoFirebase(() => {
-    if (!matchId || !firestore || !currentUser) return null;
+    if (!matchId || !firestore || !currentUser?.id) return null;
     return doc(firestore, 'matches', matchId);
-  }, [firestore, matchId, currentUser]);
+  }, [firestore, matchId, currentUser?.id]);
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
   const otherUserId = useMemo(() => {
-    if (!match || !currentUser) return null;
+    if (!match || !currentUser?.id) return null;
     return match.users.find(id => id !== currentUser.id);
-  }, [match, currentUser]);
+  }, [match, currentUser?.id]);
 
   const otherUserRef = useMemoFirebase(() => {
     if (!otherUserId || !firestore) return null;
@@ -106,9 +106,9 @@ export default function ChatPage() {
   const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
   
   const messagesColRef = useMemoFirebase(() => {
-    if (!matchId || !firestore || !currentUser) return null;
+    if (!matchId || !firestore || !currentUser?.id) return null;
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
-  }, [firestore, matchId, currentUser]);
+  }, [firestore, matchId, currentUser?.id]);
   
   const messagesQuery = useMemoFirebase(() => {
     if (!messagesColRef) return null;
