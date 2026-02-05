@@ -46,7 +46,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback((key: TranslationKeys): string => {
-    return translations[language][key] || translations[defaultLang][key] || key;
+    const langDict = translations[language] || translations[defaultLang];
+    return langDict[key] || key;
   }, [language]);
 
   const value = { language, setLanguage, t, supportedLanguages };
