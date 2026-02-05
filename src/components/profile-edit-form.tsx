@@ -345,16 +345,28 @@ export default function ProfileEditForm() {
         <CameraDialog isOpen={isCameraDialogOpen} onClose={() => setIsCameraDialogOpen(false)} onPhotoTaken={handlePhotoTaken} />
 
         <Section title={t('language_section_title')} description={t('language_section_description')}>
-            <Select value={profile.language} onValueChange={(value: LanguageCode) => handleSingleSelect('language', value)}>
-                <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
-                    <SelectValue placeholder="언어 선택" />
-                </SelectTrigger>
-                <SelectContent className="bg-zinc-900 text-white border-zinc-800">
-                    {supportedLanguages.map(lang => (
-                        <SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+          <Select value={profile.language} onValueChange={(value: LanguageCode) => handleSingleSelect('language', value)}>
+            <SelectTrigger className="w-full bg-zinc-900 border-zinc-800">
+              {profile.language ? (
+                <div className="flex items-center gap-2">
+                  <span>{supportedLanguages.find(l => l.code === profile.language)?.flag}</span>
+                  <span>{supportedLanguages.find(l => l.code === profile.language)?.name}</span>
+                </div>
+              ) : (
+                <SelectValue placeholder="언어 선택" />
+              )}
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 text-white border-zinc-800">
+              {supportedLanguages.map(lang => (
+                <SelectItem key={lang.code} value={lang.code}>
+                  <div className="flex items-center gap-2">
+                    <span>{lang.flag}</span>
+                    <span>{lang.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Section>
 
         <Section title="이름">
