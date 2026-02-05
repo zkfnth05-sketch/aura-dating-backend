@@ -219,13 +219,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
   const myLikesQuery = useMemoFirebase(() => {
     if (!user?.id || !firestore) return null;
-    return query(collection(firestore, 'likes'), where('likerId', '==', user.id));
+    return query(collection(firestore, 'likes'), where('likerId', '==', user.id), where('isLike', '==', true));
   }, [user?.id, firestore]);
   const { data: myLikes, isLoading: isMyLikesLoading } = useCollection<Like>(myLikesQuery);
 
   const likesToMeQuery = useMemoFirebase(() => {
       if (!user?.id || !firestore) return null;
-      return query(collection(firestore, 'likes'), where('likeeId', '==', user.id));
+      return query(collection(firestore, 'likes'), where('likeeId', '==', user.id), where('isLike', '==', true));
   }, [user?.id, firestore]);
   const { data: likesToMe, isLoading: isLikesToMeLoading } = useCollection<Like>(likesToMeQuery);
 
