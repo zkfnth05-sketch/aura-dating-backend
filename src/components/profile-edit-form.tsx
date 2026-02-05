@@ -35,33 +35,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
   switch (code) {
     case 'ko':
-      return <svg viewBox="0 0 900 600" {...props}>
-        <rect width="900" height="600" fill="#fff"/>
-        <g transform="translate(450,300)">
-        <circle r="150" fill="#cd2e3a"/>
-        <path d="M0-150a150 150 0 0 0 0 300 75 75 0 0 1 0-150 75 75 0 0 1 0 150" fill="#0047a0"/>
-        </g>
-        <g fill="#000" transform="translate(193.2,143.2) rotate(33.69)">
-        <path d="M-75-25h150v16.7h-150z"/>
-        <path d="M-75-8.3h150v16.7h-150z"/>
-        <path d="M-75 8.3h150v16.7h-150z"/>
-        </g>
-        <g fill="#000" transform="translate(706.8,456.8) rotate(33.69)">
-        <path d="M-75-25h50v16.7h-50zM25-25h50v16.7h-50z"/>
-        <path d="M-75-8.3h50v16.7h-50zM25-8.3h50v16.7h-50z"/>
-        <path d="M-75 8.3h50v16.7h-50zM25 8.3h50v16.7h-50z"/>
-        </g>
-        <g fill="#000" transform="translate(706.8,143.2) rotate(-33.69)">
-        <path d="M-75-25h50v16.7h-50zM25-25h50v16.7h-50z"/>
-        <path d="M-75-8.3h150v16.7h-150z"/>
-        <path d="M-75 8.3h50v16.7h-50zM25 8.3h50v16.7h-50z"/>
-        </g>
-        <g fill="#000" transform="translate(193.2,456.8) rotate(-33.69)">
-        <path d="M-75-25h150v16.7h-150z"/>
-        <path d="M-75-8.3h50v16.7h-50zM25-8.3h50v16.7h-50z"/>
-        <path d="M-75 8.3h150v16.7h-150z"/>
-        </g>
-      </svg>;
+      return <svg viewBox="0 0 900 600" {...props}><path fill="#fff" d="M0 0h900v600H0z"/><g transform="translate(450 300)"><circle r="150" fill="#cd2e3a"/><path d="M-150 0a150 150 0 10300 0 75 75 0 11-150 0z" fill="#0047a0"/></g><g fill="#000"><g transform="translate(193.2 143.2)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g><g transform="translate(193.2 456.8)rotate(-33.69)"><path d="M-75-25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150z"/></g><g transform="translate(706.8 143.2)rotate(-33.69)"><path d="M-75-25h150v16.7h-150zm0 25h50v16.7h-50zm100 0h50v16.7h-50zm-100 25h150v16.7h-150z"/></g><g transform="translate(706.8 456.8)rotate(33.69)"><path d="M-75-25h150v16.7h-150zm0 25h150v16.7h-150zm0 25h150v16.7h-150z"/></g></g></svg>;
     case 'en':
       return <svg viewBox="0 0 38 20" {...props}><path fill="#B22234" d="m0,0H38V20H0"/><path stroke="#fff" strokeWidth="2" d="m0,2H38m0,4H0m0,4H38m0,4H0"/><path fill="#3C3B6E" d="m0,0H18V10H0"/></svg>;
     case 'es':
@@ -313,9 +287,9 @@ export default function ProfileEditForm() {
   return (
     <>
       <main className="container px-4 pb-24">
-        <Section title="사진 및 동영상">
+        <Section title={t('photo_video_section_title')}>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm">AI 보정</span>
+            <span className="text-sm">{t('ai_enhancement')}</span>
             <Switch checked={aiEnhancement} onCheckedChange={setAiEnhancement} />
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -350,19 +324,19 @@ export default function ProfileEditForm() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
                   <DialogHeader>
-                    <DialogTitle>사진 추가</DialogTitle>
+                    <DialogTitle>{t('add_photo')}</DialogTitle>
                     <DialogDescription>
-                      프로필에 사진을 추가하는 방법을 선택하세요.
+                      {t('add_photo_dialog_desc')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <Button variant="outline" onClick={() => { setIsCameraDialogOpen(true); setIsPhotoSourceDialogOpen(false); }}>
                       <Camera className="mr-2 h-4 w-4" />
-                      사진 촬영
+                      {t('take_photo')}
                     </Button>
                     <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                       <ImageIcon className="mr-2 h-4 w-4" />
-                      앨범에서 선택
+                      {t('from_album')}
                     </Button>
                     <input
                       type="file"
@@ -379,7 +353,7 @@ export default function ProfileEditForm() {
           </div>
            <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
             <Video className="mr-2 h-4 w-4" />
-            동영상 추가
+            {t('video_add_button')}
           </Button>
         </Section>
         
@@ -412,14 +386,14 @@ export default function ProfileEditForm() {
           </Select>
         </Section>
 
-        <Section title="이름">
+        <Section title={t('name_section_title')}>
           <Input 
             value={profile.name} 
             onChange={e => setProfile(p => ({...p, name: e.target.value}))}
             className="bg-zinc-900 border-zinc-800" />
         </Section>
 
-        <Section title="나이">
+        <Section title={t('age_section_title')}>
           <Input 
             type="number"
             value={profile.age} 
@@ -427,35 +401,39 @@ export default function ProfileEditForm() {
             className="bg-zinc-900 border-zinc-800" />
         </Section>
         
-        <Section title="성별">
+        <Section title={t('gender_section_title')}>
             <div className="flex space-x-2">
-                {['남성', '여성', '기타'].map(gender => (
+                {[
+                    { label: t('gender_male'), value: '남성' },
+                    { label: t('gender_female'), value: '여성' },
+                    { label: t('gender_other'), value: '기타' }
+                ].map(gender => (
                     <TagButton 
-                        key={gender} 
-                        label={gender}
-                        isSelected={profile.gender === gender} 
-                        onClick={() => handleSingleSelect('gender', gender as '남성' | '여성' | '기타')}
+                        key={gender.value} 
+                        label={gender.label}
+                        isSelected={profile.gender === gender.value} 
+                        onClick={() => handleSingleSelect('gender', gender.value as '남성' | '여성' | '기타')}
                     />
                 ))}
             </div>
         </Section>
         
-        <Section title="도시">
+        <Section title={t('city_section_title')}>
             <Input 
                 value={profile.location} 
                 onChange={e => setProfile(p => ({...p, location: e.target.value}))}
                 className="bg-zinc-900 border-zinc-800" />
         </Section>
 
-        <Section title="소개">
+        <Section title={t('bio_section_title')}>
           <Textarea 
             value={profile.bio} 
             onChange={e => setProfile(p => ({...p, bio: e.target.value}))}
-            placeholder="새로운 연결을 찾고 모험을 시작할 준비가 되었습니다. 제 소개를 편집하여 개성을 표현해보세요!"
+            placeholder={t('bio_placeholder')}
             className="bg-zinc-900 border-zinc-800 h-24" />
         </Section>
         
-        <Section title="찾는 관계">
+        <Section title={t('relationship_section_title')}>
             <div className="flex flex-wrap gap-2">
                 {allValues.relationship.map(item => (
                     <TagButton 
@@ -469,13 +447,13 @@ export default function ProfileEditForm() {
         </Section>
 
         {Object.entries({
-            '가치관': 'values', 
-            '소통 스타일': 'communication',
-            '라이프스타일': 'lifestyle',
-            '취미': 'hobbies',
-            '관심사': 'interests'
-        }).map(([title, key]) => (
-            <Section key={key} title={title} description="여러 개 선택">
+            'values_section_title': 'values', 
+            'communication_section_title': 'communication',
+            'lifestyle_section_title': 'lifestyle',
+            'hobbies_section_title': 'hobbies',
+            'interests_section_title': 'interests'
+        }).map(([titleKey, key]) => (
+            <Section key={key} title={t(titleKey as TranslationKeys)} description={t('multiple_selection_description')}>
                 <div className="flex flex-wrap gap-2">
                     {allValues[key as keyof typeof allValues].map(item => (
                         <TagButton 
@@ -502,19 +480,19 @@ export default function ProfileEditForm() {
         <div className="text-center mt-4">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="link" className="text-xs text-zinc-500">회원 탈퇴</Button>
+                <Button variant="link" className="text-xs text-zinc-500">{t('delete_account_button')}</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>정말로 탈퇴하시겠습니까?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('delete_account_confirm_title')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    이 작업은 되돌릴 수 없습니다. 모든 프로필 정보와 매칭 데이터가 영구적으로 삭제됩니다.
+                    {t('delete_account_confirm_description')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>취소</AlertDialogCancel>
+                  <AlertDialogCancel>{t('cancel_button')}</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDeleteAccount} className={cn(buttonVariants({ variant: "destructive" }))}>
-                    회원 탈퇴
+                    {t('delete_account_button')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
