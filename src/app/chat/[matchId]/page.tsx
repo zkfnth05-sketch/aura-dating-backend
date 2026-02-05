@@ -89,9 +89,9 @@ export default function ChatPage() {
   const audioChunksRef = useRef<Blob[]>([]);
 
   const matchRef = useMemoFirebase(() => {
-    if (!matchId || !firestore) return null;
+    if (!matchId || !firestore || !currentUser) return null;
     return doc(firestore, 'matches', matchId);
-  }, [firestore, matchId]);
+  }, [firestore, matchId, currentUser]);
   const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
 
   const otherUserId = useMemo(() => {
@@ -106,9 +106,9 @@ export default function ChatPage() {
   const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
   
   const messagesColRef = useMemoFirebase(() => {
-    if (!matchId || !firestore) return null;
+    if (!matchId || !firestore || !currentUser) return null;
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
-  }, [firestore, matchId]);
+  }, [firestore, matchId, currentUser]);
   
   const messagesQuery = useMemoFirebase(() => {
     if (!messagesColRef) return null;
