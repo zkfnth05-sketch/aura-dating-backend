@@ -318,12 +318,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setupRecaptcha = useCallback((container: HTMLElement) => {
-    if (auth && !recaptchaVerifier) {
+    if (auth) {
         const { RecaptchaVerifier } = require('firebase/auth');
         const verifier = new RecaptchaVerifier(auth, container, { size: 'invisible' });
         setRecaptchaVerifier(verifier);
       }
-  }, [auth, recaptchaVerifier]);
+  }, [auth]);
 
   const sendVerificationCode = useCallback(async (phoneNumberOverride?: string) => {
     // If override is provided, use it directly (for re-auth). Otherwise, construct from state.
