@@ -191,80 +191,75 @@ export default function ChatPage() {
     }
   }, [otherUser, t, language]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async () => {
     if (newMessage.trim() === '' || !firestore || !currentUser || !otherUser || isSending) return;
-
+  
     const messageToSend = newMessage;
     setIsSending(true);
     setNewMessage(''); // Optimistically clear input
-
+  
     try {
-        // Update user's lastSeen when they send a message
-        updateUser({ lastSeen: new Date().toISOString() });
-
-        const currentUserLang = currentUser.language || 'ko';
-        const otherUserLang = otherUser.language || 'ko';
-        let translations = {};
-
-        if (currentUserLang !== otherUserLang) {
-            try {
-                const result = await getChatTranslation({
-                    text: messageToSend,
-                    targetLanguage: languageMap[otherUserLang] || 'English',
-                });
-                if (result.translatedText) {
-                    translations = { [otherUserLang]: result.translatedText };
-                }
-            } catch (error) {
-                console.error("Chat translation failed, sending without translation:", error);
-                // Proceed without translation, don't show a toast to user
-            }
+      const currentUserLang = currentUser.language || 'ko';
+      const otherUserLang = otherUser.language || 'ko';
+      let translations = {};
+  
+      if (currentUserLang !== otherUserLang) {
+        try {
+          const result = await getChatTranslation({
+            text: messageToSend,
+            targetLanguage: languageMap[otherUserLang] || 'English',
+          });
+          if (result.translatedText) {
+            translations = { [otherUserLang]: result.translatedText };
+          }
+        } catch (error) {
+          console.error("Chat translation failed, sending without translation:", error);
+          // Proceed without translation
         }
-        
-        const batch = writeBatch(firestore);
-
-        const messageRef = doc(messagesColRef!);
-        const messageData: Omit<Message, 'id'> = {
-            senderId: currentUser.id, 
-            text: messageToSend, 
-            timestamp: serverTimestamp(),
-            senderLanguage: currentUserLang,
-            translations: translations,
-        };
-        batch.set(messageRef, messageData);
-
-        const matchUpdateData = {
-            lastMessage: messageToSend, 
-            lastMessageTimestamp: serverTimestamp(),
-            [`unreadCounts.${otherUser.id}`]: increment(1)
-        };
-        batch.update(matchRef!, matchUpdateData);
-
-        await batch.commit();
-
-        setSuggestions([]); // Clear suggestions on successful send
+      }
+  
+      const batch = writeBatch(firestore);
+  
+      const messageRef = doc(messagesColRef!);
+      const messageData: Omit<Message, 'id'> = {
+        senderId: currentUser.id,
+        text: messageToSend,
+        timestamp: serverTimestamp(),
+        senderLanguage: currentUserLang,
+        translations: translations,
+      };
+      batch.set(messageRef, messageData);
+  
+      const matchUpdateData = {
+        lastMessage: messageToSend,
+        lastMessageTimestamp: serverTimestamp(),
+        [`unreadCounts.${otherUser.id}`]: increment(1),
+      };
+      batch.update(matchRef!, matchUpdateData);
+  
+      await batch.commit();
+  
+      setSuggestions([]); // Clear suggestions on successful send
     } catch (error: any) {
-        console.error("Failed to send message:", error);
-        setNewMessage(messageToSend); // Restore message on failure
-        toast({
-            variant: "destructive",
-            title: "메시지 전송 실패",
-            description: "메시지를 보내는 중 오류가 발생했습니다. 다시 시도해주세요."
-        });
-        
-        if (error.code === 'permission-denied') {
-            // Re-creating data for error as original is out of scope
-            const messageDataForError = { senderId: currentUser.id, text: messageToSend };
-            const matchUpdateForError = { lastMessage: messageToSend };
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              operation: 'write', 
-              path: `matches/${matchId}`, 
-              requestResourceData: { message: messageDataForError, matchUpdate: matchUpdateForError },
-            }));
-        }
+      console.error("Failed to send message:", error);
+      setNewMessage(messageToSend); // Restore message on failure
+      toast({
+        variant: "destructive",
+        title: "메시지 전송 실패",
+        description: "메시지를 보내는 중 오류가 발생했습니다. 다시 시도해주세요."
+      });
+  
+      if (error.code === 'permission-denied') {
+        const messageDataForError = { senderId: currentUser.id, text: messageToSend };
+        const matchUpdateForError = { lastMessage: messageToSend };
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          operation: 'write',
+          path: `matches/${matchId}`,
+          requestResourceData: { message: messageDataForError, matchUpdate: matchUpdateForError },
+        }));
+      }
     } finally {
-        setIsSending(false);
+      setIsSending(false);
     }
   };
 
@@ -480,11 +475,22 @@ export default function ChatPage() {
                 )}
             </div>
         )}
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+        <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
           <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}>
             <span className="text-2xl">✨</span>
           </Button>
-          <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={t('chat_input_placeholder')} autoComplete="off" />
+          <Input 
+            value={newMessage} 
+            onChange={(e) => setNewMessage(e.target.value)} 
+            placeholder={t('chat_input_placeholder')} 
+            autoComplete="off" 
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
           {newMessage.trim() ? (
             <Button type="submit" size="icon" disabled={isSending}>
                 {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6 text-primary" />}
@@ -521,5 +527,7 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
 
     
