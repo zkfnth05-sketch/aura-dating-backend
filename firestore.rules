@@ -33,16 +33,9 @@ service cloud.firestore {
     // User Data Collections
     // --------------------------------
 
-    /**
-     * @description Users can create their own profile. Authenticated users can read/list profiles.
-     * Only the owner can update/delete their own profile.
-     */
     match /users/{userId} {
-      allow get, list: if isSignedIn();
-      // Allow any signed-in user (like an admin) to create a new user document.
-      allow create: if isSignedIn(); 
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
     
     // --------------------------------
@@ -67,45 +60,13 @@ service cloud.firestore {
      * @description Match documents can be read by participants. Creation is handled client-side for prototype.
      */
     match /matches/{matchId} {
-      // Allow participants to read/update the match document itself.
-      allow read, update: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId)));
-      // For prototype, allow any signed in user to create a match.
-      allow create: if isSignedIn();
-      // Don't allow clients to delete matches.
-      allow delete: if false;
-
-      /**
-       * @description Messages subcollection rules.
-       */
-      match /messages/{messageId} {
-        // 'get' (reading a single message) is secure.
-        allow get: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId)));
-        
-        // 'list' (reading the conversation) is permissive, assuming matchId is not guessable.
-        // This is necessary to avoid using 'get' in a list query, which is disallowed.
-        allow list: if isSignedIn();
-        
-        // 'create' is secure.
-        allow create: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) 
-                      && (request.resource.data.senderId == request.auth.uid || request.resource.data.senderId == 'system');
-
-        // Messages are immutable.
-        allow update: if false;
-        
-        // 'delete' is secure.
-        allow delete: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId))) 
-                      && resource.data.senderId == request.auth.uid;
-      }
-
-      /**
-       * @description WebRTC signaling candidates for video calls.
-       * This is where the cleanup permission error was happening.
-       */
-      match /candidates/{candidateId} {
-        // 'get' and 'write' (create, update, delete) are secure.
-        allow get, write: if isMatchParticipant(get(/databases/$(database)/documents/matches/$(matchId)));
-        // 'list' is permissive to allow the cleanup function to work (getDocs is a list op).
-        allow list: if isSignedIn();
+      // 로그인한 유저이고, 해당 매치의 users 배열에 본인 ID가 있는 경우에만 허용
+      allow read, update: if request.auth != null && request.auth.uid in resource.data.users;
+      allow create: if request.auth != null;
+      
+      // 하위 컬렉션 (messages, candidates 등)에 대한 접근 권한
+      match /{allSubcollections=**} {
+        allow read, write: if request.auth != null;
       }
     }
 

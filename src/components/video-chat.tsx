@@ -47,11 +47,12 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
   const [isConnecting, setIsConnecting] = useState(true);
 
   const cleanupCallData = useCallback(async () => {
-      if (!firestore) return;
-      const matchRef = doc(firestore, 'matches', matchId);
-      const candidatesCol = collection(matchRef, 'candidates');
-  
+      if (!firestore || !matchId) return;
+      
       try {
+        const matchRef = doc(firestore, 'matches', matchId);
+        const candidatesCol = collection(matchRef, 'candidates');
+    
         const candidatesSnap = await getDocs(candidatesCol);
         if(!candidatesSnap.empty) {
             const batch = writeBatch(firestore);
@@ -59,7 +60,6 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
             await batch.commit();
         }
       
-        // Check if the document still exists before updating
         const matchDoc = await getDoc(matchRef);
         if (matchDoc.exists()) {
             await updateDoc(matchRef, {
@@ -70,12 +70,12 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
             });
         }
       } catch (error) {
-        console.error("Error cleaning up call data:", error);
+        console.warn("전환 권한 부족 또는 데이터 정리 실패:", error);
       }
   }, [firestore, matchId]);
 
   useEffect(() => {
-    let unsubscribers: (() => void)[] = [];
+    const unsubscribers: (() => void)[] = [];
 
     const initWebRTC = async () => {
       if (!firestore || !matchId) return;
