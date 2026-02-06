@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, deleteDoc, getCountFromServer } from 'firebase/firestore';
 import type { User } from '@/lib/types';
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Image as ImageIcon, ShieldCheck, Users, User as UserIcon, Bot, HeartHandshake, MessagesSquare } from 'lucide-react';
+import { Loader2, Search, Image as ImageIcon, ShieldCheck, Users, User as UserIcon, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -85,6 +86,12 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
               로그인
             </Button>
           </form>
+          <Button variant="secondary" asChild className="w-full mt-4">
+            <Link href="/">
+              <Home className="mr-2 h-4 w-4" />
+              앱 처음으로 돌아가기
+            </Link>
+          </Button>
         </CardContent>
       </Card>
     </div>
