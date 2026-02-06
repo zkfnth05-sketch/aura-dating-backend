@@ -47,31 +47,21 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
   const [isConnecting, setIsConnecting] = useState(true);
 
   const cleanupCallData = useCallback(async () => {
-      if (!firestore || !matchId) return;
-      
-      try {
-        const matchRef = doc(firestore, 'matches', matchId);
-        const candidatesCol = collection(matchRef, 'candidates');
+    if (!firestore || !matchId) return;
     
-        const candidatesSnap = await getDocs(candidatesCol);
-        if(!candidatesSnap.empty) {
-            const batch = writeBatch(firestore);
-            candidatesSnap.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-        }
-      
-        const matchDoc = await getDoc(matchRef);
-        if (matchDoc.exists()) {
-            await updateDoc(matchRef, {
-              callStatus: 'idle',
-              offer: null,
-              answer: null,
-              callerId: null
-            });
-        }
-      } catch (error) {
-        console.warn("전환 권한 부족 또는 데이터 정리 실패:", error);
-      }
+    try {
+      const matchRef = doc(firestore, 'matches', matchId);
+      // 권한 에러가 날 수 있는 부분을 안전하게 처리
+      await updateDoc(matchRef, {
+        callStatus: 'idle',
+        offer: null,
+        answer: null,
+        callerId: null
+      });
+    } catch (error) {
+      // 권한 에러가 나더라도 콘솔에 경고만 찍고 앱이 튕기지 않게 함
+      console.warn("전환 권한 부족 또는 데이터 정리 실패:", error);
+    }
   }, [firestore, matchId]);
 
   useEffect(() => {
