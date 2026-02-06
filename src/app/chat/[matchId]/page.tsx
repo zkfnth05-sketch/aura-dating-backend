@@ -197,6 +197,8 @@ export default function ChatPage() {
     const messageToSend = newMessage;
     setIsSending(true);
     setNewMessage(''); // Optimistically clear input
+
+    updateUser({ lastSeen: new Date().toISOString() });
   
     try {
       const currentUserLang = currentUser.language || 'ko';
@@ -527,6 +529,8 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
 
     
 
