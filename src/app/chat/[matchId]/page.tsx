@@ -115,11 +115,14 @@ export default function ChatPage() {
   
   const messagesQuery = useMemoFirebase(() => {
     if (!messagesColRef) return null;
-    return query(messagesColRef, orderBy('timestamp', 'asc'), limit(30));
+    // Fetch latest 30 messages in descending order
+    return query(messagesColRef, orderBy('timestamp', 'desc'), limit(30));
   }, [messagesColRef]);
+
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
-  const reversedMessages = useMemo(() => {
+  // Reverse messages to display in chronological order
+  const orderedMessages = useMemo(() => {
     if (!messages) return [];
     return [...messages].reverse();
   }, [messages]);
@@ -131,7 +134,7 @@ export default function ChatPage() {
             viewport.scrollTop = viewport.scrollHeight;
         }
     }
-  }, [reversedMessages]);
+  }, [orderedMessages]);
 
   useEffect(() => {
     if (!firestore || !currentUser?.id || !matchRef) return;
@@ -191,16 +194,17 @@ export default function ChatPage() {
     }
   }, [otherUser, t, language]);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (newMessage.trim() === '' || !firestore || !currentUser || !otherUser || isSending) return;
   
     const messageToSend = newMessage;
     setIsSending(true);
     setNewMessage(''); // Optimistically clear input
 
-    updateUser({ lastSeen: new Date().toISOString() });
-  
     try {
+      await updateUser({ lastSeen: new Date().toISOString() });
+      
       const currentUserLang = currentUser.language || 'ko';
       const otherUserLang = otherUser.language || 'ko';
       let translations = {};
@@ -314,7 +318,7 @@ export default function ChatPage() {
       const result = await getAIChatReplySuggestions({
           currentUser: { name: currentUser.name, bio: currentUser.bio || '', hobbies: currentUser.hobbies || [], interests: currentUser.interests || [] },
           matchUser: { name: otherUser.name, bio: otherUser.bio || '', hobbies: otherUser.hobbies || [], interests: otherUser.interests || [] },
-          messages: (reversedMessages || []).map(m => ({ senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name, text: m.text || '[음성 메시지]' })),
+          messages: (orderedMessages || []).map(m => ({ senderName: m.senderId === currentUser.id ? currentUser.name : otherUser.name, text: m.text || '[음성 메시지]' })),
           targetLanguage: languageMap[language] || 'Korean'
       });
       setSuggestions(result.suggestions);
@@ -431,8 +435,8 @@ export default function ChatPage() {
 
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {areMessagesLoading && messages?.length === 0 && <div className="text-center text-muted-foreground">{t('chat_loading_messages')}</div>}
-          {reversedMessages && reversedMessages.map((message) => {
+          {areMessagesLoading && orderedMessages?.length === 0 && <div className="text-center text-muted-foreground">{t('chat_loading_messages')}</div>}
+          {orderedMessages && orderedMessages.map((message) => {
               const isMyMessage = message.senderId === currentUser.id;
               
               const isTranslated = !isMyMessage && !!message.translations?.[language];
@@ -477,7 +481,7 @@ export default function ChatPage() {
                 )}
             </div>
         )}
-        <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="flex items-center gap-2">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}>
             <span className="text-2xl">✨</span>
           </Button>
@@ -489,7 +493,7 @@ export default function ChatPage() {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                 e.preventDefault();
-                handleSendMessage();
+                handleSendMessage(e);
               }
             }}
           />
@@ -529,9 +533,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    
-
-    
-
-    
