@@ -84,6 +84,7 @@ export default function ChatPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
   const [lastSeenText, setLastSeenText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -192,68 +193,79 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === '' || !firestore || !currentUser || !otherUser) return;
-    
-    // Update user's lastSeen when they send a message
-    updateUser({ lastSeen: new Date().toISOString() });
+    if (newMessage.trim() === '' || !firestore || !currentUser || !otherUser || isSending) return;
 
-    const currentUserLang = currentUser.language || 'ko';
-    const otherUserLang = otherUser.language || 'ko';
-    let translations = {};
+    const messageToSend = newMessage;
+    setIsSending(true);
+    setNewMessage(''); // Optimistically clear input
 
-    if (currentUserLang !== otherUserLang) {
-      try {
-        const result = await getChatTranslation({
-          text: newMessage,
-          targetLanguage: languageMap[otherUserLang] || 'English',
-        });
-        if (result.translatedText) {
-          translations = { [otherUserLang]: result.translatedText };
-        } else {
-          toast({
-            variant: "destructive",
-            title: t('translation_failed_title'),
-            description: t('translation_failed_empty_desc'),
-          });
+    try {
+        // Update user's lastSeen when they send a message
+        updateUser({ lastSeen: new Date().toISOString() });
+
+        const currentUserLang = currentUser.language || 'ko';
+        const otherUserLang = otherUser.language || 'ko';
+        let translations = {};
+
+        if (currentUserLang !== otherUserLang) {
+            try {
+                const result = await getChatTranslation({
+                    text: messageToSend,
+                    targetLanguage: languageMap[otherUserLang] || 'English',
+                });
+                if (result.translatedText) {
+                    translations = { [otherUserLang]: result.translatedText };
+                }
+            } catch (error) {
+                console.error("Chat translation failed, sending without translation:", error);
+                // Proceed without translation, don't show a toast to user
+            }
         }
-      } catch (error) {
-        console.error("Chat translation failed:", error);
+        
+        const batch = writeBatch(firestore);
+
+        const messageRef = doc(messagesColRef!);
+        const messageData: Omit<Message, 'id'> = {
+            senderId: currentUser.id, 
+            text: messageToSend, 
+            timestamp: serverTimestamp(),
+            senderLanguage: currentUserLang,
+            translations: translations,
+        };
+        batch.set(messageRef, messageData);
+
+        const matchUpdateData = {
+            lastMessage: messageToSend, 
+            lastMessageTimestamp: serverTimestamp(),
+            [`unreadCounts.${otherUser.id}`]: increment(1)
+        };
+        batch.update(matchRef!, matchUpdateData);
+
+        await batch.commit();
+
+        setSuggestions([]); // Clear suggestions on successful send
+    } catch (error: any) {
+        console.error("Failed to send message:", error);
+        setNewMessage(messageToSend); // Restore message on failure
         toast({
-          variant: "destructive",
-          title: t('translation_service_error_title'),
-          description: t('translation_service_error_desc'),
+            variant: "destructive",
+            title: "메시지 전송 실패",
+            description: "메시지를 보내는 중 오류가 발생했습니다. 다시 시도해주세요."
         });
-      }
+        
+        if (error.code === 'permission-denied') {
+            // Re-creating data for error as original is out of scope
+            const messageDataForError = { senderId: currentUser.id, text: messageToSend };
+            const matchUpdateForError = { lastMessage: messageToSend };
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+              operation: 'write', 
+              path: `matches/${matchId}`, 
+              requestResourceData: { message: messageDataForError, matchUpdate: matchUpdateForError },
+            }));
+        }
+    } finally {
+        setIsSending(false);
     }
-    
-    const batch = writeBatch(firestore);
-
-    const messageRef = doc(messagesColRef!);
-    const messageData: Omit<Message, 'id'> = {
-      senderId: currentUser.id, 
-      text: newMessage, 
-      timestamp: serverTimestamp(),
-      senderLanguage: currentUserLang,
-      translations: translations,
-    };
-    batch.set(messageRef, messageData);
-
-    const matchUpdateData = {
-      lastMessage: newMessage, lastMessageTimestamp: serverTimestamp(),
-      [`unreadCounts.${otherUser.id}`]: increment(1)
-    };
-    batch.update(matchRef!, matchUpdateData);
-
-    batch.commit().catch(error => {
-      if (error.code === 'permission-denied') {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          operation: 'write', path: `matches/${matchId}`, requestResourceData: { message: messageData, matchUpdate: matchUpdateData },
-        }));
-      }
-    });
-
-    setNewMessage('');
-    setSuggestions([]);
   };
 
   const handleSendAudio = async (audioBlob: Blob) => {
@@ -381,7 +393,7 @@ export default function ChatPage() {
             <UserX className="h-16 w-16 text-muted-foreground mb-4" />
             <h1 className="text-2xl font-bold">{t('chat_user_not_found_title')}</h1>
             <p className="text-muted-foreground mt-2">{t('chat_user_not_found_subtitle')}</p>
-            <Button onClick={() => router.back()} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
+            <Button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
         </div>
     );
   }
@@ -392,7 +404,7 @@ export default function ChatPage() {
             <UserX className="h-16 w-16 text-muted-foreground mb-4" />
             <h1 className="text-2xl font-bold">{t('chat_user_withdrawn_title')}</h1>
             <p className="text-muted-foreground mt-2">{t('chat_user_withdrawn_subtitle')}</p>
-            <Button onClick={() => router.back()} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
+            <Button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
         </div>
     );
   }
@@ -474,7 +486,9 @@ export default function ChatPage() {
           </Button>
           <Input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder={t('chat_input_placeholder')} autoComplete="off" />
           {newMessage.trim() ? (
-            <Button type="submit" size="icon"><Send className="h-6 w-6 text-primary" /></Button>
+            <Button type="submit" size="icon" disabled={isSending}>
+                {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6 text-primary" />}
+            </Button>
           ) : (
             <TooltipProvider>
               <Tooltip>
