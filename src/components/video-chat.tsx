@@ -190,8 +190,7 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
       streamRef.current?.getTracks().forEach(track => track.stop());
       pc.current?.close();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore, matchId, localUser.id, cleanupCallData]);
+  }, [firestore, matchId, localUser.id, cleanupCallData, t, toast]);
   
   const handleEndCall = useCallback(async () => {
       onEndCall();
