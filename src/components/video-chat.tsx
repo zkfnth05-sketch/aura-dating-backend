@@ -46,12 +46,41 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isConnecting, setIsConnecting] = useState(true);
 
+  const cleanupCallData = useCallback(async () => {
+      if (!firestore) return;
+      const matchRef = doc(firestore, 'matches', matchId);
+      const candidatesCol = collection(matchRef, 'candidates');
+  
+      try {
+        const candidatesSnap = await getDocs(candidatesCol);
+        if(!candidatesSnap.empty) {
+            const batch = writeBatch(firestore);
+            candidatesSnap.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+        }
+      
+        // Check if the document still exists before updating
+        const matchDoc = await getDoc(matchRef);
+        if (matchDoc.exists()) {
+            await updateDoc(matchRef, {
+              callStatus: 'idle',
+              offer: null,
+              answer: null,
+              callerId: null
+            });
+        }
+      } catch (error) {
+        console.error("Error cleaning up call data:", error);
+      }
+  }, [firestore, matchId]);
+
   useEffect(() => {
+    let unsubscribers: (() => void)[] = [];
+
     const initWebRTC = async () => {
       if (!firestore || !matchId) return;
 
       try {
-        // 1. 미디어 장치(카메라, 마이크) 가져오기
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: 'user' }, 
           audio: true 
@@ -60,17 +89,14 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
         setHasPermissions(true);
         if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-        // 2. PeerConnection 초기화
         pc.current = new RTCPeerConnection(configuration);
 
-        // 내 트랙 추가
         stream.getTracks().forEach(track => {
           if (pc.current && streamRef.current) {
             pc.current.addTrack(track, streamRef.current);
           }
         });
 
-        // 상대방 트랙 수신 시 비디오 연결
         pc.current.ontrack = (event) => {
           console.log('상대방 스트림 수신 성공');
           if (remoteVideoRef.current) {
@@ -82,7 +108,6 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
         const matchRef = doc(firestore, 'matches', matchId);
         const candidatesCol = collection(matchRef, 'candidates');
 
-        // ICE Candidate(연결 경로) 생성 시 DB 저장
         pc.current.onicecandidate = (event) => {
           if (event.candidate) {
             addDoc(candidatesCol, { 
@@ -92,27 +117,24 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
           }
         };
 
-        // 3. 역할(Caller/Callee)에 따른 시그널링
         const matchSnap = await getDoc(matchRef);
         const isCaller = matchSnap.data()?.callerId === localUser.id;
 
         if (isCaller) {
-          // [전화 건 사람] Offer 생성
           const offer = await pc.current.createOffer();
           await pc.current.setLocalDescription(offer);
           await updateDoc(matchRef, { 
             offer: { type: offer.type, sdp: offer.sdp } 
           });
 
-          // 상대방의 Answer 대기
-          onSnapshot(matchRef, async (snapshot) => {
+          const unsubMatch = onSnapshot(matchRef, async (snapshot) => {
             const data = snapshot.data();
             if (data?.answer && pc.current && !pc.current.currentRemoteDescription) {
               await pc.current.setRemoteDescription(new RTCSessionDescription(data.answer));
             }
           });
+          unsubscribers.push(unsubMatch);
         } else {
-          // [전화 받은 사람] Offer 수신 후 Answer 생성
           const data = matchSnap.data();
           if (data?.offer) {
             await pc.current.setRemoteDescription(new RTCSessionDescription(data.offer));
@@ -125,8 +147,7 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
           }
         }
 
-        // 4. 상대방의 ICE Candidate 실시간 감지 및 추가
-        onSnapshot(candidatesCol, (snapshot) => {
+        const unsubCandidates = onSnapshot(candidatesCol, (snapshot) => {
           snapshot.docChanges().forEach(async (change) => {
             if (change.type === 'added') {
               const candidateData = change.doc.data();
@@ -140,6 +161,7 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
             }
           });
         });
+        unsubscribers.push(unsubCandidates);
 
       } catch (err: any) {
         console.warn('WebRTC 초기화 에러:', err);
@@ -163,40 +185,17 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
     initWebRTC();
 
     return () => {
+      unsubscribers.forEach(unsub => unsub());
+      cleanupCallData();
       streamRef.current?.getTracks().forEach(track => track.stop());
       pc.current?.close();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore, matchId, localUser.id]);
-  
-  const cleanupCallData = useCallback(async () => {
-      if (!firestore) return;
-      const matchRef = doc(firestore, 'matches', matchId);
-      const candidatesCol = collection(matchRef, 'candidates');
-  
-      try {
-        const candidatesSnap = await getDocs(candidatesCol);
-        if(!candidatesSnap.empty) {
-            const batch = writeBatch(firestore);
-            candidatesSnap.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-        }
-      
-        await updateDoc(matchRef, {
-          callStatus: 'idle',
-          offer: null,
-          answer: null,
-          callerId: null
-        });
-      } catch (error) {
-        console.error("Error cleaning up call data:", error);
-      }
-  }, [firestore, matchId]);
+  }, [firestore, matchId, localUser.id, cleanupCallData]);
   
   const handleEndCall = useCallback(async () => {
-      await cleanupCallData();
       onEndCall();
-  }, [cleanupCallData, onEndCall]);
+  }, [onEndCall]);
   
   const toggleMic = () => {
     if (streamRef.current) {
@@ -216,7 +215,6 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
 
   return (
     <div className="relative h-screen w-full bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
-      {/* 상대방 영상 (전체화면) */}
       <video
         ref={remoteVideoRef}
         autoPlay
@@ -242,7 +240,6 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
         </div>
       )}
 
-      {/* 내 영상 (우측 상단 팝업) */}
       <div className="absolute top-6 right-6 w-32 h-44 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl z-30 bg-zinc-900">
         <video
           ref={localVideoRef}
@@ -258,7 +255,6 @@ export default function VideoChat({ localUser, remoteUser, matchId, onEndCall }:
         )}
       </div>
 
-      {/* 하단 컨트롤 바 */}
       <div className="absolute bottom-12 flex items-center gap-6 z-40">
         <Button 
           onClick={toggleMic} 
