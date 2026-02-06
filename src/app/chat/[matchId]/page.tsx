@@ -114,7 +114,7 @@ export default function ChatPage() {
   
   const messagesQuery = useMemoFirebase(() => {
     if (!messagesColRef) return null;
-    return query(messagesColRef, orderBy('timestamp', 'desc'), limit(30));
+    return query(messagesColRef, orderBy('timestamp', 'asc'), limit(30));
   }, [messagesColRef]);
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
@@ -404,7 +404,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10 flex-shrink-0">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}><ArrowLeft className="h-5 w-5" /></Button>
+        <Button variant="ghost" size="icon" onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex items-center gap-3 flex-1">
           <Avatar>
             <AvatarImage src={otherUser.photoUrls?.[0]} alt={otherUser.name} />
@@ -507,3 +507,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
