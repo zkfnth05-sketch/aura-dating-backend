@@ -6,18 +6,19 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { Loader2 } from 'lucide-react';
-import { format, parseISO, subMonths } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import dynamic from 'next/dynamic';
 
-const chartConfig = {
-  users: {
-    label: "신규 가입자",
-    color: "hsl(var(--primary))",
-  },
-} satisfies ChartConfig;
+const DashboardChart = dynamic(() => import('@/components/dashboard-chart'), {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[350px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    ),
+  });
 
 
 export default function DashboardPage() {
@@ -149,29 +150,7 @@ export default function DashboardPage() {
                             </div>
                         ) : (
                             <div className="h-[350px]">
-                                <ChartContainer config={chartConfig} className="w-full h-full">
-                                    <BarChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: -10 }}>
-                                        <CartesianGrid vertical={false} />
-                                        <XAxis
-                                            dataKey="date"
-                                            tickLine={false}
-                                            tickMargin={10}
-                                            axisLine={false}
-                                            tickFormatter={(value) => {
-                                                if (timePeriod === 'monthly') {
-                                                    return format(parseISO(value), 'yyyy-MM');
-                                                }
-                                                return format(parseISO(value), 'MM-dd');
-                                            }}
-                                        />
-                                        <YAxis allowDecimals={false} />
-                                        <ChartTooltip
-                                            cursor={false}
-                                            content={<ChartTooltipContent />}
-                                        />
-                                        <Bar dataKey="users" fill="var(--color-users)" radius={4} />
-                                    </BarChart>
-                                </ChartContainer>
+                                <DashboardChart chartData={chartData} timePeriod={timePeriod} />
                             </div>
                         )}
                     </CardContent>
