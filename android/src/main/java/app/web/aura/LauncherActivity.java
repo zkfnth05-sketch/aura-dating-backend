@@ -15,9 +15,7 @@
  */
 package app.web.aura;
 
-import android.content.pm.ActivityInfo;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import androidx.activity.EdgeToEdge;
 
