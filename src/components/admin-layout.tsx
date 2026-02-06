@@ -26,9 +26,7 @@ const AdminSidebarContent = () => {
     
     const handleLogout = () => {
         sessionStorage.removeItem('isAdminAuthenticated');
-        router.push('/admin');
-        // We might need to force a reload or state change to properly re-render the login page.
-        window.location.reload();
+        window.location.href = '/admin'; // Redirect to force re-evaluation of auth state
     }
 
     return (
