@@ -33,6 +33,7 @@ service cloud.firestore {
     // User Data Collections
     // --------------------------------
 
+    // 유저 정보 읽기 규칙
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId;
@@ -56,9 +57,7 @@ service cloud.firestore {
     }
 
 
-    /**
-     * @description Match documents can be read by participants. Creation is handled client-side for prototype.
-     */
+    // matches 컬렉션 규칙
     match /matches/{matchId} {
       // 로그인한 유저이고, 해당 매치의 users 배열에 본인 ID가 있는 경우에만 허용
       allow read, update: if request.auth != null && request.auth.uid in resource.data.users;
