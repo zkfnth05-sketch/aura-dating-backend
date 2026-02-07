@@ -75,7 +75,7 @@ export default function ChatPage() {
   const firestore = useFirestore();
   const storage = useStorage();
   const { user: currentUser, isLoaded: isUserLoaded, updateUser } = useUser();
-  const { t, language } = useLanguage();
+  const { t, language, supportedLanguages } = useLanguage();
   const { toast } = useToast();
   
   const [newMessage, setNewMessage] = useState('');
@@ -133,6 +133,10 @@ export default function ChatPage() {
     const otherUserLang = otherUser.language || 'ko';
     return currentUserLang !== otherUserLang;
   }, [currentUser, otherUser]);
+
+  const currentLanguageName = useMemo(() => {
+    return supportedLanguages.find(lang => lang.code === language)?.name || '...';
+  }, [language, supportedLanguages]);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -443,7 +447,7 @@ export default function ChatPage() {
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
         {isTranslationEnabled && (
           <div className="p-3 mb-4 text-xs text-center text-primary-foreground bg-primary/80 rounded-lg">
-            {t('chat_translation_notice')}
+            {t('chat_translation_notice').replace('%s', currentLanguageName)}
           </div>
         )}
         <div className="space-y-4">
