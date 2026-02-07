@@ -81,7 +81,7 @@ export default function SignupPage() {
         <p className="mb-4 text-sm text-neutral-400">
             Hello, welcome to Aura Ai Dating. Please select your preferred language below.
         </p>
-        <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto">
+        <div className="flex flex-wrap items-center justify-center gap-2">
             {supportedLanguages.map(lang => (
                 <Button key={lang.code} variant="ghost" size="sm" onClick={() => setLanguage(lang.code as any)} className={cn("gap-2", language === lang.code && "bg-primary text-primary-foreground hover:bg-primary/90")}>
                     <FlagIcon code={lang.code} className="w-5 h-auto rounded-sm" />
