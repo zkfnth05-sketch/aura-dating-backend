@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import type { Match, Message, User } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Send, Loader2, UserX } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, UserX, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -446,8 +446,9 @@ export default function ChatPage() {
 
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
         {isTranslationEnabled && (
-          <div className="p-3 mb-4 text-xs text-center text-primary-foreground bg-primary/80 rounded-lg">
-            {t('chat_translation_notice').replace('%s', currentLanguageName)}
+          <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-start gap-2 mb-4">
+            <Languages className="h-4 w-4 text-blue-300 flex-shrink-0" />
+            <span>{t('chat_translation_notice').replace('%s', currentLanguageName)}</span>
           </div>
         )}
         <div className="space-y-4">
