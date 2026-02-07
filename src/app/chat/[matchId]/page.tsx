@@ -127,6 +127,13 @@ export default function ChatPage() {
     return [...messages].reverse();
   }, [messages]);
 
+  const isTranslationEnabled = useMemo(() => {
+    if (!currentUser || !otherUser) return false;
+    const currentUserLang = currentUser.language || 'ko';
+    const otherUserLang = otherUser.language || 'ko';
+    return currentUserLang !== otherUserLang;
+  }, [currentUser, otherUser]);
+
   useEffect(() => {
     if (scrollAreaRef.current) {
         const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
@@ -434,6 +441,11 @@ export default function ChatPage() {
       </header>
 
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
+        {isTranslationEnabled && (
+          <div className="p-3 mb-4 text-xs text-center text-primary-foreground bg-primary/80 rounded-lg">
+            {t('chat_translation_notice')}
+          </div>
+        )}
         <div className="space-y-4">
           {areMessagesLoading && orderedMessages?.length === 0 && <div className="text-center text-muted-foreground">{t('chat_loading_messages')}</div>}
           {orderedMessages && orderedMessages.map((message) => {

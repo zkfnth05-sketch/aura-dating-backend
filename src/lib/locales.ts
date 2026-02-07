@@ -93,7 +93,7 @@ export const translations = {
     'signup_failed_title': '등록 실패',
     'signup_failed_desc': '프로필을 완성하는 데 실패했습니다. 다시 시도해주세요.',
     'ai_enhance_failed_title': 'AI 보정 실패',
-    'ai_enhance_failed_desc': 'Ai 사진보정이 실패하여 원본사진으로 대체 됩니다.Ai사진보정을 원할시 다시한번 시도해 주세요.',
+    'ai_enhance_failed_desc': 'Ai 사진보정이 실패하여 원본 사진이 사용됩니다.Ai 사진보정을 원할시 다시한번 시도해 주세요.',
 
     // Profile Edit
     'edit_profile_title': '프로필 수정',
@@ -337,6 +337,7 @@ export const translations = {
     'new_match_desc': '%s님과 새로운 인연이 시작되었습니다.',
     'new_match_start_message': '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
     'new_message_title': '새 메시지: %s',
+    'chat_translation_notice': '실시간 자동 번역 중: 메시지가 상대방의 언어로 자동 변환됩니다.',
 
     // Permissions
     'camera_permission_denied_title': '카메라/마이크 권한 필요',
@@ -803,6 +804,7 @@ export const translations = {
     'new_match_desc': 'You have a new connection with %s.',
     'new_match_start_message': '✨ You can now start a conversation with your new connection!',
     'new_message_title': 'New Message from %s',
+    'chat_translation_notice': 'Real-time translation is active: Your messages are automatically translated into the other person\'s language.',
 
     // Permissions
     'camera_permission_denied_title': 'Camera/Mic Permission Needed',
@@ -1267,6 +1269,7 @@ export const translations = {
     'new_match_desc': '%sさんとマッチしました。',
     'new_match_start_message': '✨ 新しい出会いと会話を始めることができます！',
     'new_message_title': '%sさんからの新着メッセージ',
+    'chat_translation_notice': 'リアルタイム翻訳中：メッセージは相手の言語に自動的に翻訳されます。',
 
     // Permissions
     'camera_permission_denied_title': 'カメラ/マイクの許可が必要です',
@@ -1730,6 +1733,7 @@ export const translations = {
     'new_match_desc': 'Tienes una nueva conexión con %s.',
     'new_match_start_message': '✨ ¡Ahora puedes iniciar una conversación con tu nueva conexión!',
     'new_message_title': 'Nuevo Mensaje de %s',
+    'chat_translation_notice': 'Traducción en tiempo real activa: Sus mensajes se traducen automáticamente al idioma de la otra persona.',
 
     // Permissions
     'camera_permission_denied_title': 'Se necesita permiso de Cámara/Micrófono',
