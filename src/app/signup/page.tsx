@@ -77,7 +77,7 @@ export default function SignupPage() {
   return (
     <div className="flex flex-col items-center justify-between min-h-screen bg-black text-white p-8">
       <div className="flex-grow flex flex-col items-center justify-center text-center w-full max-w-sm">
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+        <div className="flex items-center justify-center gap-2 mb-8">
             {supportedLanguages.map(lang => (
                 <Button key={lang.code} variant="ghost" size="sm" onClick={() => setLanguage(lang.code as any)} className={cn("gap-2", language === lang.code && "bg-primary text-primary-foreground hover:bg-primary/90")}>
                     <FlagIcon code={lang.code} className="w-5 h-auto rounded-sm" />
