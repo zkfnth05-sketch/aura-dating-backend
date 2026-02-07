@@ -1,3 +1,4 @@
+
 import type { User } from '@/lib/types';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -16,11 +17,10 @@ type ProfileCardProps = {
   swipeState: 'left' | 'right' | null;
   zIndex: number;
   depth: number;
-  onLike: () => void;
-  onDislike: () => void;
+  onSwipe: (direction: 'left' | 'right') => void;
 };
 
-const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex, depth, onLike, onDislike }: ProfileCardProps) => {
+const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex, depth, onSwipe }: ProfileCardProps) => {
   const router = useRouter();
   const { t } = useLanguage();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
@@ -60,15 +60,15 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
 
     if (Math.abs(dragPosition.x) > SWIPE_THRESHOLD) {
       if (dragPosition.x > 0) {
-        onLike();
+        onSwipe('right');
       } else {
-        onDislike();
+        onSwipe('left');
       }
     } else {
       // Snap back if not swiped far enough
       setDragPosition({ x: 0, y: 0 });
     }
-  }, [isDragging, isActive, dragPosition, onLike, onDislike]);
+  }, [isDragging, isActive, dragPosition, onSwipe]);
 
   const handleClick = (e: React.MouseEvent) => {
     if (hasDraggedRef.current) {

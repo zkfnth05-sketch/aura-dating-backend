@@ -181,6 +181,15 @@ export default function HomePageClient() {
     return matches.find(m => m.users.includes(activeUser.id)) || null;
   }, [matches, activeUser]);
 
+  const handleSwipe = (direction: 'left' | 'right') => {
+    if (!activeUser || swipeState) return;
+    setSwipeState(direction);
+  
+    setTimeout(() => {
+      setCurrentIndex(prev => prev + 1);
+      setSwipeState(null);
+    }, 400); // Animation time
+  };
 
   const handleAction = async (action: 'like' | 'dislike' | 'message') => {
     if (!currentUser || !activeUser || !firestore || swipeState) return;
@@ -314,8 +323,7 @@ export default function HomePageClient() {
                   zIndex={isTop ? 50 : 20}
                   swipeState={isTop ? swipeState : null}
                   depth={isTop ? 0 : 1}
-                  onLike={() => handleAction('like')}
-                  onDislike={() => handleAction('dislike')}
+                  onSwipe={handleSwipe}
                 />
               );
             })
