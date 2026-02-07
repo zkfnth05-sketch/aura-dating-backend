@@ -1,7 +1,7 @@
 export const firebaseConfig = {
   "projectId": "aura-ai-dating-38251551-64a99",
   "appId": "1:865239923716:web:eb6833b2eaf6377e920951",
-  "storageBucket": "aura-ai-dating-38251551-64a99.appspot.com",
+  "storageBucket": "aura-ai-dating-38251551-64a99.firebasestorage.app",
   "apiKey": "AIzaSyDa6fe6vHmVRbeMDoBU44b7qKaI_c7s3h4",
   "authDomain": "aura-ai-dating-38251551-64a99.firebaseapp.com",
   "measurementId": "",
