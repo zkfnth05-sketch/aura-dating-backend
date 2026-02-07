@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { calculateCompatibility } from '@/lib/utils';
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/language-context';
 import { TranslationKeys } from '@/lib/locales';
@@ -16,37 +16,101 @@ type ProfileCardProps = {
   swipeState: 'left' | 'right' | null;
   zIndex: number;
   depth: number;
+  onLike: () => void;
+  onDislike: () => void;
 };
 
-const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex, depth }: ProfileCardProps) => {
+const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeState, zIndex, depth, onLike, onDislike }: ProfileCardProps) => {
   const router = useRouter();
   const { t } = useLanguage();
   const { score, commonalities } = calculateCompatibility(currentUser, potentialMatch);
+
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const hasDraggedRef = useRef(false);
+
+  const SWIPE_THRESHOLD = 100;
+
+  const handleDragStart = useCallback((clientX: number, clientY: number) => {
+    if (!isActive) return;
+    setIsDragging(true);
+    hasDraggedRef.current = false;
+    startPosRef.current = { x: clientX, y: clientY };
+  }, [isActive]);
   
+  const handleDragMove = useCallback((clientX: number, clientY: number) => {
+    if (!isDragging || !isActive) return;
+    
+    const dx = clientX - startPosRef.current.x;
+    const dy = clientY - startPosRef.current.y;
+    
+    // Only set hasDragged if the drag is significant
+    if (!hasDraggedRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      hasDraggedRef.current = true;
+    }
+
+    setDragPosition({ x: dx, y: dy });
+  }, [isDragging, isActive]);
+
+  const handleDragEnd = useCallback(() => {
+    if (!isDragging || !isActive) return;
+    
+    setIsDragging(false);
+
+    if (Math.abs(dragPosition.x) > SWIPE_THRESHOLD) {
+      if (dragPosition.x > 0) {
+        onLike();
+      } else {
+        onDislike();
+      }
+    } else {
+      // Snap back if not swiped far enough
+      setDragPosition({ x: 0, y: 0 });
+    }
+  }, [isDragging, isActive, dragPosition, onLike, onDislike]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (hasDraggedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  // Mouse event handlers
+  const onMouseDown = (e: React.MouseEvent) => handleDragStart(e.clientX, e.clientY);
+  const onMouseMove = (e: React.MouseEvent) => handleDragMove(e.clientX, e.clientY);
+  const onMouseUp = () => handleDragEnd();
+  const onMouseLeave = () => handleDragEnd();
+
+  // Touch event handlers
+  const onTouchStart = (e: React.TouchEvent) => handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+  const onTouchMove = (e: React.TouchEvent) => handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+  const onTouchEnd = () => handleDragEnd();
+
+  const rotation = dragPosition.x / 20;
+
+  let finalTransform = `translateY(${depth * 10}px) scale(${1 - (depth * 0.05)})`;
+  if (isActive) {
+      if (swipeState) { // An action has been triggered, card is flying out
+          finalTransform = `translateX(${swipeState === 'left' ? '-150%' : '150%'}) rotate(${swipeState === 'left' ? -20 : 20}deg) ${finalTransform}`;
+      } else { // Top card, interactive and draggable
+          finalTransform = `translateX(${dragPosition.x}px) translateY(${dragPosition.y}px) rotate(${rotation}deg) ${finalTransform}`;
+      }
+  }
+
   const cardStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
     zIndex: zIndex,
-    
-    // translate3d와 translateZ(0px/1px)를 써서 하드웨어 가속 레이어를 분리합니다.
-    transform: `
-      translateX(${isActive && swipeState === 'left' ? '-150%' : isActive && swipeState === 'right' ? '150%' : '0'}) 
-      rotate(${isActive && swipeState === 'left' ? '-20deg' : isActive && swipeState === 'right' ? '20deg' : '0'})
-      translateY(${depth * 10}px)
-      scale(${1 - (depth * 0.05)})
-      translateZ(${isActive ? '1px' : '0px'}) 
-    `,
-    
-    // 아래 카드가 위 카드를 뚫고 터치를 가로채는 것을 방지
+    transform: finalTransform,
     pointerEvents: isActive ? 'auto' : 'none',
-    
-    opacity: isActive ? 1 : 0.7, // 아래 카드를 조금 더 어둡게 해서 시각적 분리
-    transition: 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.1), opacity 0.3s',
+    opacity: isActive ? 1 : 0.7,
+    transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s',
     willChange: 'transform, opacity',
     backfaceVisibility: 'hidden',
-    WebkitBackfaceVisibility: 'hidden',
+    cursor: isDragging ? 'grabbing' : (isActive ? 'grab' : 'default'),
   };
-
 
   const allTags = [
     ...(potentialMatch.relationship || []),
@@ -63,11 +127,19 @@ const ProfileCard = React.memo(({ currentUser, potentialMatch, isActive, swipeSt
         'rounded-2xl overflow-hidden shadow-2xl bg-card border-none'
       )}
       style={cardStyle}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseLeave}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       <Link 
         href={`/users/${potentialMatch.id}`} 
         className="block w-full h-full"
         draggable={false}
+        onClick={handleClick}
       >
         <div className="relative w-full h-full bg-muted">
             {potentialMatch.photoUrls && potentialMatch.photoUrls.length > 0 ? (

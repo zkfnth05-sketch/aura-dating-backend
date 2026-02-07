@@ -313,6 +313,8 @@ export default function HomePageClient() {
                   zIndex={isTop ? 50 : 20}
                   swipeState={isTop ? swipeState : null}
                   depth={isTop ? 0 : 1}
+                  onLike={() => handleAction('like')}
+                  onDislike={() => handleAction('dislike')}
                 />
               );
             })
@@ -344,5 +346,3 @@ export default function HomePageClient() {
     </div>
   );
 }
-
-    
