@@ -2,18 +2,15 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // By default, deny all reads and writes unless specified below.
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
 
-    // Allow authenticated users to read any file. 
-    // This is needed so users can see/hear each other's content.
+    // Default: Allow authenticated users to read anything, but deny all writes.
+    // Specific write rules below will grant access where needed.
     match /{allPaths=**} {
       allow read: if request.auth != null;
+      allow write: if false;
     }
 
-    // Allow authenticated users to upload audio messages to a chat.
+    // Allow any authenticated user to upload audio messages to a chat.
     match /audio_messages/{matchId}/{fileName} {
       allow write: if request.auth != null;
     }
