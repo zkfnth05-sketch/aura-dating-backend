@@ -14,7 +14,7 @@ import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions, getChatTranslation } from '@/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from '@/components/video-chat';
-import { useFirestore, useCollection, useDoc, useMemoFirebase, useStorage } from '@/firebase';
+import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp, limit } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -133,12 +133,16 @@ export default function ChatPage() {
   }, [language, supportedLanguages]);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-        const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
-        if(viewport) {
+    const timer = setTimeout(() => {
+        if (scrollAreaRef.current) {
+          const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
+          if (viewport) {
             viewport.scrollTop = viewport.scrollHeight;
+          }
         }
-    }
+      }, 0);
+  
+      return () => clearTimeout(timer);
   }, [orderedMessages]);
 
   useEffect(() => {
