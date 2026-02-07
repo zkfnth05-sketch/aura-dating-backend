@@ -14,7 +14,7 @@ import { useUser } from '@/contexts/user-context';
 import { getAIChatReplySuggestions, getChatTranslation } from '@/actions/ai-actions';
 import { useToast } from '@/hooks/use-toast';
 import VideoChat from '@/components/video-chat';
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useStorage, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { CollectionReference, addDoc, serverTimestamp, query, orderBy, doc, updateDoc, onSnapshot, writeBatch, increment, collection, getDoc, Timestamp, limit } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -133,7 +133,8 @@ export default function ChatPage() {
   }, [language, supportedLanguages]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const scrollToEnd = () => {
+      setTimeout(() => {
         if (scrollAreaRef.current) {
           const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
           if (viewport) {
@@ -141,9 +142,14 @@ export default function ChatPage() {
           }
         }
       }, 0);
+    };
   
-      return () => clearTimeout(timer);
-  }, [orderedMessages]);
+    // Scroll when messages are loaded
+    scrollToEnd();
+  
+    // Dependency on orderedMessages length ensures it runs when new messages are added.
+    // Dependency on isRecording ensures it runs when recording UI appears/disappears.
+  }, [orderedMessages.length, isRecording]);
 
   useEffect(() => {
     if (!firestore || !currentUser?.id || !matchRef) return;
