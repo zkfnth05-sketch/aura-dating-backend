@@ -75,9 +75,9 @@ export default function SignupPage() {
   const { t, setLanguage, supportedLanguages, language } = useLanguage();
 
   return (
-    <div className="flex flex-col items-center justify-between min-h-screen bg-black text-white p-8">
-      <div className="w-full">
-        <div className="flex flex-nowrap items-center justify-center gap-2">
+    <div className="flex flex-col items-center min-h-screen bg-black text-white p-8">
+      <div className="w-full pt-8">
+        <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto">
             {supportedLanguages.map(lang => (
                 <Button key={lang.code} variant="ghost" size="sm" onClick={() => setLanguage(lang.code as any)} className={cn("gap-2", language === lang.code && "bg-primary text-primary-foreground hover:bg-primary/90")}>
                     <FlagIcon code={lang.code} className="w-5 h-auto rounded-sm" />
