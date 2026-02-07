@@ -2,10 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useUser, useStorage } from '@/firebase';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { X, Check, RefreshCw, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useLanguage } from '@/contexts/language-context';
 
@@ -27,16 +34,12 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(MAX_DURATION_SECONDS);
 
-  const stopStream = useCallback(() => {
+  const cleanup = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
-  }, []);
-
-  const cleanup = useCallback(() => {
-    stopStream();
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.ondataavailable = null;
       mediaRecorderRef.current.onstop = null;
@@ -46,18 +49,17 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
-    setMode('record');
-    setIsRecording(false);
-    setVideoBlob(null);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
+    setMode('record');
+    setIsRecording(false);
+    setVideoBlob(null);
     setPreviewUrl(null);
     setCountdown(MAX_DURATION_SECONDS);
-  }, [stopStream, previewUrl]);
+  }, [previewUrl]);
 
   const startCamera = useCallback(async () => {
-    cleanup();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } },
@@ -76,21 +78,28 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
       onClose();
       return null;
     }
-  }, [cleanup, onClose, t, toast]);
+  }, [onClose, t, toast]);
 
   useEffect(() => {
-    if (isOpen && mode === 'record') {
+    if (isOpen) {
       startCamera();
     } else {
       cleanup();
     }
     return () => cleanup();
-  }, [isOpen, startCamera, cleanup, mode]);
-  
-  const startRecording = async () => {
-    const stream = await startCamera();
-    if (!stream) return;
+  }, [isOpen, startCamera, cleanup]);
 
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+    setIsRecording(false);
+  }, []);
+
+  const startRecordingInternal = (stream: MediaStream) => {
     setIsRecording(true);
     setCountdown(MAX_DURATION_SECONDS);
 
@@ -111,7 +120,7 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
       setPreviewUrl(url);
       setMode('preview');
       setIsRecording(false);
-      stopStream();
+      stream.getTracks().forEach(track => track.stop()); // Stop camera after recording
     };
 
     recorder.start();
@@ -128,26 +137,27 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
 
     setTimeout(stopRecording, MAX_DURATION_SECONDS * 1000);
   };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
+  
+  const startRecording = async () => {
+    const stream = videoRef.current?.srcObject as MediaStream;
+    if (!stream || !stream.active) {
+      const newStream = await startCamera();
+      if (!newStream) return;
+      // Need a small delay for the new stream to be ready
+      setTimeout(() => startRecordingInternal(newStream), 100);
+    } else {
+      startRecordingInternal(stream);
     }
   };
-  
+
   const handleSave = async () => {
     if (!videoBlob || !user || !storage) return;
-
     setMode('uploading');
     try {
       const videoFileRef = storageRef(storage, `videos/${user.id}/${Date.now()}.webm`);
       await uploadBytes(videoFileRef, videoBlob);
       const downloadURL = await getDownloadURL(videoFileRef);
       await updateUser({ videoUrls: [...(user.videoUrls || []), downloadURL] });
-
       toast({
         title: '동영상 업로드 성공',
         description: '프로필에 동영상이 추가되었습니다.',
@@ -163,55 +173,58 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
       setMode('preview');
     }
   };
+  
+  const handleRetake = () => {
+    cleanup();
+    startCamera();
+  }
 
-  const renderContent = () => {
-    if (mode === 'uploading') {
-      return <Loader2 className="w-16 h-16 animate-spin text-primary" />;
-    }
-
-    if (mode === 'preview' && previewUrl) {
-      return (
-        <>
-          <video src={previewUrl} autoPlay loop playsInline className="w-full h-full object-cover" />
-          <div className="absolute bottom-10 left-0 right-0 flex justify-center items-center gap-6 z-20">
-            <Button variant="outline" size="icon" className="w-16 h-16 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white" onClick={() => setMode('record')}>
-                <RefreshCw />
-            </Button>
-            <Button size="icon" className="w-20 h-20 rounded-full bg-primary hover:bg-primary/90" onClick={handleSave}>
-                <Check className="w-10 h-10" />
-            </Button>
-          </div>
-        </>
-      );
-    }
-    
-    return (
-      <>
-        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-        <div className="absolute bottom-10 left-0 right-0 flex justify-center items-center z-20">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="w-20 h-20 rounded-full bg-transparent border-white border-4"
-            onClick={isRecording ? stopRecording : startRecording}
-          >
-            {isRecording ? <div className="w-8 h-8 bg-red-500 rounded-md" /> : <div className="w-16 h-16 bg-red-500 rounded-full" />}
-          </Button>
-        </div>
-        {isRecording && <p className="absolute top-16 text-white text-lg font-mono bg-black/50 px-2 rounded-md">{countdown}</p>}
-      </>
-    );
-  };
+  const handleClose = () => {
+    cleanup();
+    onClose();
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full h-full max-w-full sm:rounded-none bg-black p-0 flex flex-col items-center justify-center border-none">
-        <div className="absolute top-4 left-4 z-20">
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-white bg-black/30 hover:bg-black/50">
-                <X />
-            </Button>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md bg-card border-primary/20">
+        <DialogHeader>
+          <DialogTitle>{t('record_video_title')}</DialogTitle>
+          <DialogDescription>{t('record_video_desc')}</DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div className="relative w-full aspect-[9/16] rounded-md overflow-hidden bg-black flex items-center justify-center">
+            {mode === 'uploading' ? (
+                <Loader2 className="w-12 h-12 animate-spin text-primary" />
+            ) : mode === 'preview' && previewUrl ? (
+                <video src={previewUrl} autoPlay loop playsInline className="w-full h-full object-cover" />
+            ) : (
+                <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
+            )}
+            {isRecording && <p className="absolute top-4 text-white text-lg font-mono bg-black/50 px-3 py-1 rounded-full">{countdown}</p>}
+          </div>
         </div>
-        {renderContent()}
+        <DialogFooter>
+          {mode === 'record' && (
+            <>
+              <Button variant="secondary" onClick={handleClose} disabled={isRecording}>{t('cancel_button')}</Button>
+              <Button onClick={isRecording ? stopRecording : startRecording}>
+                {isRecording ? t('stop_recording') : t('start_recording')}
+              </Button>
+            </>
+          )}
+          {mode === 'preview' && (
+            <>
+              <Button variant="secondary" onClick={handleRetake}>{t('retake_button')}</Button>
+              <Button onClick={handleSave}>{t('save_button')}</Button>
+            </>
+          )}
+          {mode === 'uploading' && (
+            <Button disabled className="w-full">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t('uploading_button')}
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

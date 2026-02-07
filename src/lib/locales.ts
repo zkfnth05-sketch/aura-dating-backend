@@ -484,6 +484,12 @@ export const translations = {
     'admin_logout_button': '로그아웃',
     'admin_sidebar_dashboard': '대시보드',
     'admin_sidebar_user_management': '사용자 관리',
+    'uploading_button': '업로드 중...',
+    'record_video_title': '동영상 촬영',
+    'record_video_desc': '최대 15초까지 동영상을 녹화할 수 있습니다.',
+    'start_recording': '녹화 시작',
+    'stop_recording': '녹화 중지',
+    'retake_button': '다시 촬영',
   },
   en: {
     // Signup Flow
@@ -954,6 +960,12 @@ export const translations = {
     'admin_logout_button': 'Logout',
     'admin_sidebar_dashboard': 'Dashboard',
     'admin_sidebar_user_management': 'User Management',
+    'uploading_button': 'Uploading...',
+    'record_video_title': 'Record Video',
+    'record_video_desc': 'You can record a video for up to 15 seconds.',
+    'start_recording': 'Start Recording',
+    'stop_recording': 'Stop Recording',
+    'retake_button': 'Retake',
   },
   ja: {
     // Signup Flow
@@ -1139,7 +1151,7 @@ export const translations = {
     'profile_nav': 'プロフィール',
     'ai_rec_button': 'AI推薦',
     'new_users_tab': 'NEW',
-
+    
     // Main App UI
     'no_recommendations_title': '近くに新しい出会いはありません。',
     'no_recommendations_subtitle': 'フィルターを変更するか、後でもう一度確認してください。',
@@ -1424,6 +1436,12 @@ export const translations = {
     'admin_logout_button': 'ログアウト',
     'admin_sidebar_dashboard': 'ダッシュボード',
     'admin_sidebar_user_management': 'ユーザー管理',
+    'uploading_button': 'アップロード中...',
+    'record_video_title': '動画撮影',
+    'record_video_desc': '最大15秒まで動画を撮影できます。',
+    'start_recording': '録画開始',
+    'stop_recording': '録画停止',
+    'retake_button': '再撮影',
   },
   es: {
     // Signup Flow
@@ -1893,5 +1911,11 @@ export const translations = {
     'admin_logout_button': 'Cerrar Sesión',
     'admin_sidebar_dashboard': 'Panel de Control',
     'admin_sidebar_user_management': 'Gestión de Usuarios',
+    'uploading_button': 'Subiendo...',
+    'record_video_title': 'Grabar Vídeo',
+    'record_video_desc': 'Puedes grabar un vídeo de hasta 15 segundos.',
+    'start_recording': 'Iniciar Grabación',
+    'stop_recording': 'Detener Grabación',
+    'retake_button': 'Grabar de Nuevo',
   },
 };
