@@ -187,11 +187,11 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md bg-card border-primary/20 flex flex-col p-0 h-full sm:h-auto sm:max-h-[95vh] rounded-none sm:rounded-lg">
-        <DialogHeader className="p-6 pb-2 shrink-0">
+        <DialogHeader className="p-6 pb-2 shrink-0 border-b">
           <DialogTitle>{t('record_video_title')}</DialogTitle>
           <DialogDescription>{t('record_video_desc')}</DialogDescription>
         </DialogHeader>
-        <div className="px-6 py-4 flex-1 overflow-y-auto">
+        <div className="px-6 py-4 flex-1 overflow-y-auto min-h-0">
           <div className="relative w-full aspect-[9/16] rounded-md overflow-hidden bg-black flex items-center justify-center">
             {mode === 'uploading' ? (
                 <Loader2 className="w-12 h-12 animate-spin text-primary" />
