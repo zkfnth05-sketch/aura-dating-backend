@@ -301,6 +301,7 @@ export const translations = {
     'new_like_desc': '%s님이 회원님을 좋아합니다.',
     'new_match_title': '🎉 새로운 매치!',
     'new_match_desc': '%s님과 새로운 인연이 시작되었습니다.',
+    'new_match_start_message': '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
     'new_message_title': '새 메시지: %s',
 
     // Permissions
@@ -733,6 +734,7 @@ export const translations = {
     'new_like_desc': '%s likes you.',
     'new_match_title': '🎉 New Match!',
     'new_match_desc': 'You have a new connection with %s.',
+    'new_match_start_message': '✨ You can now start a conversation with your new connection!',
     'new_message_title': 'New Message from %s',
 
     // Permissions
@@ -1163,6 +1165,7 @@ export const translations = {
     'new_like_desc': '%sさんから「いいね！」されました。',
     'new_match_title': '🎉 新しいマッチ！',
     'new_match_desc': '%sさんとマッチしました。',
+    'new_match_start_message': '✨ 新しい出会いと会話を始めることができます！',
     'new_message_title': '%sさんからの新着メッセージ',
 
     // Permissions
@@ -1592,6 +1595,7 @@ export const translations = {
     'new_like_desc': 'Le gustas a %s.',
     'new_match_title': '🎉 ¡Nuevo Match!',
     'new_match_desc': 'Tienes una nueva conexión con %s.',
+    'new_match_start_message': '✨ ¡Ahora puedes iniciar una conversación con tu nueva conexión!',
     'new_message_title': 'Nuevo Mensaje de %s',
 
     // Permissions
@@ -1733,3 +1737,5 @@ export const translations = {
     'admin_sidebar_user_management': 'Gestión de Usuarios',
   },
 };
+
+    

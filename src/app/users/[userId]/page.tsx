@@ -175,7 +175,7 @@ function UserProfilePageContent() {
           id: newMatchRef.id,
           users: [currentUser.id, targetUserId],
           matchDate: serverTimestamp(),
-          lastMessage: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+          lastMessage: t('new_match_start_message'),
           lastMessageTimestamp: serverTimestamp(),
           lastMessageSenderId: 'system',
           unreadCounts: { [currentUser.id]: 0, [targetUserId]: 1 },
@@ -188,7 +188,7 @@ function UserProfilePageContent() {
             const messagesColRef = collection(newMatchRef, 'messages');
             addDoc(messagesColRef, {
               senderId: 'system',
-              text: '✨ 이제 새로운 인연과 대화를 시작할 수 있어요!',
+              text: t('new_match_start_message'),
               timestamp: serverTimestamp(),
             }).catch(e => {
                 if (e.code === 'permission-denied') {
@@ -518,3 +518,5 @@ export default function UserProfilePage() {
     </Suspense>
   )
 }
+
+    
