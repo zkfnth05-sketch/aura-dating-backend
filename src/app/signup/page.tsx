@@ -76,7 +76,10 @@ export default function SignupPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-black text-white p-8">
-      <div className="w-full pt-8">
+      <div className="w-full pt-[46px] text-center">
+        <p className="mb-4 text-sm text-neutral-400">
+            Hello, welcome to Aura Ai Dating. Please select your preferred language below.
+        </p>
         <div className="flex flex-nowrap items-center justify-center gap-2 overflow-x-auto">
             {supportedLanguages.map(lang => (
                 <Button key={lang.code} variant="ghost" size="sm" onClick={() => setLanguage(lang.code as any)} className={cn("gap-2", language === lang.code && "bg-primary text-primary-foreground hover:bg-primary/90")}>
@@ -129,7 +132,7 @@ export default function SignupPage() {
                 </ol>
 
                 <h3 className="font-bold mt-4">제3조 (약관의 명시와 개정)</h3>
-                <p>"회사"는 이 약관의 내용을 "회원"이 쉽게 알 수 있도록 서비스 초기 화면에 게시합니다. "회사"는 "약관의규제에관한법률", "정보통신망이용촉진및정보보호등에관한법률(이하 "정보통신망법")" 등 관련법을 위배하지 않는 범위에서 이 약관을 개정할 수 있습니다.</p>
+                <p>"회사"는 이 약관의 내용을 "회원"이 쉽게 알 수 있도록 서비스 초기 화면에 게시합니다. "회사"는 "약관의규제에관한법률", "정보통신망이용촉진및정보보호등에관한법률(이하 "정보통신망법")" 등 관련법을 위배하지 않는 범위에서 이 약관을 개정할 수 있습니다。</p>
                 
                 <h3 className="font-bold mt-4">제4조 (서비스의 제공)</h3>
                 <p>회사는 다음과 같은 서비스를 제공합니다.</p>
