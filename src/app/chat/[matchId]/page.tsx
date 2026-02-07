@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -126,13 +125,6 @@ export default function ChatPage() {
     if (!messages) return [];
     return [...messages].reverse();
   }, [messages]);
-
-  const isTranslationEnabled = useMemo(() => {
-    if (!currentUser || !otherUser) return false;
-    const currentUserLang = currentUser.language || 'ko';
-    const otherUserLang = otherUser.language || 'ko';
-    return currentUserLang !== otherUserLang;
-  }, [currentUser, otherUser]);
 
   const currentLanguageName = useMemo(() => {
     return supportedLanguages.find(lang => lang.code === language)?.name || '...';
@@ -445,12 +437,10 @@ export default function ChatPage() {
       </header>
 
       <ScrollArea className="flex-1 p-4 pb-20" ref={scrollAreaRef}>
-        {isTranslationEnabled && (
-          <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-start gap-2 mb-4">
-            <Languages className="h-4 w-4 text-blue-300 flex-shrink-0" />
-            <span>{t('chat_translation_notice').replace('%s', currentLanguageName)}</span>
-          </div>
-        )}
+        <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-start gap-2 mb-4">
+          <Languages className="h-4 w-4 text-blue-300 flex-shrink-0" />
+          <span>{t('chat_translation_notice').replace('%s', currentLanguageName)}</span>
+        </div>
         <div className="space-y-4">
           {areMessagesLoading && orderedMessages?.length === 0 && <div className="text-center text-muted-foreground">{t('chat_loading_messages')}</div>}
           {orderedMessages && orderedMessages.map((message) => {
