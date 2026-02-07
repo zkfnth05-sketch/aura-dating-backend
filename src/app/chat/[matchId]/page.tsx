@@ -343,59 +343,58 @@ export default function ChatPage() {
     }
   };
   
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+    }
+  };
+  
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+  
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
+          audioChunksRef.current.push(event.data);
         }
       };
+  
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         handleSendAudio(audioBlob);
         audioChunksRef.current = [];
         stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
       };
+  
       mediaRecorderRef.current.start();
       setIsRecording(true);
-
+  
       setCountdown(15);
       countdownIntervalRef.current = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-              mediaRecorderRef.current.stop();
-            }
-            clearInterval(countdownIntervalRef.current!);
+            stopRecording();
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-
+  
       setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-          mediaRecorderRef.current.stop();
-        }
+        stopRecording();
       }, 15000);
-
+  
     } catch (err) {
       toast({ variant: 'destructive', title: t('chat_mic_permission_failed_title'), description: t('chat_mic_permission_failed_desc') })
     }
   };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = null;
-      }
-    }
-  };
+  
   const handleMicPress = () => startRecording();
   const handleMicRelease = () => stopRecording();
 
