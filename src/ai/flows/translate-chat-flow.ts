@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview AI flow for real-time, cost-effective chat message translation.
@@ -33,9 +34,9 @@ const translateChatFlow = ai.defineFlow(
     outputSchema: TranslateChatOutputSchema,
   },
   async (input) => {
-    // Using gemini-2.5-flash as it is fast and cost-effective for simple translation tasks.
+    // Using gemini-1.5-flash-latest as it is highly cost-effective for simple translation tasks.
     const { output } = await ai.generate({
-        model: googleAI.model('gemini-2.5-flash'),
+        model: googleAI.model('gemini-1.5-flash-latest'),
         prompt: `You are a translation agent. Your task is to translate the given text into the specified target language.
 Your response MUST be a valid JSON object that conforms to the provided schema, containing only the translated text. Do not include any extra explanations, formatting, or markdown.
 
