@@ -186,12 +186,12 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md bg-card border-primary/20">
-        <DialogHeader>
+      <DialogContent className="max-w-md bg-card border-primary/20 flex flex-col p-0 h-full sm:h-auto sm:max-h-[95vh] rounded-none sm:rounded-lg">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <DialogTitle>{t('record_video_title')}</DialogTitle>
           <DialogDescription>{t('record_video_desc')}</DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div className="px-6 py-4 flex-1 overflow-y-auto">
           <div className="relative w-full aspect-[9/16] rounded-md overflow-hidden bg-black flex items-center justify-center">
             {mode === 'uploading' ? (
                 <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -203,7 +203,7 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
             {isRecording && <p className="absolute top-4 text-white text-lg font-mono bg-black/50 px-3 py-1 rounded-full">{countdown}</p>}
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="p-6 pt-4 shrink-0 border-t">
           {mode === 'record' && (
             <>
               <Button variant="secondary" onClick={handleClose} disabled={isRecording}>{t('cancel_button')}</Button>
