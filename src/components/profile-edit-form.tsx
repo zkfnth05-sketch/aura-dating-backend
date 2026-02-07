@@ -9,14 +9,14 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { X, Plus, Video, Camera, ImageIcon, Loader2, Check } from 'lucide-react';
+import { X, Plus, Video, Camera, ImageIcon, Loader2, Check, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn, compressImage } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
 import { getAuth, deleteUser } from 'firebase/auth';
 import { doc, deleteDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useStorage } from '@/firebase';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +35,7 @@ import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
 import VideoUploadDialog from './video-upload-dialog';
 import { getEnhancedPhoto } from '@/actions/ai-actions';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 
 const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
@@ -91,7 +92,9 @@ export default function ProfileEditForm() {
   const { user: currentUser, updateUser, isLoaded, authUser } = useUser();
   const { t, setLanguage, supportedLanguages } = useLanguage();
   const firestore = useFirestore();
+  const storage = useStorage();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
   
   const [profile, setProfile] = useState({
     name: '',
@@ -115,6 +118,7 @@ export default function ProfileEditForm() {
   const [aiEnhancement, setAiEnhancement] = useState(true);
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
+  const [isVideoSourceDialogOpen, setIsVideoSourceDialogOpen] = useState(false);
   const [isReauthDialogOpen, setIsReauthDialogOpen] = useState(false);
   const [isVideoUploadOpen, setIsVideoUploadOpen] = useState(false);
 
@@ -290,6 +294,54 @@ export default function ProfileEditForm() {
     updateUser({ videoUrls: newVideoUrls });
   }
 
+  const handleVideoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsVideoSourceDialogOpen(false);
+
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = async () => {
+      window.URL.revokeObjectURL(video.src);
+      if (video.duration > 15) {
+        toast({
+          variant: 'destructive',
+          title: '동영상 길이 초과',
+          description: `동영상은 15초 이하여야 합니다.`,
+        });
+        return;
+      }
+      
+      if (!currentUser || !storage) return;
+
+      setIsSaving(true);
+      try {
+        const videoFileRef = storageRef(storage, `videos/${currentUser.id}/${Date.now()}.${file.name.split('.').pop() || 'webm'}`);
+        await uploadBytes(videoFileRef, file);
+        const downloadURL = await getDownloadURL(videoFileRef);
+        await updateUser({ videoUrls: [...(currentUser.videoUrls || []), downloadURL] });
+
+        toast({
+          title: '동영상 업로드 성공',
+          description: '프로필에 동영상이 추가되었습니다.',
+        });
+      } catch (error) {
+        console.error('Failed to upload video:', error);
+        toast({
+          variant: 'destructive',
+          title: '업로드 실패',
+          description: '동영상 업로드 중 오류가 발생했습니다.',
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    };
+    video.src = URL.createObjectURL(file);
+    if(videoFileInputRef.current) videoFileInputRef.current.value = "";
+  };
+
+
   return (
     <>
       <main className="container px-4 pb-40">
@@ -356,7 +408,7 @@ export default function ProfileEditForm() {
               </Dialog>
             )}
           </div>
-           <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700" onClick={() => setIsVideoUploadOpen(true)}>
+           <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700" onClick={() => setIsVideoSourceDialogOpen(true)}>
             <Video className="mr-2 h-4 w-4" />
             {t('video_add_button')}
           </Button>
@@ -376,6 +428,34 @@ export default function ProfileEditForm() {
         </Section>
         
         <CameraDialog isOpen={isCameraDialogOpen} onClose={() => setIsCameraDialogOpen(false)} onPhotoTaken={handlePhotoTaken} />
+
+        <Dialog open={isVideoSourceDialogOpen} onOpenChange={setIsVideoSourceDialogOpen}>
+            <DialogContent className="sm:max-w-[425px] bg-card border-primary/20">
+                <DialogHeader>
+                <DialogTitle>동영상 추가</DialogTitle>
+                <DialogDescription>
+                    프로필에 동영상을 추가하는 방법을 선택하세요.
+                </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                <Button variant="outline" onClick={() => { setIsVideoUploadOpen(true); setIsVideoSourceDialogOpen(false); }}>
+                    <Camera className="mr-2 h-4 w-4" />
+                    직접 촬영
+                </Button>
+                <Button variant="outline" onClick={() => videoFileInputRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    앨범에서 선택
+                </Button>
+                <input
+                    type="file"
+                    ref={videoFileInputRef}
+                    onChange={handleVideoFileChange}
+                    className="hidden"
+                    accept="video/*"
+                />
+                </div>
+            </DialogContent>
+        </Dialog>
 
         <Section title={t('language_section_title')} description={t('language_section_description')}>
           <Select value={profile.language} onValueChange={(value: LanguageCode) => handleSingleSelect('language', value)}>

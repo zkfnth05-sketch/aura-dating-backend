@@ -5,7 +5,7 @@ import { useUser, useStorage } from '@/firebase';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { X, Check, Upload, RefreshCw, Loader2 } from 'lucide-react';
+import { X, Check, RefreshCw, Loader2 } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useLanguage } from '@/contexts/language-context';
 
@@ -19,7 +19,6 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [mode, setMode] = useState<'record' | 'preview' | 'uploading'>('record');
@@ -138,29 +137,6 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
       clearInterval(countdownIntervalRef.current);
     }
   };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.onloadedmetadata = () => {
-      window.URL.revokeObjectURL(video.src);
-      if (video.duration > MAX_DURATION_SECONDS) {
-        toast({
-          variant: 'destructive',
-          title: '동영상 길이 초과',
-          description: `동영상은 ${MAX_DURATION_SECONDS}초 이하여야 합니다.`,
-        });
-      } else {
-        setVideoBlob(file);
-        setPreviewUrl(URL.createObjectURL(file));
-        setMode('preview');
-      }
-    };
-    video.src = URL.createObjectURL(file);
-  };
   
   const handleSave = async () => {
     if (!videoBlob || !user || !storage) return;
@@ -212,11 +188,7 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
     return (
       <>
         <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
-        <div className="absolute bottom-10 left-0 right-0 flex justify-center items-center gap-6 z-20">
-          <Button variant="ghost" className="text-white" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="mr-2" />
-            앨범
-          </Button>
+        <div className="absolute bottom-10 left-0 right-0 flex justify-center items-center z-20">
           <Button 
             variant="outline" 
             size="icon" 
@@ -225,7 +197,6 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
           >
             {isRecording ? <div className="w-8 h-8 bg-red-500 rounded-md" /> : <div className="w-16 h-16 bg-red-500 rounded-full" />}
           </Button>
-          <div className="w-20" /> {/* Spacer */}
         </div>
         {isRecording && <p className="absolute top-16 text-white text-lg font-mono bg-black/50 px-2 rounded-md">{countdown}</p>}
       </>
@@ -241,13 +212,6 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
             </Button>
         </div>
         {renderContent()}
-        <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            className="hidden"
-            accept="video/*"
-        />
       </DialogContent>
     </Dialog>
   );
