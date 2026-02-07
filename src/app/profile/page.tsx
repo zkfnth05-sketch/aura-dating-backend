@@ -152,6 +152,7 @@ export default function ProfilePage() {
                 id="location-banner-toggle"
                 checked={notificationSettings.locationShared}
                 onCheckedChange={(checked) => handleSettingChange('locationShared', checked)}
+                className={cn(notificationSettings.locationShared ? 'data-[state=checked]:bg-blue-400' : 'data-[state=unchecked]:bg-zinc-700')}
               />
             </div>
 
