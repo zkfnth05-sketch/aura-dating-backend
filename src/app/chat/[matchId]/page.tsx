@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import type { Match, Message, User } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Send, Loader2, UserX, Languages } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, UserX, Languages, Square, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -80,11 +80,14 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [isCallActive, setIsCallActive] = useState(false);
   const [lastSeenText, setLastSeenText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [countdown, setCountdown] = useState(15);
+
+  const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'preview'>('idle');
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -147,9 +150,7 @@ export default function ChatPage() {
     // Scroll when messages are loaded
     scrollToEnd();
   
-    // Dependency on orderedMessages length ensures it runs when new messages are added.
-    // Dependency on isRecording ensures it runs when recording UI appears/disappears.
-  }, [orderedMessages.length, isRecording]);
+  }, [orderedMessages.length, recordingState]);
 
   useEffect(() => {
     if (!firestore || !currentUser?.id || !matchRef) return;
@@ -284,8 +285,8 @@ export default function ChatPage() {
     }
   };
 
-  const handleSendAudio = async (audioBlob: Blob) => {
-    if (!firestore || !currentUser || !otherUser || !storage) return;
+  const handleSendAudio = async (audioBlob: Blob | null) => {
+    if (!audioBlob || !firestore || !currentUser || !otherUser || !storage) return;
 
     updateUser({ lastSeen: new Date().toISOString() });
 
@@ -347,6 +348,10 @@ export default function ChatPage() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
     }
+    if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+    }
   };
   
   const startRecording = async () => {
@@ -361,11 +366,15 @@ export default function ChatPage() {
       };
   
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        handleSendAudio(audioBlob);
+        if (audioChunksRef.current.length > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            setRecordedAudioBlob(audioBlob);
+            const url = URL.createObjectURL(audioBlob);
+            setAudioPreviewUrl(url);
+            setRecordingState('preview');
+        }
         audioChunksRef.current = [];
         stream.getTracks().forEach(track => track.stop());
-        setIsRecording(false);
         if (countdownIntervalRef.current) {
           clearInterval(countdownIntervalRef.current);
           countdownIntervalRef.current = null;
@@ -373,7 +382,7 @@ export default function ChatPage() {
       };
   
       mediaRecorderRef.current.start();
-      setIsRecording(true);
+      setRecordingState('recording');
   
       setCountdown(15);
       countdownIntervalRef.current = setInterval(() => {
@@ -386,17 +395,26 @@ export default function ChatPage() {
         });
       }, 1000);
   
-      setTimeout(() => {
-        stopRecording();
-      }, 15000);
+      setTimeout(stopRecording, 15000);
   
     } catch (err) {
       toast({ variant: 'destructive', title: t('chat_mic_permission_failed_title'), description: t('chat_mic_permission_failed_desc') })
     }
   };
-  
-  const handleMicPress = () => startRecording();
-  const handleMicRelease = () => stopRecording();
+
+  const handleDiscardRecording = () => {
+    if (audioPreviewUrl) {
+      URL.revokeObjectURL(audioPreviewUrl);
+    }
+    setRecordingState('idle');
+    setAudioPreviewUrl(null);
+    setRecordedAudioBlob(null);
+  };
+
+  const handleConfirmSendAudio = async () => {
+    await handleSendAudio(recordedAudioBlob);
+    handleDiscardRecording();
+  };
 
   const handleInitiateCall = () => {
     if(!currentUser || !firestore || !otherUser || !matchRef) return;
@@ -439,16 +457,73 @@ export default function ChatPage() {
   if (isCallActive) {
     return <VideoChat localUser={currentUser} remoteUser={otherUser} matchId={matchId} onEndCall={handleEndCall} />;
   }
+  
+  const renderFooterContent = () => {
+    switch (recordingState) {
+      case 'recording':
+        return (
+          <div className="flex items-center justify-between w-full h-14 bg-card p-2 rounded-lg">
+            <div className="flex items-center text-red-500 animate-pulse">
+              <MicIcon className="w-5 h-5 mr-2" />
+              <span className="font-mono font-bold">{countdown}s</span>
+            </div>
+            <Button onClick={stopRecording} variant="destructive" size="icon">
+              <Square className="h-6 w-6 fill-current" />
+            </Button>
+          </div>
+        );
+      case 'preview':
+        return (
+          <div className="flex items-center justify-between w-full h-14 bg-card p-2 rounded-lg">
+            <Button onClick={handleDiscardRecording} variant="ghost" size="icon">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </Button>
+            {audioPreviewUrl && <audio src={audioPreviewUrl} controls className="w-full mx-2 h-10" />}
+            <Button onClick={handleConfirmSendAudio} size="icon">
+              <Send className="h-6 w-6 text-primary" />
+            </Button>
+          </div>
+        );
+      case 'idle':
+      default:
+        return (
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}>
+              <span className="text-2xl">✨</span>
+            </Button>
+            <Input 
+              value={newMessage} 
+              onChange={(e) => setNewMessage(e.target.value)} 
+              placeholder={t('chat_input_placeholder')} 
+              autoComplete="off" 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
+            />
+            {newMessage.trim() ? (
+              <Button type="submit" size="icon" disabled={isSending}>
+                  {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6 text-primary" />}
+              </Button>
+            ) : (
+              <Button 
+                type="button" 
+                size="icon" 
+                variant="ghost" 
+                onClick={startRecording}
+              >
+                <MicIcon className="h-6 w-6 text-primary" />
+              </Button>
+            )}
+          </form>
+        );
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {isRecording && (
-        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-50 pointer-events-none">
-          <MicIcon className="w-16 h-16 text-red-500 animate-pulse mb-8" />
-          <p className="text-6xl font-mono font-bold text-white">{countdown}</p>
-          <p className="text-white/80 mt-4">{t('recording_in_progress')}</p>
-        </div>
-      )}
       <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10 flex-shrink-0">
         <Button variant="ghost" size="icon" onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex items-center gap-3 flex-1">
@@ -518,41 +593,10 @@ export default function ChatPage() {
                 )}
             </div>
         )}
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="icon" onClick={handleGetSuggestions} disabled={isLoadingSuggestions}>
-            <span className="text-2xl">✨</span>
-          </Button>
-          <Input 
-            value={newMessage} 
-            onChange={(e) => setNewMessage(e.target.value)} 
-            placeholder={t('chat_input_placeholder')} 
-            autoComplete="off" 
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-          />
-          {newMessage.trim() ? (
-            <Button type="submit" size="icon" disabled={isSending}>
-                {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6 text-primary" />}
-            </Button>
-          ) : (
-            <Button 
-              type="button" 
-              size="icon" 
-              variant={isRecording ? 'destructive' : 'ghost'} 
-              onMouseDown={handleMicPress} 
-              onMouseUp={handleMicRelease} 
-              onTouchStart={handleMicPress} 
-              onTouchEnd={handleMicRelease}
-            >
-              <MicIcon className="h-6 w-6 text-primary" />
-            </Button>
-          )}
-        </form>
+        {renderFooterContent()}
       </footer>
     </div>
   );
 }
+
+    
