@@ -8,3 +8,4 @@ import '@/ai/flows/date-course-flow.ts';
 import '@/ai/flows/recommendation-reason-flow.ts';
 import '@/ai/flows/chat-reply-flow.ts';
 import '@/ai/flows/translate-chat-flow.ts';
+import '@/ai/flows/animate-photo-flow.ts';

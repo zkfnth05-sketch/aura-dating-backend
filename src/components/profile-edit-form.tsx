@@ -9,12 +9,12 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { X, Plus, Video, Camera, ImageIcon, Loader2 } from 'lucide-react';
+import { X, Plus, Video, Camera, ImageIcon, Loader2, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn, compressImage } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import CameraDialog from '@/components/camera-dialog';
-import { getEnhancedPhoto } from '@/actions/ai-actions';
+import { generateAnimatedPhoto } from '@/actions/ai-actions';
 import { getAuth, deleteUser } from 'firebase/auth';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -32,6 +32,8 @@ import {
 import ReauthDialog from './reauth-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TranslationKeys } from '@/lib/locales';
+import { Label } from './ui/label';
+import { ScrollArea } from './ui/scroll-area';
 
 const FlagIcon = ({ code, ...props }: { code: string } & React.SVGProps<SVGSVGElement>) => {
   switch (code) {
@@ -113,6 +115,12 @@ export default function ProfileEditForm() {
   const [isPhotoSourceDialogOpen, setIsPhotoSourceDialogOpen] = useState(false);
   const [isReauthDialogOpen, setIsReauthDialogOpen] = useState(false);
 
+  const [isAnimateVideoDialogOpen, setIsAnimateVideoDialogOpen] = useState(false);
+  const [selectedPhotoForVideo, setSelectedPhotoForVideo] = useState<string | null>(null);
+  const [videoPrompt, setVideoPrompt] = useState<string>('');
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+
+
   useEffect(() => {
     if (currentUser) {
       setProfile({
@@ -141,6 +149,7 @@ export default function ProfileEditForm() {
   }
 
   const photoUrls = currentUser.photoUrls || [];
+  const videoUrls = currentUser.videoUrls || [];
   
   const handleMultiSelect = (field: keyof typeof profile, value: string) => {
     setProfile(prev => {
@@ -160,7 +169,7 @@ export default function ProfileEditForm() {
   }
 
   const handleSave = () => {
-    if (isEnhancing) {
+    if (isEnhancing || isGeneratingVideo) {
         toast({
             variant: "destructive",
             title: t('ai_enhancing_toast_title'),
@@ -279,6 +288,38 @@ export default function ProfileEditForm() {
     }
   };
 
+  const handleGenerateVideo = async () => {
+    if (!selectedPhotoForVideo) {
+        toast({ title: "동영상을 만들 사진을 선택해주세요.", variant: "destructive" });
+        return;
+    }
+    if (!videoPrompt.trim()) {
+        toast({ title: "프롬프트를 입력해주세요.", variant: "destructive" });
+        return;
+    }
+    setIsGeneratingVideo(true);
+    try {
+        const { videoDataUri } = await generateAnimatedPhoto({
+            photoDataUri: selectedPhotoForVideo,
+            prompt: videoPrompt
+        });
+        await updateUser({ videoUrls: [...videoUrls, videoDataUri] });
+        toast({ title: "동영상 생성 완료!", description: "프로필에 동영상이 추가되었습니다." });
+        setIsAnimateVideoDialogOpen(false);
+        setSelectedPhotoForVideo(null);
+        setVideoPrompt('');
+    } catch (error: any) {
+        toast({ title: "동영상 생성 실패", description: error.message, variant: "destructive" });
+    } finally {
+        setIsGeneratingVideo(false);
+    }
+  }
+
+  const removeVideo = (urlToRemove: string) => {
+    const newVideoUrls = videoUrls.filter(url => url !== urlToRemove);
+    updateUser({ videoUrls: newVideoUrls });
+  }
+
   return (
     <>
       <main className="container px-4 pb-40">
@@ -344,12 +385,24 @@ export default function ProfileEditForm() {
                 </DialogContent>
               </Dialog>
             )}
-
           </div>
-           <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700">
+           <Button variant="outline" className="w-full mt-4 bg-zinc-800 border-zinc-700 hover:bg-zinc-700" onClick={() => setIsAnimateVideoDialogOpen(true)}>
             <Video className="mr-2 h-4 w-4" />
             {t('video_add_button')}
           </Button>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {videoUrls.map((url, index) => (
+                <div key={url + index} className="relative aspect-square rounded-lg overflow-hidden group bg-zinc-900">
+                    <video src={url} className="object-cover w-full h-full" controls loop />
+                    <div className="absolute top-1 right-1 z-20">
+                    <Button variant="destructive" size="icon" onClick={() => removeVideo(url)} className="w-6 h-6 rounded-full bg-black/50">
+                        <X className="h-4 w-4" />
+                    </Button>
+                    </div>
+                </div>
+            ))}
+            </div>
         </Section>
         
         <CameraDialog isOpen={isCameraDialogOpen} onClose={() => setIsCameraDialogOpen(false)} onPhotoTaken={handlePhotoTaken} />
@@ -448,8 +501,8 @@ export default function ProfileEditForm() {
       <footer className="fixed bottom-0 left-0 right-0 p-4 bg-black/80 backdrop-blur-sm border-t border-zinc-800">
         <div className="flex w-full gap-2 max-w-screen-sm mx-auto">
             <Button variant="secondary" onClick={() => router.back()} className="flex-1 h-12 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 rounded-lg">{t('cancel_button')}</Button>
-            <Button onClick={handleSave} disabled={isSaving || isEnhancing} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">
-                {(isSaving || isEnhancing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button onClick={handleSave} disabled={isSaving || isEnhancing || isGeneratingVideo} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg">
+                {(isSaving || isEnhancing || isGeneratingVideo) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {t('save_button')}
             </Button>
         </div>
@@ -483,6 +536,52 @@ export default function ProfileEditForm() {
           onReauthSuccess={handleDeleteAccount}
         />
       )}
+      <Dialog open={isAnimateVideoDialogOpen} onOpenChange={setIsAnimateVideoDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>프로필 동영상 생성</DialogTitle>
+                <DialogDescription>
+                    프로필 사진 중 하나를 선택하고, 어떤 움직임을 원하는지 설명해주세요. AI가 5초 분량의 동영상을 생성합니다. (예: 머리카락이 바람에 날리는 모습, 부드럽게 미소짓는 모습)
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+                <div>
+                    <Label>1. 동영상으로 만들 사진 선택</Label>
+                    <ScrollArea className="h-48 mt-2">
+                        <div className="grid grid-cols-4 gap-2 pr-4">
+                            {photoUrls.map((url) => (
+                                <div key={url} className="relative aspect-square rounded-md overflow-hidden cursor-pointer" onClick={() => setSelectedPhotoForVideo(url)}>
+                                    <Image src={url} alt="photo" fill className="object-cover"/>
+                                    {selectedPhotoForVideo === url && (
+                                        <div className="absolute inset-0 border-4 border-primary rounded-md flex items-center justify-center bg-black/50">
+                                            <Check className="h-8 w-8 text-white"/>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </ScrollArea>
+                </div>
+                <div>
+                    <Label htmlFor="video-prompt">2. 원하는 움직임 설명 (프롬프트)</Label>
+                    <Textarea 
+                        id="video-prompt"
+                        value={videoPrompt}
+                        onChange={(e) => setVideoPrompt(e.target.value)}
+                        placeholder="예: 부드럽게 미소지으며 머리카락이 바람에 날리는 모습"
+                        className="mt-2"
+                    />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="secondary" onClick={() => setIsAnimateVideoDialogOpen(false)}>취소</Button>
+                <Button onClick={handleGenerateVideo} disabled={isGeneratingVideo || !selectedPhotoForVideo || !videoPrompt.trim()}>
+                    {isGeneratingVideo ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                    생성하기
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </>
   );
 }

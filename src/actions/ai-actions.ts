@@ -26,6 +26,11 @@ import {
     TranslateChatInput,
     TranslateChatOutput,
 } from '@/ai/flows/translate-chat-flow';
+import {
+    animatePhoto,
+    AnimatePhotoInput,
+    AnimatePhotoOutput,
+} from '@/ai/flows/animate-photo-flow';
 
 export async function getEnhancedPhoto(
     input: EnhancePhotoInput
@@ -81,5 +86,21 @@ export async function getChatTranslation(
     } catch (error) {
         console.error('AI Chat Translation failed:', error);
         throw new Error('Failed to get chat translation.');
+    }
+}
+
+export async function generateAnimatedPhoto(
+    input: AnimatePhotoInput
+): Promise<AnimatePhotoOutput> {
+    try {
+        const result = await animatePhoto(input);
+        return result;
+    } catch (error) {
+        console.error('AI photo animation failed:', error);
+        // Re-throw to let the client-side handle it with a toast
+        if (error instanceof Error) {
+            throw new Error(error.message);
+        }
+        throw new Error('An unknown error occurred during video generation.');
     }
 }
