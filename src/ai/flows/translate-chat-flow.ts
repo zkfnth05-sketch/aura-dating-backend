@@ -24,7 +24,14 @@ const TranslateChatOutputSchema = z.object({
 export type TranslateChatOutput = z.infer<typeof TranslateChatOutputSchema>;
 
 export async function translateChatText(input: TranslateChatInput): Promise<TranslateChatOutput> {
-  return translateChatFlow(input);
+  try {
+    return await translateChatFlow(input);
+  } catch (error) {
+    console.error("AI chat translation failed, returning empty translation.", error);
+    // Return a fallback response with an empty string.
+    // The calling code is designed to handle this by not including a translation.
+    return { translatedText: "" };
+  }
 }
 
 const translateChatFlow = ai.defineFlow(
@@ -34,9 +41,11 @@ const translateChatFlow = ai.defineFlow(
     outputSchema: TranslateChatOutputSchema,
   },
   async (input) => {
-    // Using gemini-1.5-flash-latest as it is highly cost-effective for simple translation tasks.
+    // Reverted to gemini-2.5-flash. While gemini-1.5-flash-latest is cost-effective,
+    // gemini-2.5-flash provides better reliability for structured JSON output, which is crucial for this flow.
+    // This model still offers a great balance of performance and cost.
     const { output } = await ai.generate({
-        model: googleAI.model('gemini-1.5-flash-latest'),
+        model: googleAI.model('gemini-2.5-flash'),
         prompt: `You are a translation agent. Your task is to translate the given text into the specified target language.
 Your response MUST be a valid JSON object that conforms to the provided schema, containing only the translated text. Do not include any extra explanations, formatting, or markdown.
 
@@ -46,8 +55,7 @@ Text to translate: "${input.text}"`,
         retries: 2, // Add retries for robustness
     });
     
-    // If the model fails to produce valid output, it will throw an error which is caught by the Server Action.
-    // We expect the calling function to handle this gracefully.
+    // If the model fails to produce valid output, it will throw an error which is caught by the calling function.
     return output!;
   }
 );
