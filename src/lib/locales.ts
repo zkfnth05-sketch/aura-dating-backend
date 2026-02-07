@@ -621,7 +621,7 @@ export const translations = {
 
     // Date Course Form
     'date_course_rec_title': 'AI Date Course Recommendation',
-    'date_course_rec_subtitle': 'Tell us where you want to go or the vibe you want, and AI will plan the perfect date.',
+    'date_course_rec_subtitle': 'Tell us where you want to go or the vibe you want, and the AI will plan the perfect date.',
     'date_course_destination_label': 'Tell us about your desired travel destination',
     'date_course_destination_placeholder': 'e.g., Seoul',
     'date_course_party_size_label': 'Number of people',
@@ -654,7 +654,7 @@ export const translations = {
     'date_course_vibe_foodie': 'Foodie',
     'date_course_vibe_any': 'Any',
     'get_ai_date_course_button': 'Get AI Date Course Recommendation',
-    'ai_generating_date_course_title': 'AI is planning the perfect date',
+    'ai_generating_date_course_title': 'The AI is planning the perfect date',
     'ai_generating_date_course_subtitle': 'just for the two of you...',
     'no_image_available': 'Could not generate a representative image.',
     'total_estimated_cost_label': 'Total Estimated Cost',
@@ -1737,5 +1737,3 @@ export const translations = {
     'admin_sidebar_user_management': 'Gestión de Usuarios',
   },
 };
-
-    
