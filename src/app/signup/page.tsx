@@ -77,7 +77,7 @@ export default function SignupPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-black text-white p-8">
-      <div className="w-full text-center pt-12">
+      <div className="w-full text-center pt-20">
         <p className="mb-4 text-sm text-neutral-400">
             Hello, welcome to Aura Ai Dating. Please select your preferred language below.
         </p>
@@ -122,28 +122,28 @@ export default function SignupPage() {
             </DialogHeader>
             <ScrollArea className="h-96 w-full rounded-md border p-4">
               <div className="prose prose-sm dark:prose-invert">
-                <h3 className="font-bold">제1조 (목적)</h3>
-                <p>이 약관은 더윤컴퍼니(이하 "회사")가 제공하는 Aura 서비스 및 관련 제반 서비스의 이용과 관련하여 회사와 회원과의 권리, 의무 및 책임사항, 기타 필요한 사항을 규정함을 목적으로 합니다.</p>
+                <h3 className="font-bold">{t('terms_article_1_title')}</h3>
+                <p>{t('terms_article_1_content')}</p>
                 
-                <h3 className="font-bold mt-4">제2조 (정의)</h3>
-                <p>이 약관에서 사용하는 용어의 정의는 다음과 같습니다.</p>
+                <h3 className="font-bold mt-4">{t('terms_article_2_title')}</h3>
+                <p>{t('terms_article_2_content_1')}</p>
                 <ol className="list-decimal pl-5">
-                  <li>"서비스"라 함은 구현되는 단말기(PC, TV, 휴대형단말기 등의 각종 유무선 장치를 포함)와 상관없이 "회원"이 이용할 수 있는 Aura 및 관련 제반 서비스를 의미합니다.</li>
-                  <li>"회원"이라 함은 회사의 "서비스"에 접속하여 이 약관에 따라 "회사"와 이용계약을 체결하고 "회사"가 제공하는 "서비스"를 이용하는 고객을 말합니다.</li>
+                  <li>{t('terms_article_2_content_2')}</li>
+                  <li>{t('terms_article_2_content_3')}</li>
                 </ol>
 
-                <h3 className="font-bold mt-4">제3조 (약관의 명시와 개정)</h3>
-                <p>"회사"는 이 약관의 내용을 "회원"이 쉽게 알 수 있도록 서비스 초기 화면에 게시합니다. "회사"는 "약관의규제에관한법률", "정보통신망이용촉진및정보보호등에관한법률(이하 "정보통신망법")" 등 관련법을 위배하지 않는 범위에서 이 약관을 개정할 수 있습니다。</p>
+                <h3 className="font-bold mt-4">{t('terms_article_3_title')}</h3>
+                <p>{t('terms_article_3_content')}</p>
                 
-                <h3 className="font-bold mt-4">제4조 (서비스의 제공)</h3>
-                <p>회사는 다음과 같은 서비스를 제공합니다.</p>
+                <h3 className="font-bold mt-4">{t('terms_article_4_title')}</h3>
+                <p>{t('terms_article_4_content_1')}</p>
                 <ul className="list-disc pl-5">
-                    <li>소셜 네트워킹 서비스</li>
-                    <li>위치 기반 추천 서비스</li>
-                    <li>기타 회사가 추가 개발하거나 다른 회사와의 제휴계약 등을 통해 회원에게 제공하는 일체의 서비스</li>
+                    <li>{t('terms_article_4_service_1')}</li>
+                    <li>{t('terms_article_4_service_2')}</li>
+                    <li>{t('terms_article_4_service_3')}</li>
                 </ul>
                 <p className="mt-4">...</p>
-                <p className="font-bold">본 약관은 2024년 7월 25일부터 적용됩니다.</p>
+                <p className="font-bold">{t('terms_effective_date')}</p>
               </div>
             </ScrollArea>
           </DialogContent>
@@ -159,24 +159,24 @@ export default function SignupPage() {
             </DialogHeader>
             <ScrollArea className="h-96 w-full rounded-md border p-4">
               <div className="prose prose-sm dark:prose-invert">
-                <p>더윤컴퍼니(이하 '회사'는) 고객님의 개인정보를 중요시하며, "정보통신망 이용촉진 및 정보보호"에 관한 법률을 준수하고 있습니다。</p>
+                <p>{t('privacy_intro')}</p>
                 
-                <h3 className="font-bold mt-4">제1조 (개인정보의 처리 목적)</h3>
-                <p>회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.</p>
+                <h3 className="font-bold mt-4">{t('privacy_article_1_title')}</h3>
+                <p>{t('privacy_article_1_content_1')}</p>
                 <ol className="list-decimal pl-5">
-                  <li>홈페이지 회원 가입 및 관리: 회원 가입의사 확인, 회원제 서비스 제공에 따른 본인 식별·인증, 회원자격 유지·관리, 제한적 본인확인제 시행에 따른 본인확인, 서비스 부정이용 방지, 만 14세 미만 아동의 개인정보 처리시 법정대리인의 동의여부 확인, 각종 고지·통지, 고충처리 등을 목적으로 개인정보를 처리합니다.</li>
-                  <li>신규 서비스 개발 및 마케팅·광고에의 활용: 신규 서비스 개발 및 맞춤 서비스 제공, 통계학적 특성에 따른 서비스 제공 및 광고 게재, 서비스의 유효성 확인, 접속빈도 파악 또는 회원의 서비스 이용에 대한 통계 등을 목적으로 개인정보를 처리합니다.</li>
+                  <li>{t('privacy_article_1_item_1')}</li>
+                  <li>{t('privacy_article_1_item_2')}</li>
                 </ol>
 
-                <h3 className="font-bold mt-4">제2조 (처리하는 개인정보의 항목)</h3>
-                <p>회사는 회원가입, 원활한 고객상담, 각종 서비스의 제공을 위해 아래와 같은 개인정보를 수집하고 있습니다.</p>
+                <h3 className="font-bold mt-4">{t('privacy_article_2_title')}</h3>
+                <p>{t('privacy_article_2_content_1')}</p>
                 <ul className="list-disc pl-5">
-                  <li>필수항목 : 이름, 생년월일, 성별, 로그인ID, 비밀번호, 휴대전화번호, 이메일</li>
-                  <li>선택항목 : 프로필 사진, 위치정보, 취미, 관심사 등</li>
+                  <li>{t('privacy_article_2_item_1')}</li>
+                  <li>{t('privacy_article_2_item_2')}</li>
                 </ul>
 
                 <p className="mt-4">...</p>
-                <p className="font-bold">본 방침은 2024년 7월 25일부터 시행됩니다.</p>
+                <p className="font-bold">{t('privacy_effective_date')}</p>
               </div>
             </ScrollArea>
           </DialogContent>
