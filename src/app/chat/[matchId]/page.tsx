@@ -84,10 +84,12 @@ export default function ChatPage() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [lastSeenText, setLastSeenText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [countdown, setCountdown] = useState(15);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const matchRef = useMemoFirebase(() => {
     if (!matchId || !firestore) return null;
@@ -275,7 +277,6 @@ export default function ChatPage() {
   const handleSendAudio = async (audioBlob: Blob) => {
     if (!firestore || !currentUser || !otherUser || !storage) return;
 
-    // Update user's lastSeen when they send a message
     updateUser({ lastSeen: new Date().toISOString() });
 
     const audioFileRef = storageRef(storage, `audio_messages/${matchId}/${new Date().getTime()}.webm`);
@@ -295,7 +296,7 @@ export default function ChatPage() {
         batch.set(messageRef, messageData);
     
         const matchUpdateData = {
-            lastMessage: t('new_match_start_message'), 
+            lastMessage: t('audio_message_label'), 
             lastMessageTimestamp: serverTimestamp(),
             [`unreadCounts.${otherUser.id}`]: increment(1)
         };
@@ -349,6 +350,27 @@ export default function ChatPage() {
       };
       mediaRecorderRef.current.start();
       setIsRecording(true);
+
+      setCountdown(15);
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+              mediaRecorderRef.current.stop();
+            }
+            clearInterval(countdownIntervalRef.current!);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+          mediaRecorderRef.current.stop();
+        }
+      }, 15000);
+
     } catch (err) {
       toast({ variant: 'destructive', title: t('chat_mic_permission_failed_title'), description: t('chat_mic_permission_failed_desc') })
     }
@@ -358,6 +380,10 @@ export default function ChatPage() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
     }
   };
   const handleMicPress = () => startRecording();
@@ -370,20 +396,8 @@ export default function ChatPage() {
   };
 
   const handleEndCall = () => {
-      // The cleanup logic is now inside the VideoChat component, 
-      // but we still need to set the local state.
       setIsCallActive(false);
   }
-
-  const isDuringConversation = useMemo(() => {
-    if (!otherUser?.lastSeen) return false;
-    if (otherUser.lastSeen === 'Online') return true;
-    const now = new Date();
-    const lastSeenDate = new Date(otherUser.lastSeen);
-    const diffInMinutes = (now.getTime() - lastSeenDate.getTime()) / (1000 * 60);
-    return diffInMinutes <= 5;
-  }, [otherUser?.lastSeen]);
-
 
   const isLoading = !isUserLoaded || isMatchLoading || (match != null && otherUserId != null && isOtherUserLoading);
   
@@ -419,6 +433,13 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      {isRecording && (
+        <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center z-50 pointer-events-none">
+          <MicIcon className="w-16 h-16 text-red-500 animate-pulse mb-8" />
+          <p className="text-6xl font-mono font-bold text-white">{countdown}</p>
+          <p className="text-white/80 mt-4">{t('recording_in_progress')}</p>
+        </div>
+      )}
       <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10 flex-shrink-0">
         <Button variant="ghost" size="icon" onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex items-center gap-3 flex-1">
@@ -509,31 +530,17 @@ export default function ChatPage() {
                 {isSending ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6 text-primary" />}
             </Button>
           ) : (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <Button 
-                      type="button" 
-                      size="icon" 
-                      variant={isRecording ? 'destructive' : 'ghost'} 
-                      onMouseDown={handleMicPress} 
-                      onMouseUp={handleMicRelease} 
-                      onTouchStart={handleMicPress} 
-                      onTouchEnd={handleMicRelease}
-                      disabled={!isDuringConversation}
-                    >
-                      <MicIcon className="h-6 w-6 text-primary" />
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                {!isDuringConversation && (
-                  <TooltipContent>
-                    <p>{t('audio_message_disabled_tooltip')}</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+            <Button 
+              type="button" 
+              size="icon" 
+              variant={isRecording ? 'destructive' : 'ghost'} 
+              onMouseDown={handleMicPress} 
+              onMouseUp={handleMicRelease} 
+              onTouchStart={handleMicPress} 
+              onTouchEnd={handleMicRelease}
+            >
+              <MicIcon className="h-6 w-6 text-primary" />
+            </Button>
           )}
         </form>
       </footer>

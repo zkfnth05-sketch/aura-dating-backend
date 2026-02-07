@@ -295,7 +295,8 @@ export const translations = {
     'audio_upload_permission_denied': '음성 메시지를 보낼 권한이 없습니다.',
     'audio_upload_failed_title': '음성 메시지 전송 실패',
     'general_error_desc': '오류가 발생했습니다.',
-    'audio_message_disabled_tooltip': '음성 메시지는 상대방과 대화 중일 때만 보낼 수 있습니다.',
+    'recording_in_progress': '녹음 중...',
+    'audio_message_label': '[음성 메시지]',
     
     // User Profile
     'user_profile_not_found_title': '사용자를 찾을 수 없습니다.',
@@ -763,7 +764,8 @@ export const translations = {
     'audio_upload_permission_denied': 'You do not have permission to send audio messages.',
     'audio_upload_failed_title': 'Audio Message Send Failed',
     'general_error_desc': 'An error occurred.',
-    'audio_message_disabled_tooltip': 'Audio messages can only be sent when the other person is in conversation.',
+    'recording_in_progress': 'Recording...',
+    'audio_message_label': '[Audio Message]',
 
     // User Profile
     'user_profile_not_found_title': 'User Not Found',
@@ -1193,7 +1195,7 @@ export const translations = {
     'date_course_travel_label': '移動手段',
     'date_course_cost_per_person_label': '費用',
     'date_course_tip_label': '💖 Tip',
-
+    
     // Chat
     'chat_user_not_found_title': 'ユーザーが見つかりません。',
     'chat_user_not_found_subtitle': 'この会話は削除されたか、存在しません。',
@@ -1229,8 +1231,9 @@ export const translations = {
     'audio_upload_permission_denied': '音声メッセージを送信する権限がありません。',
     'audio_upload_failed_title': '音声メッセージ送信失敗',
     'general_error_desc': 'エラーが発生しました。',
-    'audio_message_disabled_tooltip': '音声メッセージは相手が会話中にのみ送信できます。',
-    
+    'recording_in_progress': '録音中...',
+    'audio_message_label': '[音声メッセージ]',
+
     // User Profile
     'user_profile_not_found_title': 'ユーザーが見つかりません',
     'user_profile_not_found_subtitle': 'このプロフィールは削除されたか、存在しません。',
@@ -1694,7 +1697,8 @@ export const translations = {
     'audio_upload_permission_denied': 'No tienes permiso para enviar mensajes de audio.',
     'audio_upload_failed_title': 'Error al Enviar Mensaje de Audio',
     'general_error_desc': 'Ocurrió un error.',
-    'audio_message_disabled_tooltip': 'Los mensajes de audio solo se pueden enviar cuando la otra persona está en la conversación.',
+    'recording_in_progress': 'Grabando...',
+    'audio_message_label': '[Mensaje de audio]',
 
     // User Profile
     'user_profile_not_found_title': 'Usuario No Encontrado',
