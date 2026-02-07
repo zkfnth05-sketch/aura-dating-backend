@@ -213,7 +213,7 @@ export default function ProfileEditForm() {
             toast({
                 variant: "destructive",
                 title: t('ai_enhance_failed_title'),
-                description: t('ai_enhance_failed_desc'),
+                description: "AI 보정에 실패하여 원본 사진이 사용됩니다.AI 보정을 원하시면 다시 시도해주세요",
             });
         }
     }
