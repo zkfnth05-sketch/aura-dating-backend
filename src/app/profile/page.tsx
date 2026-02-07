@@ -134,17 +134,26 @@ export default function ProfilePage() {
           </div>
 
           <div className="container relative z-10 px-4 mt-6">
-            {notificationSettings.locationShared && (
-              <div className="bg-blue-900/50 border border-blue-400 text-blue-200 text-sm rounded-lg p-3 flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-blue-300" />
-                  <span>{t('profile_location_sharing_on_desc')}</span>
-                </div>
-                <button onClick={() => handleSettingChange('locationShared', false)} className="text-blue-300 hover:text-white">
-                  <X className="h-4 w-4" />
-                </button>
+            <div className={cn(
+                "text-sm rounded-lg p-3 flex items-center justify-between mb-6",
+                notificationSettings.locationShared
+                    ? "bg-blue-900/50 border border-blue-400 text-blue-200"
+                    : "bg-zinc-800/50 border border-zinc-700 text-zinc-400"
+            )}>
+              <div className="flex items-center gap-2">
+                <MapPin className={cn("h-4 w-4", notificationSettings.locationShared ? "text-blue-300" : "text-zinc-500")} />
+                <span>
+                  {notificationSettings.locationShared
+                    ? t('profile_location_sharing_on_desc')
+                    : t('profile_location_sharing_off_desc')}
+                </span>
               </div>
-            )}
+              <Switch
+                id="location-banner-toggle"
+                checked={notificationSettings.locationShared}
+                onCheckedChange={(checked) => handleSettingChange('locationShared', checked)}
+              />
+            </div>
 
             <div className="bg-card p-4 rounded-lg">
 
