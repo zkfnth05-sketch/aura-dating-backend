@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -71,7 +72,7 @@ export default function PhonePage() {
             </label>
             <Select value={countryCode} onValueChange={setCountryCode} disabled={isSendingOtp}>
                 <SelectTrigger id="country-code" className="mt-2 w-full bg-zinc-900 border-zinc-800 h-12 text-base">
-                    <SelectValue placeholder="국가 선택" />
+                    <SelectValue placeholder={t('select_country_placeholder')} />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 text-white border-zinc-800 max-h-60">
                     {countryCodes.map(c => (

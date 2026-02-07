@@ -251,8 +251,8 @@ export default function ChatPage() {
       setNewMessage(messageToSend); // Restore message on failure
       toast({
         variant: "destructive",
-        title: "메시지 전송 실패",
-        description: "메시지를 보내는 중 오류가 발생했습니다. 다시 시도해주세요."
+        title: t('chat_send_message_failed_title'),
+        description: t('chat_send_message_failed_desc'),
       });
   
       if (error.code === 'permission-denied') {
@@ -292,7 +292,7 @@ export default function ChatPage() {
         batch.set(messageRef, messageData);
     
         const matchUpdateData = {
-            lastMessage: '음성 메시지', 
+            lastMessage: t('new_match_start_message'), 
             lastMessageTimestamp: serverTimestamp(),
             [`unreadCounts.${otherUser.id}`]: increment(1)
         };
@@ -303,9 +303,9 @@ export default function ChatPage() {
     } catch (error: any) {
         console.error("Error uploading audio or sending message:", error);
         if (error.code === 'storage/unauthorized' || error.code?.includes('permission-denied')) {
-             toast({ variant: "destructive", title: "전송 실패", description: "음성 메시지를 보낼 권한이 없습니다." });
+             toast({ variant: "destructive", title: t('upload_failed_title'), description: t('audio_upload_permission_denied') });
         } else {
-             toast({ variant: "destructive", title: "음성 메시지 전송 실패", description: "오류가 발생했습니다." });
+             toast({ variant: "destructive", title: t('audio_upload_failed_title'), description: t('general_error_desc') });
         }
     }
   };
@@ -522,7 +522,7 @@ export default function ChatPage() {
                 </TooltipTrigger>
                 {!isDuringConversation && (
                   <TooltipContent>
-                    <p>음성 메시지는 상대방과 대화 중일 때만 보낼 수 있습니다.</p>
+                    <p>{t('audio_message_disabled_tooltip')}</p>
                   </TooltipContent>
                 )}
               </Tooltip>

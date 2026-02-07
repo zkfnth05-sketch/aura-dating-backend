@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -91,8 +92,8 @@ export default function CreateProfilePage() {
       console.error("Failed to start user update:", error);
       toast({
         variant: "destructive",
-        title: "오류",
-        description: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
+        title: t('error_title'),
+        description: t('profile_update_failed_desc'),
       });
       setIsSubmitting(false); // Only re-enable if navigation fails
     }

@@ -53,6 +53,7 @@ export const translations = {
     'phone_number_placeholder': '전화번호',
     'phone_number_description': '로그인 또는 회원가입을 위해 전화번호를 입력해주세요.',
     'get_verify_code': '인증 코드 받기',
+    'select_country_placeholder': '국가 선택',
 
     // OTP
     'otp_title': '인증 코드 입력',
@@ -75,6 +76,7 @@ export const translations = {
     'next_button': '다음',
     'profile_creation_toast_title': '입력 필요',
     'profile_creation_toast_desc': '이름, 나이, 도시를 모두 입력해주세요.',
+    'error_title': '오류',
 
 
     // Photo Upload
@@ -286,6 +288,13 @@ export const translations = {
     'translation_failed_empty_desc': 'AI가 번역을 생성하지 못했습니다. 원본 언어로 메시지가 전송됩니다.',
     'translation_service_error_title': '번역 서비스 오류',
     'translation_service_error_desc': '메시지를 번역할 수 없습니다. 원본 언어로 전송됩니다.',
+    'chat_send_message_failed_title': '메시지 전송 실패',
+    'chat_send_message_failed_desc': '메시지를 보내는 중 오류가 발생했습니다. 다시 시도해주세요.',
+    'upload_failed_title': '전송 실패',
+    'audio_upload_permission_denied': '음성 메시지를 보낼 권한이 없습니다.',
+    'audio_upload_failed_title': '음성 메시지 전송 실패',
+    'general_error_desc': '오류가 발생했습니다.',
+    'audio_message_disabled_tooltip': '음성 메시지는 상대방과 대화 중일 때만 보낼 수 있습니다.',
     
     // User Profile
     'user_profile_not_found_title': '사용자를 찾을 수 없습니다.',
@@ -511,6 +520,7 @@ export const translations = {
     'phone_number_placeholder': 'Phone Number',
     'phone_number_description': 'Please enter your phone number to log in or sign up.',
     'get_verify_code': 'Get verification code',
+    'select_country_placeholder': 'Select Country',
 
     // OTP
     'otp_title': 'Enter verification code',
@@ -533,6 +543,7 @@ export const translations = {
     'next_button': 'Next',
     'profile_creation_toast_title': 'Input Required',
     'profile_creation_toast_desc': 'Please enter your name, age, and city.',
+    'error_title': 'Error',
 
 
     // Photo Upload
@@ -743,7 +754,14 @@ export const translations = {
     'translation_failed_empty_desc': 'The AI returned an empty translation. The message will be sent in the original language.',
     'translation_service_error_title': 'Translation Service Error',
     'translation_service_error_desc': 'Could not translate the message. It will be sent in the original language.',
-    
+    'chat_send_message_failed_title': 'Message Send Failed',
+    'chat_send_message_failed_desc': 'An error occurred while sending the message. Please try again.',
+    'upload_failed_title': 'Upload Failed',
+    'audio_upload_permission_denied': 'You do not have permission to send audio messages.',
+    'audio_upload_failed_title': 'Audio Message Send Failed',
+    'general_error_desc': 'An error occurred.',
+    'audio_message_disabled_tooltip': 'Audio messages can only be sent when the other person is in conversation.',
+
     // User Profile
     'user_profile_not_found_title': 'User Not Found',
     'user_profile_not_found_subtitle': 'This profile is deleted or does not exist.',
@@ -802,7 +820,7 @@ export const translations = {
     'push_noti_unsupported_title': 'Push Notifications Not Supported',
     'push_noti_unsupported_desc': 'This browser does not support push notifications.',
     'media_device_not_found_title': 'Media Device Not Found',
-    'media_device_not_found_desc': 'Could not find a camera or microphone. Please try on a device with media inputs.',
+    'media_device_not_found_desc': 'Could not find a camera or a microphone. Please try on a device with media inputs.',
     
     // Filters
     'filter_title': 'Filters',
@@ -966,6 +984,7 @@ export const translations = {
     'phone_number_placeholder': '電話番号',
     'phone_number_description': 'ログインまたは会員登録のために電話番号を入力してください。',
     'get_verify_code': '認証コードを受け取る',
+    'select_country_placeholder': '国を選択',
 
     // OTP
     'otp_title': '認証コードを入力',
@@ -988,6 +1007,7 @@ export const translations = {
     'next_button': '次へ',
     'profile_creation_toast_title': '入力が必要です',
     'profile_creation_toast_desc': '名前、年齢、都市を入力してください。',
+    'error_title': 'エラー',
 
 
     // Photo Upload
@@ -1198,6 +1218,13 @@ export const translations = {
     'translation_failed_empty_desc': 'AIが翻訳を生成できませんでした。メッセージは元の言語で送信されます。',
     'translation_service_error_title': '翻訳サービスエラー',
     'translation_service_error_desc': 'メッセージを翻訳できません。元の言語で送信されます。',
+    'chat_send_message_failed_title': 'メッセージ送信失敗',
+    'chat_send_message_failed_desc': 'メッセージの送信中にエラーが発生しました。もう一度お試しください。',
+    'upload_failed_title': 'アップロード失敗',
+    'audio_upload_permission_denied': '音声メッセージを送信する権限がありません。',
+    'audio_upload_failed_title': '音声メッセージ送信失敗',
+    'general_error_desc': 'エラーが発生しました。',
+    'audio_message_disabled_tooltip': '音声メッセージは相手が会話中にのみ送信できます。',
     
     // User Profile
     'user_profile_not_found_title': 'ユーザーが見つかりません',
@@ -1421,6 +1448,7 @@ export const translations = {
     'phone_number_placeholder': 'Número de teléfono',
     'phone_number_description': 'Por favor, introduce tu número de teléfono para iniciar sesión o registrarte.',
     'get_verify_code': 'Obtener código de verificación',
+    'select_country_placeholder': 'Seleccionar País',
   
     // OTP
     'otp_title': 'Introducir código de verificación',
@@ -1443,6 +1471,7 @@ export const translations = {
     'next_button': 'Siguiente',
     'profile_creation_toast_title': 'Información Requerida',
     'profile_creation_toast_desc': 'Por favor, introduce tu nombre, edad y ciudad.',
+    'error_title': 'Error',
   
     // Photo Upload
     'add_profile_photo_title': 'Por favor, sube tu foto de perfil principal.',
@@ -1652,7 +1681,14 @@ export const translations = {
     'translation_failed_empty_desc': 'La IA no devolvió una traducción. El mensaje se enviará en el idioma original.',
     'translation_service_error_title': 'Error del Servicio de Traducción',
     'translation_service_error_desc': 'No se pudo traducir el mensaje. Se enviará en el idioma original.',
-    
+    'chat_send_message_failed_title': 'Error al Enviar Mensaje',
+    'chat_send_message_failed_desc': 'Ocurrió un error al enviar el mensaje. Por favor, inténtalo de nuevo.',
+    'upload_failed_title': 'Error al Subir',
+    'audio_upload_permission_denied': 'No tienes permiso para enviar mensajes de audio.',
+    'audio_upload_failed_title': 'Error al Enviar Mensaje de Audio',
+    'general_error_desc': 'Ocurrió un error.',
+    'audio_message_disabled_tooltip': 'Los mensajes de audio solo se pueden enviar cuando la otra persona está en la conversación.',
+
     // User Profile
     'user_profile_not_found_title': 'Usuario No Encontrado',
     'user_profile_not_found_subtitle': 'Este perfil ha sido eliminado o no existe.',
