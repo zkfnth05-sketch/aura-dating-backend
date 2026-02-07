@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -76,7 +77,7 @@ export default function SignupPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-black text-white p-8">
-      <div className="w-full text-center pt-[28px]">
+      <div className="w-full text-center pt-12">
         <p className="mb-4 text-sm text-neutral-400">
             Hello, welcome to Aura Ai Dating. Please select your preferred language below.
         </p>
@@ -158,7 +159,7 @@ export default function SignupPage() {
             </DialogHeader>
             <ScrollArea className="h-96 w-full rounded-md border p-4">
               <div className="prose prose-sm dark:prose-invert">
-                <p>더윤컴퍼니(이하 '회사'는) 고객님의 개인정보를 중요시하며, "정보통신망 이용촉진 및 정보보호"에 관한 법률을 준수하고 있습니다.</p>
+                <p>더윤컴퍼니(이하 '회사'는) 고객님의 개인정보를 중요시하며, "정보통신망 이용촉진 및 정보보호"에 관한 법률을 준수하고 있습니다。</p>
                 
                 <h3 className="font-bold mt-4">제1조 (개인정보의 처리 목적)</h3>
                 <p>회사는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 개인정보 보호법 제18조에 따라 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.</p>
