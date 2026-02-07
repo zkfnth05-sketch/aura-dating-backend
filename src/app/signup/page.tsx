@@ -77,7 +77,7 @@ export default function SignupPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-black text-white p-8">
-       <div className="w-full text-center pt-20">
+       <div className="w-full text-center pt-[60px]">
         <p className="mb-4 text-sm text-neutral-400">
             Hello, welcome to Aura Ai Dating. Please select your preferred language below.
         </p>
