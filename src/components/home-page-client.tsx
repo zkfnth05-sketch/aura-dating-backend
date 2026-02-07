@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -313,6 +314,8 @@ export default function HomePageClient() {
                   zIndex={isTop ? 50 : 20}
                   swipeState={isTop ? swipeState : null}
                   depth={isTop ? 0 : 1}
+                  onLike={() => handleAction('like')}
+                  onDislike={() => handleAction('dislike')}
                 />
               );
             })
