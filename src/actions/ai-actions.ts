@@ -26,6 +26,11 @@ import {
     TranslateChatInput,
     TranslateChatOutput,
 } from '@/ai/flows/translate-chat-flow';
+import {
+    getAudioTranslation as getAudioTranslationFlow,
+    AudioTranslationInput,
+    AudioTranslationOutput,
+} from '@/ai/flows/transcribe-and-translate-audio-flow';
 
 export async function getEnhancedPhoto(
     input: EnhancePhotoInput
@@ -81,5 +86,17 @@ export async function getChatTranslation(
     } catch (error) {
         console.error('AI Chat Translation failed:', error);
         throw new Error('Failed to get chat translation.');
+    }
+}
+
+export async function getAudioTranslation(
+    input: AudioTranslationInput
+): Promise<AudioTranslationOutput> {
+    try {
+        const result = await getAudioTranslationFlow(input);
+        return result;
+    } catch (error) {
+        console.error('AI Audio Translation failed:', error);
+        throw new Error('Failed to get audio translation.');
     }
 }

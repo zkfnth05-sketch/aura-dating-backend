@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -21,6 +22,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useLanguage } from '@/contexts/language-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AudioMessagePlayer from '@/components/audio-message-player';
 
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -567,7 +569,7 @@ export default function ChatPage() {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className={cn('max-w-xs md:max-w-md px-4 py-2 rounded-2xl', isMyMessage ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-accent text-accent-foreground rounded-bl-none')}>
-                                {message.audioUrl ? (<audio controls src={message.audioUrl} className="h-10" />) : (<p className="text-sm break-words">{displayText}</p>)}
+                                {message.audioUrl ? (<AudioMessagePlayer message={message} />) : (<p className="text-sm break-words">{displayText}</p>)}
                                 </div>
                             </TooltipTrigger>
                             {isTranslated && (

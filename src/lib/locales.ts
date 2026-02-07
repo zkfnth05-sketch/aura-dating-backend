@@ -1,4 +1,5 @@
 
+
 export const supportedLanguages = [
   { code: 'ko', name: '한국어' },
   { code: 'en', name: 'English' },
@@ -297,6 +298,9 @@ export const translations = {
     'general_error_desc': '오류가 발생했습니다.',
     'recording_in_progress': '녹음 중...',
     'audio_message_label': '[음성 메시지]',
+    'download_button': '다운로드',
+    'translate_button': '번역',
+    'translating_button': '번역 중...',
     
     // User Profile
     'user_profile_not_found_title': '사용자를 찾을 수 없습니다.',
@@ -766,6 +770,9 @@ export const translations = {
     'general_error_desc': 'An error occurred.',
     'recording_in_progress': 'Recording...',
     'audio_message_label': '[Audio Message]',
+    'download_button': 'Download',
+    'translate_button': 'Translate',
+    'translating_button': 'Translating...',
 
     // User Profile
     'user_profile_not_found_title': 'User Not Found',
@@ -1233,6 +1240,9 @@ export const translations = {
     'general_error_desc': 'エラーが発生しました。',
     'recording_in_progress': '録音中...',
     'audio_message_label': '[音声メッセージ]',
+    'download_button': 'ダウンロード',
+    'translate_button': '翻訳',
+    'translating_button': '翻訳中...',
 
     // User Profile
     'user_profile_not_found_title': 'ユーザーが見つかりません',
@@ -1699,6 +1709,9 @@ export const translations = {
     'general_error_desc': 'Ocurrió un error.',
     'recording_in_progress': 'Grabando...',
     'audio_message_label': '[Mensaje de audio]',
+    'download_button': 'Descargar',
+    'translate_button': 'Traducir',
+    'translating_button': 'Traduciendo...',
 
     // User Profile
     'user_profile_not_found_title': 'Usuario No Encontrado',
