@@ -26,6 +26,7 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [mode, setMode] = useState<'record' | 'preview' | 'uploading'>('record');
@@ -34,93 +35,104 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(MAX_DURATION_SECONDS);
 
-  const cleanup = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
+  const cleanupAndClose = useCallback(() => {
+    if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
     }
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.ondataavailable = null;
-      mediaRecorderRef.current.onstop = null;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
     }
-    mediaRecorderRef.current = null;
     if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-      countdownIntervalRef.current = null;
+        clearInterval(countdownIntervalRef.current);
     }
     if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
+        URL.revokeObjectURL(previewUrl);
     }
     setMode('record');
     setIsRecording(false);
     setVideoBlob(null);
     setPreviewUrl(null);
-    setCountdown(MAX_DURATION_SECONDS);
-  }, [previewUrl]);
-
+    onClose();
+  }, [onClose, previewUrl]);
+  
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } },
-        audio: true,
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      return stream;
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } },
+            audio: true,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+            videoRef.current.src = '';
+            videoRef.current.srcObject = stream;
+        }
     } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: t('camera_permission_denied_title'),
-        description: t('camera_permission_denied_desc'),
-      });
-      onClose();
-      return null;
+        toast({
+            variant: 'destructive',
+            title: t('camera_permission_denied_title'),
+            description: t('camera_permission_denied_desc'),
+        });
+        cleanupAndClose();
     }
-  }, [onClose, t, toast]);
+  }, [t, toast, cleanupAndClose]);
 
   useEffect(() => {
     if (isOpen) {
       startCamera();
-    } else {
-      cleanup();
     }
-    return () => cleanup();
-  }, [isOpen, startCamera, cleanup]);
+    // Cleanup is handled by the Dialog's onOpenChange or unmount
+  }, [isOpen, startCamera]);
+
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
     if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
     }
     setIsRecording(false);
   }, []);
 
-  const startRecordingInternal = (stream: MediaStream) => {
+  const startRecording = useCallback(() => {
+    if (!streamRef.current?.active) {
+        toast({ variant: 'destructive', title: "카메라 오류", description: "카메라를 시작할 수 없습니다. 권한을 확인해주세요." });
+        return;
+    }
+
     setIsRecording(true);
     setCountdown(MAX_DURATION_SECONDS);
 
-    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    const recorder = new MediaRecorder(streamRef.current, { mimeType: 'video/webm' });
     mediaRecorderRef.current = recorder;
     const chunks: Blob[] = [];
     
     recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunks.push(event.data);
-      }
+        if (event.data.size > 0) chunks.push(event.data);
     };
 
     recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      setVideoBlob(blob);
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-      setMode('preview');
-      setIsRecording(false);
-      stream.getTracks().forEach(track => track.stop()); // Stop camera after recording
+        setIsRecording(false);
+        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+        
+        if (chunks.length === 0) {
+            console.warn("Recording stopped with no data, possibly too short.");
+            return;
+        }
+
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        
+        setVideoBlob(blob);
+        setPreviewUrl(url);
+        setMode('preview');
+
+        if(videoRef.current) {
+            videoRef.current.srcObject = null;
+            videoRef.current.src = url;
+        }
     };
 
     recorder.start();
@@ -134,22 +146,8 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
         return prev - 1;
       });
     }, 1000);
-
-    setTimeout(stopRecording, MAX_DURATION_SECONDS * 1000);
-  };
+  }, [stopRecording, toast]);
   
-  const startRecording = async () => {
-    const stream = videoRef.current?.srcObject as MediaStream;
-    if (!stream || !stream.active) {
-      const newStream = await startCamera();
-      if (!newStream) return;
-      // Need a small delay for the new stream to be ready
-      setTimeout(() => startRecordingInternal(newStream), 100);
-    } else {
-      startRecordingInternal(stream);
-    }
-  };
-
   const handleSave = async () => {
     if (!videoBlob || !user || !storage) return;
     setMode('uploading');
@@ -162,7 +160,7 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
         title: '동영상 업로드 성공',
         description: '프로필에 동영상이 추가되었습니다.',
       });
-      onClose();
+      cleanupAndClose();
     } catch (error) {
       console.error('Failed to upload video:', error);
       toast({
@@ -175,17 +173,15 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
   };
   
   const handleRetake = () => {
-    cleanup();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setMode('record');
+    setVideoBlob(null);
+    setPreviewUrl(null);
     startCamera();
-  }
-
-  const handleClose = () => {
-    cleanup();
-    onClose();
-  }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && cleanupAndClose()}>
       <DialogContent className="max-w-md bg-card border-primary/20 flex flex-col p-0 h-full sm:h-auto sm:max-h-[95vh] rounded-none sm:rounded-lg">
         <DialogHeader className="p-6 pb-2 shrink-0 border-b">
           <DialogTitle>{t('record_video_title')}</DialogTitle>
@@ -193,20 +189,23 @@ export default function VideoUploadDialog({ isOpen, onClose }: { isOpen: boolean
         </DialogHeader>
         <div className="px-6 py-4 flex-1 overflow-y-auto min-h-0">
           <div className="relative w-full aspect-[9/16] rounded-md overflow-hidden bg-black flex items-center justify-center">
-            {mode === 'uploading' ? (
-                <Loader2 className="w-12 h-12 animate-spin text-primary" />
-            ) : mode === 'preview' && previewUrl ? (
-                <video src={previewUrl} autoPlay loop playsInline className="w-full h-full object-cover" />
-            ) : (
-                <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
-            )}
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              muted={mode === 'record'} 
+              playsInline 
+              loop={mode === 'preview'} 
+              className="w-full h-full object-cover" 
+              style={{ transform: mode === 'record' ? 'scaleX(-1)' : 'none' }}
+            />
             {isRecording && <p className="absolute top-4 text-white text-lg font-mono bg-black/50 px-3 py-1 rounded-full">{countdown}</p>}
+            {mode === 'uploading' && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>}
           </div>
         </div>
         <DialogFooter className="p-6 pt-4 shrink-0 border-t">
           {mode === 'record' && (
             <>
-              <Button variant="secondary" onClick={handleClose} disabled={isRecording}>{t('cancel_button')}</Button>
+              <Button variant="secondary" onClick={cleanupAndClose} disabled={isRecording}>{t('cancel_button')}</Button>
               <Button onClick={isRecording ? stopRecording : startRecording}>
                 {isRecording ? t('stop_recording') : t('start_recording')}
               </Button>
