@@ -113,6 +113,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(initialSettings);
   const [filters, setFilters] = useState<FilterSettings>(initialFilters);
   const [isUserDocLoading, setIsUserDocLoading] = useState(true);
+  const [areSettingsLoaded, setAreSettingsLoaded] = useState(false); // New state to track settings loading
   const [isSignupFlowActive, setIsSignupFlowActive] = useState(false);
 
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -126,12 +127,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [peopleILiked, setPeopleILiked] = useState<User[] | null>(null);
   const [peopleWhoLikedMe, setPeopleWhoLikedMe] = useState<User[] | null>(null);
   
-  const isLoaded = !isAuthLoading && !isUserDocLoading;
+  const isLoaded = !isAuthLoading && !isUserDocLoading && areSettingsLoaded;
 
-  // User Document Fetching
+  // Load Settings from LocalStorage
   useEffect(() => {
-    let isMounted = true;
-    if (isAuthLoading) {
+    try {
+      const storedSettings = localStorage.getItem('notificationSettings');
+      if (storedSettings) {
+        setNotificationSettings(prev => ({ ...prev, ...JSON.parse(storedSettings) }));
+      }
+      const storedFilters = localStorage.getItem('userFilters');
+      if (storedFilters) {
+        setFilters(prev => ({ ...prev, ...JSON.parse(storedFilters) }));
+      }
+    } catch (error) {
+      console.error("Failed to parse data from localStorage", error);
+    } finally {
+      setAreSettingsLoaded(true); // Signal that settings are now loaded
+    }
+  }, []);
+
+  // User Document Fetching & Presence Management
+  useEffect(() => {
+    if (isAuthLoading || !areSettingsLoaded) {
       setIsUserDocLoading(true);
       return;
     }
@@ -143,72 +161,71 @@ export function UserProvider({ children }: { children: ReactNode }) {
   
     if (firestore) {
       const userRef = doc(firestore, 'users', authUser.uid);
-      const updateUserPresence = () => {
-        getDoc(userRef).then(docSnap => {
-          if (docSnap.exists()) {
+
+      // Function to update last seen status
+      const updateLastSeen = () => {
+        updateDoc(userRef, { lastSeen: new Date().toISOString() })
+          .catch(e => console.error("Error updating lastSeen:", e));
+      };
+
+      // Function to update location, only called once on initial load if permitted
+      const updateUserLocationOnce = () => {
+        if (notificationSettings.locationShared) { // Check the loaded setting
             navigator.geolocation.getCurrentPosition(
               (position) => {
                 const { latitude, longitude } = position.coords;
-                updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence:", e));
+                updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() })
+                  .catch(e => console.error("Error updating location:", e));
               },
-              () => { 
-                updateDoc(userRef, { lastSeen: new Date().toISOString() }).catch(e => console.error("Error updating presence:", e));
+              (error) => {
+                console.warn("Geolocation error, updating lastSeen only:", error);
+                updateLastSeen(); 
               },
-              { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
             );
-          }
-        });
+        } else {
+            // If location sharing is off, just update last seen
+            updateLastSeen();
+        }
       };
-  
-      getDoc(userRef).then(docSnap => {
-        if (!isMounted) return;
+
+      let isInitialUserLoad = true;
+      const unsubscribe = onSnapshot(userRef, (docSnap) => {
         if (docSnap.exists()) {
           const userData = docSnap.data() as User;
           setUser(userData);
-          updateUserPresence();
+          if (isInitialUserLoad) {
+            updateUserLocationOnce(); // <<<<< ONLY RUNS ONCE
+            isInitialUserLoad = false;
+          }
         } else {
           setUser(null);
         }
         setIsUserDocLoading(false);
-      }).catch(error => {
-        console.error("Failed to fetch user document:", error);
-        if (isMounted) {
-          setUser(null);
-          setIsUserDocLoading(false);
-        }
+      }, error => {
+         console.error("Failed to fetch user document:", error);
+         setUser(null);
+         setIsUserDocLoading(false);
       });
   
-      const unsubscribe = onSnapshot(userRef, (docSnap) => {
-        if (!isMounted) return;
-        if (docSnap.exists()) {
-          setUser(docSnap.data() as User);
-        } else {
-          setUser(null);
-        }
-      });
+      // On window focus, just update last seen, not location
+      const handleFocus = () => {
+         getDoc(userRef).then(docSnap => {
+           if(docSnap.exists()){
+             updateLastSeen();
+           }
+         });
+      };
       
-      const handleFocus = () => updateUserPresence();
       window.addEventListener('focus', handleFocus);
   
       return () => {
-        isMounted = false;
         unsubscribe();
         window.removeEventListener('focus', handleFocus);
       };
     }
-  }, [authUser?.uid, firestore, isAuthLoading]);
+  }, [authUser?.uid, firestore, isAuthLoading, areSettingsLoaded, notificationSettings.locationShared]);
 
-  // Load Settings from LocalStorage
-  useEffect(() => {
-    try {
-      const storedSettings = localStorage.getItem('notificationSettings');
-      if (storedSettings) setNotificationSettings(JSON.parse(storedSettings));
-      const storedFilters = localStorage.getItem('userFilters');
-      if (storedFilters) setFilters(JSON.parse(storedFilters));
-    } catch (error) {
-      console.error("Failed to parse data from localStorage", error);
-    }
-  }, []);
 
   // --- Matches & Likes Queries ---
   const matchesQuery = useMemoFirebase(() => {
@@ -464,3 +481,5 @@ export function useUser() {
   }
   return context;
 }
+
+    
