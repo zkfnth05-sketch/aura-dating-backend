@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -7,77 +6,48 @@ service cloud.firestore {
     // Helper Functions
     // --------------------------------
 
-    /**
-     * Returns true if the user is authenticated.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
+    function isSignedIn() { return request.auth != null; }
 
-    /**
-     * Returns true if the authenticated user's UID matches the provided userId.
-     * This is the primary function for checking resource ownership.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    
-    /**
-     * Checks if the current user is one of the participants in a given match document.
-     */
-    function isMatchParticipant(matchDoc) {
-      return isSignedIn() && request.auth.uid in matchDoc.data.users;
-    }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
 
     // --------------------------------
     // User Data Collections
     // --------------------------------
 
-    // 유저 정보 읽기 규칙
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
     }
     
     // --------------------------------
     // Shared Data Collections
     // --------------------------------
 
-    /**
-     * @description Rules for the top-level 'likes' collection.
-     */
     match /likes/{likeId} {
-        // Anyone signed in can read the likes, necessary for querying.
-        allow read: if isSignedIn();
-        // A user can only create a like document if the 'likerId' in the document
-        // is their own user ID. This prevents spoofing.
-        allow create: if isSignedIn() && request.resource.data.likerId == request.auth.uid;
-        // Likes are immutable, they cannot be updated or deleted by clients.
-        allow update, delete: if false;
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.likerId || request.auth.uid == resource.data.likeeId);
+      allow create: if isSignedIn() && request.resource.data.likerId == request.auth.uid;
+      allow update, delete: if false;
     }
 
-
-    // matches 컬렉션 규칙
     match /matches/{matchId} {
-      // 읽기 및 업데이트 권한
-      // 1. 기존 데이터(resource)의 users 배열에 내가 있거나
-      // 2. 새로 만들 데이터(request.resource)의 users 배열에 내가 있는 경우
-      allow read: if isSignedIn() && request.auth.uid in resource.data.users;
-      allow update: if isSignedIn() && (request.auth.uid in resource.data.users || request.auth.uid in request.resource.data.users);
-      allow create: if isSignedIn();
+      // Allow a user to list only the matches they are a part of.
+      allow list: if isSignedIn() && request.query.where.users.includes(request.auth.uid);
       
-      match /{allSubcollections=**} {
-        allow read, write: if isSignedIn();
+      // Allow a user to get, update, or create a match document if they are a participant.
+      allow get, update: if isSignedIn() && request.auth.uid in resource.data.users;
+      allow create: if isSignedIn() && request.auth.uid in request.resource.data.users;
+
+      // Allow participants to manage WebRTC signaling and chat messages.
+      match /candidates/{candidateId} {
+        allow read, write, delete: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.users;
+      }
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.users;
       }
     }
 
-    /**
-     * @description Rules for the top-level 'reports' collection.
-     */
     match /reports/{reportId} {
-      // Any signed-in user can create a report, but they must be the reporter.
       allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
-      // Only backend processes should read/update/delete reports.
       allow read, update, delete: if false;
     }
   }
