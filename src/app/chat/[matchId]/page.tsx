@@ -85,6 +85,7 @@ export default function ChatPage() {
   const [isCallActive, setIsCallActive] = useState(false);
   const [lastSeenText, setLastSeenText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isSendingAudio, setIsSendingAudio] = useState(false);
   const [countdown, setCountdown] = useState(15);
 
   const [recordingState, setRecordingState] = useState<'idle' | 'recording' | 'preview'>('idle');
@@ -288,8 +289,9 @@ export default function ChatPage() {
   };
 
   const handleSendAudio = async (audioBlob: Blob | null) => {
-    if (!audioBlob || !firestore || !currentUser || !otherUser || !storage) return;
+    if (!audioBlob || !firestore || !currentUser || !otherUser || !storage || isSendingAudio) return;
 
+    setIsSendingAudio(true);
     updateUser({ lastSeen: new Date().toISOString() });
 
     const audioFileRef = storageRef(storage, `audio_messages/${matchId}/${new Date().getTime()}.webm`);
@@ -324,6 +326,8 @@ export default function ChatPage() {
         } else {
              toast({ variant: "destructive", title: t('audio_upload_failed_title'), description: t('general_error_desc') });
         }
+    } finally {
+        setIsSendingAudio(false);
     }
   };
 
@@ -477,12 +481,12 @@ export default function ChatPage() {
       case 'preview':
         return (
           <div className="flex items-center justify-between w-full h-14 bg-card p-2 rounded-lg">
-            <Button onClick={handleDiscardRecording} variant="ghost" size="icon">
+            <Button onClick={handleDiscardRecording} variant="ghost" size="icon" disabled={isSendingAudio}>
               <Trash2 className="h-6 w-6 text-destructive" />
             </Button>
             {audioPreviewUrl && <audio src={audioPreviewUrl} controls className="w-full mx-2 h-10" />}
-            <Button onClick={handleConfirmSendAudio} size="icon">
-              <Send className="h-6 w-6 text-primary" />
+            <Button onClick={handleConfirmSendAudio} size="icon" disabled={isSendingAudio}>
+              {isSendingAudio ? <Loader2 className="h-6 w-6 animate-spin" /> : <Send className="h-6 w-6 text-primary" />}
             </Button>
           </div>
         );
@@ -600,5 +604,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    
