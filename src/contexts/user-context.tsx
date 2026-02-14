@@ -148,9 +148,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateNotificationSettings = useCallback((newSettings: Partial<NotificationSettings>) => {
+    setNotificationSettings(prevSettings => {
+        const updatedSettings = { ...prevSettings, ...newSettings };
+        try {
+            localStorage.setItem('notificationSettings', JSON.stringify(updatedSettings));
+        } catch (error) {
+            console.error("Failed to save settings", error);
+        }
+        return updatedSettings;
+    });
+  }, []);
+
   // User Document Fetching & Presence Management
   useEffect(() => {
-    if (isAuthLoading || !areSettingsLoaded) {
+    if (isAuthLoading || !firestore) {
       setIsUserDocLoading(true);
       return;
     }
@@ -159,73 +171,74 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setIsUserDocLoading(false);
       return;
     }
-  
-    if (firestore) {
-      const userRef = doc(firestore, 'users', authUser.uid);
 
-      // Function to update last seen status
-      const updateLastSeen = () => {
-        updateDoc(userRef, { lastSeen: new Date().toISOString() })
-          .catch(e => console.error("Error updating lastSeen:", e));
-      };
+    const userRef = doc(firestore, 'users', authUser.uid);
+    
+    // Subscribe to user document
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setUser(docSnap.data() as User);
+      } else {
+        setUser(null);
+      }
+      setIsUserDocLoading(false);
+    }, error => {
+       console.error("Failed to fetch user document:", error);
+       setUser(null);
+       setIsUserDocLoading(false);
+    });
 
-      // Function to update location, only called once on initial load if permitted
-      const updateUserLocationOnce = () => {
-        if (notificationSettings.locationShared) { // Check the loaded setting
-            navigator.geolocation.getCurrentPosition(
-              (position) => {
-                const { latitude, longitude } = position.coords;
-                updateDoc(userRef, { lat: latitude, lng: longitude, lastSeen: new Date().toISOString() })
-                  .catch(e => console.error("Error updating location:", e));
-              },
-              (error) => {
-                console.warn("Geolocation error, updating lastSeen only:", error);
-                updateLastSeen(); 
-              },
-              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-            );
-        } else {
-            // If location sharing is off, just update last seen
-            updateLastSeen();
+    // Handle presence (lastSeen)
+    const updateLastSeen = () => {
+      getDoc(userRef).then(docSnap => {
+        if(docSnap.exists()){
+          updateDoc(userRef, { lastSeen: new Date().toISOString() })
+            .catch(e => console.error("Error updating lastSeen:", e));
         }
-      };
-
-      let isInitialUserLoad = true;
-      const unsubscribe = onSnapshot(userRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const userData = docSnap.data() as User;
-          setUser(userData);
-          if (isInitialUserLoad) {
-            updateUserLocationOnce(); // <<<<< ONLY RUNS ONCE
-            isInitialUserLoad = false;
-          }
-        } else {
-          setUser(null);
-        }
-        setIsUserDocLoading(false);
-      }, error => {
-         console.error("Failed to fetch user document:", error);
-         setUser(null);
-         setIsUserDocLoading(false);
       });
-  
-      // On window focus, just update last seen, not location
-      const handleFocus = () => {
-         getDoc(userRef).then(docSnap => {
-           if(docSnap.exists()){
-             updateLastSeen();
-           }
-         });
-      };
-      
-      window.addEventListener('focus', handleFocus);
-  
-      return () => {
-        unsubscribe();
-        window.removeEventListener('focus', handleFocus);
-      };
+    };
+    
+    window.addEventListener('focus', updateLastSeen);
+    updateLastSeen(); // Update once on load
+    
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', updateLastSeen);
+    };
+  }, [authUser, firestore, isAuthLoading]);
+
+  // Dedicated useEffect for location management
+  useEffect(() => {
+    // Wait for everything to be ready
+    if (!isLoaded || !user || !firestore) {
+      return;
     }
-  }, [authUser?.uid, firestore, isAuthLoading, areSettingsLoaded, notificationSettings.locationShared]);
+    
+    if (notificationSettings.locationShared) {
+      const userRef = doc(firestore, 'users', user.id);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          updateDoc(userRef, { lat: latitude, lng: longitude })
+            .catch(e => console.error("Error updating location:", e));
+        },
+        (error) => {
+          console.warn("Geolocation error:", error.message);
+          if (error.code === error.PERMISSION_DENIED) {
+            toast({
+              variant: "destructive",
+              title: "위치 권한 거부됨",
+              description: "위치 서비스를 사용하려면 브라우저 설정에서 권한을 허용해주세요.",
+            });
+            // Sync the UI toggle with the browser's reality
+            updateNotificationSettings({ locationShared: false });
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    }
+  }, [isLoaded, user, firestore, notificationSettings.locationShared, updateNotificationSettings, toast]);
 
 
   // --- Matches & Likes Queries ---
@@ -303,19 +316,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return setDocumentNonBlocking(userRef, dataToSave, { merge: true });
   }, [authUser, firestore]);
   
-
-  const updateNotificationSettings = useCallback((newSettings: Partial<NotificationSettings>) => {
-    setNotificationSettings(prevSettings => {
-        const updatedSettings = { ...prevSettings, ...newSettings };
-        try {
-            localStorage.setItem('notificationSettings', JSON.stringify(updatedSettings));
-        } catch (error) {
-            console.error("Failed to save settings", error);
-        }
-        return updatedSettings;
-    });
-  }, []);
-
   const updateFilters = useCallback((newFilters: Partial<FilterSettings>) => {
     setFilters(prevFilters => {
         const updatedFilters = { ...prevFilters, ...newFilters };
