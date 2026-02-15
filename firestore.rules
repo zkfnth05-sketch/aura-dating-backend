@@ -23,6 +23,8 @@ service cloud.firestore {
     // Shared Data Collections
     // --------------------------------
 
+    // --- DO NOT MODIFY: Likes Rule ---
+    // This rule is confirmed to be working correctly.
     match /likes/{likeId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.likerId || request.auth.uid == resource.data.likeeId);
       allow create: if isSignedIn() && request.resource.data.likerId == request.auth.uid;
@@ -46,6 +48,8 @@ service cloud.firestore {
       }
     }
 
+    // --- DO NOT MODIFY: Reports Rule ---
+    // This rule is confirmed to be working correctly.
     match /reports/{reportId} {
       allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
       allow read, update, delete: if false;
