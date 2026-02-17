@@ -210,7 +210,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Dedicated useEffect for location management
   useEffect(() => {
-    // Wait for everything to be ready and user to exist.
     if (!isLoaded || !user || !firestore) {
       return;
     }
@@ -221,12 +220,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          // Only update if location has meaningfully changed to avoid unnecessary writes
-          // This check is simple and prevents writes if the user object hasn't changed from the one in the closure.
-          if (user.lat !== latitude || user.lng !== longitude) {
-            updateDoc(userRef, { lat: latitude, lng: longitude })
-              .catch(e => console.error("Error updating location:", e));
-          }
+          // Get the latest user data before writing to prevent race conditions or stale data writes
+          getDoc(userRef).then(docSnap => {
+            if (docSnap.exists()) {
+              const currentUserData = docSnap.data() as User;
+              if (currentUserData.lat !== latitude || currentUserData.lng !== longitude) {
+                updateDoc(userRef, { lat: latitude, lng: longitude })
+                  .catch(e => console.error("Error updating location:", e));
+              }
+            }
+          }).catch(e => console.error("Error fetching user doc before location update:", e));
         },
         (error) => {
           console.warn("Geolocation error:", error.message);
@@ -243,9 +246,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
       );
     }
-    // This effect now ONLY runs when isLoaded, user.id, or locationShared setting changes.
-    // It will NOT re-run when user.photoUrls or other profile fields change.
-  }, [isLoaded, user?.id, firestore, notificationSettings.locationShared]);
+  }, [isLoaded, user?.id, firestore, notificationSettings.locationShared, toast, updateNotificationSettings]);
 
 
   // --- Matches & Likes Queries ---
@@ -489,5 +490,3 @@ export function useUser() {
   }
   return context;
 }
-
-    
