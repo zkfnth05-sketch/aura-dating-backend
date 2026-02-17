@@ -141,6 +141,11 @@ export const chatGuide: CoachMarkGuideData = {
   guideId: 'chat',
   steps: [
     {
+      target: 'main .bg-blue-900\\/50',
+      title: '실시간 자동 번역',
+      content: '외국인과 대화해도 걱정하지마세요. 실시간 자동 번역 중: 당신의 한국어 메시지가 상대방의 선택한 언어로 자동 변환됩니다.',
+    },
+    {
       target: 'footer form input',
       title: '메시지 입력',
       content: '이곳에 메시지를 입력하여 상대방과 대화를 나눌 수 있습니다.',
