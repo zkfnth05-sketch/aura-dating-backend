@@ -23,6 +23,8 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { useLanguage } from '@/contexts/language-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AudioMessagePlayer from '@/components/audio-message-player';
+import CoachMarkGuide from '@/components/coach-mark-guide';
+import { chatGuide } from '@/lib/coachmark-steps';
 
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -530,6 +532,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      <CoachMarkGuide guide={chatGuide} />
       <header className="flex items-center gap-4 p-4 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur z-10 flex-shrink-0">
         <Button variant="ghost" size="icon" onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }}><ArrowLeft className="h-5 w-5" /></Button>
         <div className="flex items-center gap-3 flex-1">

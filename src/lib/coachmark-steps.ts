@@ -104,9 +104,9 @@ export const editProfileGuide: CoachMarkGuideData = {
       content: '이 페이지에서 사진, 자기소개, 관심사 등 모든 프로필 정보를 자유롭게 수정할 수 있습니다. 사진은 AI 사진 보정 토글을 켜고 끌 수 있어, 원본 사진을 그대로 올리거나 AI가 직접 멋지게 보정해주는 기능을 사용할 수 있습니다.',
     },
     {
-      target: 'main.container > div.py-6:nth-of-type(2)',
+      target: 'main > section:nth-of-type(2)',
       title: '언어 설정',
-      content: '사용하실 언어를 선택하시시고 저장하시면 변경된 언어로 이어서 앱을 사용하실 수 잇습니다.',
+      content: '사용하실 언어를 선택하시고 저장하시면 변경된 언어로 이어서 앱을 사용하실 수 잇습니다.',
     },
     {
       target: 'footer',
@@ -133,6 +133,32 @@ export const hotGuide: CoachMarkGuideData = {
       target: '[role="tablist"]',
       title: 'HOT 회원과 NEW 회원',
       content: '상단의 탭을 눌러 현재 인기 있는 "HOT 회원"과 "NEW 회원" 목록을 번갈아 볼 수 있습니다.',
+    },
+  ],
+};
+
+export const chatGuide: CoachMarkGuideData = {
+  guideId: 'chat',
+  steps: [
+    {
+      target: 'footer form input',
+      title: '메시지 입력',
+      content: '이곳에 메시지를 입력하여 상대방과 대화를 나눌 수 있습니다.',
+    },
+    {
+      target: 'footer form button:first-child',
+      title: 'AI 답장 추천',
+      content: '대화가 막힐 때, 이 버튼을 눌러 AI가 추천하는 센스있는 답장을 받아보세요.',
+    },
+    {
+      target: 'footer form button[type=button]:last-child',
+      title: '음성 메시지',
+      content: '마이크 버튼을 눌러 당신의 목소리를 직접 전달할 수도 있습니다.',
+    },
+    {
+      target: 'header button:last-child',
+      title: '영상 통화',
+      content: '상대방과 더 가까워지고 싶다면 영상 통화를 시작해보세요!',
     },
   ],
 };
