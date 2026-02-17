@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -6,6 +7,7 @@ import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { type CoachMarkGuideData } from '@/lib/coachmark-steps';
+import { useLanguage } from '@/contexts/language-context';
 
 function getElementRect(selector: string): DOMRect | null {
   try {
@@ -19,11 +21,17 @@ function getElementRect(selector: string): DOMRect | null {
 
 export default function CoachMarkGuide({ guide }: { guide: CoachMarkGuideData | null }) {
   const { user, updateUser, isLoaded } = useUser();
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [spotlightStyle, setSpotlightStyle] = useState<React.CSSProperties>({});
   
-  const step = guide?.steps[currentStepIndex];
+  const stepWithKeys = guide?.steps[currentStepIndex];
+  const step = stepWithKeys ? {
+    ...stepWithKeys,
+    title: t(stepWithKeys.title),
+    content: t(stepWithKeys.content)
+  } : null;
 
   const updateSpotlight = useCallback(() => {
     if (!step) {
@@ -119,9 +127,9 @@ export default function CoachMarkGuide({ guide }: { guide: CoachMarkGuideData | 
                     <p className="text-sm mt-1">{step.content}</p>
                 </div>
                 <div className="flex justify-between items-center">
-                    <Button variant="ghost" onClick={handleFinish}>건너뛰기</Button>
+                    <Button variant="ghost" onClick={handleFinish}>{t('coach_skip_button')}</Button>
                     <Button onClick={handleNext}>
-                        {currentStepIndex === guide.steps.length - 1 ? '완료' : '다음'}
+                        {currentStepIndex === guide.steps.length - 1 ? t('complete_button') : t('next_button')}
                     </Button>
                 </div>
             </div>
