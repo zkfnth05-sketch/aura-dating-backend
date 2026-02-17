@@ -101,7 +101,7 @@ export const editProfileGuide: CoachMarkGuideData = {
     {
       target: 'main',
       title: '프로필 정보 수정',
-      content: '이 페이지에서 사진, 자기소개, 관심사 등 모든 프로필 정보를 자유롭게 수정할 수 있습니다.',
+      content: '이 페이지에서 사진, 자기소개, 관심사 등 모든 프로필 정보를 자유롭게 수정할 수 있습니다. 사진은 AI 사진 보정 토글을 켜고 끌 수 있어, 원본 사진을 그대로 올리거나 AI가 직접 멋지게 보정해주는 기능을 사용할 수 있습니다.',
     },
     {
       target: 'footer',
