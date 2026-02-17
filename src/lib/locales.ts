@@ -260,7 +260,7 @@ export const translations = {
     'date_course_travel_label': '이동',
     'date_course_cost_per_person_label': '비용',
     'date_course_tip_label': '💖 Tip',
-
+    
     // Chat
     'chat_user_not_found_title': '대화 상대를 찾을 수 없습니다.',
     'chat_user_not_found_subtitle': '삭제되었거나 존재하지 않는 대화입니다.',
@@ -527,7 +527,7 @@ export const translations = {
     'coach_hot_step3_title': 'HOT 회원과 NEW 회원',
     'coach_hot_step3_content': '상단의 탭을 눌러 현재 인기 있는 "HOT 회원"과 "NEW 회원" 목록을 번갈아 볼 수 있습니다.',
     'coach_chat_step1_title': '실시간 자동 번역',
-    'coach_chat_step1_content': '외국인과 대화해도 걱정하지마세요. 실시간 자동 번역 중: 당신의 한국어 메시지가 상대방의 선택한 언어로 자동 변환됩니다.',
+    'coach_chat_step1_content': '외국인과 대화해도 걱정하지마세요.실시간 자동 번역 중: 당신의 한국어 메시지가 상대방의 선택한 언어로 자동 변환됩니다.',
     'coach_chat_step2_title': '메시지 입력',
     'coach_chat_step2_content': '이곳에 메시지를 입력하여 상대방과 대화를 나눌 수 있습니다.',
     'coach_chat_step3_title': 'AI 답장 추천',
