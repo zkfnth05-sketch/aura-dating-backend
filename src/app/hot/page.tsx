@@ -13,6 +13,8 @@ import { useFirestore } from '@/firebase';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/contexts/language-context';
+import CoachMarkGuide from '@/components/coach-mark-guide';
+import { hotGuide } from '@/lib/coachmark-steps';
 
 const UserCard = React.memo(({ user }: { user: User }) => {
   // Defensive check for photoUrls
@@ -126,9 +128,10 @@ export default function HotPage() {
       </div>
     );
   }
-
+  
   return (
     <div className="flex flex-col min-h-screen">
+      <CoachMarkGuide guide={hotGuide} />
       <Header />
       <main>
         <Tabs defaultValue="new" className="w-full">

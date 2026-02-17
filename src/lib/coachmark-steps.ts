@@ -1,4 +1,3 @@
-
 export type CoachMarkStep = {
   target: string;
   title: string;
@@ -106,12 +105,28 @@ export const editProfileGuide: CoachMarkGuideData = {
     {
       target: 'main.container > div.py-6:nth-of-type(2)',
       title: '언어 설정',
-      content: '사용하실 언어를 선택하시고 저장하시면 변경된 언어로 이어서 앱을 사용하실 수 있습니다.',
+      content: '사용하실 언어를 선택하시시고 저장하시면 변경된 언어로 이어서 앱을 사용하실 수 잇습니다.',
     },
     {
       target: 'footer',
       title: '저장하기',
       content: '수정이 완료되면 화면 하단의 저장 버튼을 눌러 변경사항을 프로필에 반영하는 것을 잊지 마세요!',
+    },
+  ],
+};
+
+export const hotGuide: CoachMarkGuideData = {
+  guideId: 'hot',
+  steps: [
+    {
+      target: '[role="tabpanel"][data-state="active"]',
+      title: '새로운 회원 목록',
+      content: '이곳에서 최근에 가입한 새로운 회원들을 확인할 수 있습니다. 새로운 인연을 먼저 만나보세요!',
+    },
+    {
+      target: '[role="tablist"]',
+      title: 'HOT 회원과 NEW 회원',
+      content: '상단의 탭을 눌러 현재 인기 있는 "HOT 회원"과 "NEW 회원" 목록을 번갈아 볼 수 있습니다.',
     },
   ],
 };
