@@ -273,7 +273,6 @@ export default function HomePageClient() {
 
     const likesCollection = collection(firestore, 'likes');
 
-    // Non-blocking write to the new top-level 'likes' collection
     addDoc(likesCollection, likeData).catch(e => {
       if (e.code === 'permission-denied') {
         const contextualError = new FirestorePermissionError({
