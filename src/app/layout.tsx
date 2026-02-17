@@ -28,7 +28,7 @@ export default function RootLayout({
       <head>
         <title>Aura - 새로운 만남의 시작</title>
         <meta name="description" content="Aura와 함께 당신의 인연을 찾아보세요." />
-        <link rel="manifest" href="/manifest.json" />
+        
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon.svg" />
         <meta name="theme-color" content="#FFD700" />
