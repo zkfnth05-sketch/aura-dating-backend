@@ -25,6 +25,7 @@ service cloud.firestore {
 
     // --- DO NOT MODIFY: Likes Rule ---
     // This rule is confirmed to be working correctly.
+    // Per user request, this section must not be changed.
     match /likes/{likeId} {
       allow read: if isSignedIn() && (request.auth.uid == resource.data.likerId || request.auth.uid == resource.data.likeeId);
       allow create: if isSignedIn() && request.resource.data.likerId == request.auth.uid;
