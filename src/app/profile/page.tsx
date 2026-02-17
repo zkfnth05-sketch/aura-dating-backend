@@ -14,6 +14,8 @@ import Header from '@/components/layout/header';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/language-context';
 import { TranslationKeys } from '@/lib/locales';
+import CoachMarkGuide from '@/components/coach-mark-guide';
+import { profileGuide } from '@/lib/coachmark-steps';
 
 // Helper components for page structure
 const ProfileSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -95,6 +97,7 @@ export default function ProfilePage() {
 
   return (
     <>
+      <CoachMarkGuide guide={profileGuide} />
       <div className="bg-background text-foreground">
         <Header />
         <main>

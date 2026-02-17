@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import type { User } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useLanguage } from '@/contexts/language-context';
+import CoachMarkGuide from '@/components/coach-mark-guide';
+import { homeGuide } from '@/lib/coachmark-steps';
 
 
 const PREFETCH_THRESHOLD = 5;
@@ -307,6 +309,7 @@ export default function HomePageClient() {
 
   return (
     <div className="flex flex-col h-full bg-background">
+      <CoachMarkGuide guide={homeGuide} />
       <Header />
       <main className="relative flex-1 flex items-center justify-center p-4">
         <div className="relative w-full aspect-[3/4.5] max-w-[400px] perspective-1000">

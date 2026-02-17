@@ -11,6 +11,8 @@ import { useFirestore } from '@/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import type { User } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
+import CoachMarkGuide from '@/components/coach-mark-guide';
+import { mapGuide } from '@/lib/coachmark-steps';
 
 // Module-level cache to persist data across component mounts within the same session.
 let mapUsersCache: User[] | null = null;
@@ -131,6 +133,7 @@ export default function MapPage() {
 
   return (
     <div className="h-full flex flex-col">
+      <CoachMarkGuide guide={mapGuide} />
       <Header />
       <div className="flex-1">
         {isFetching ? (

@@ -10,6 +10,8 @@ import { Loader2 } from 'lucide-react';
 import type { User, Match } from '@/lib/types';
 import { useLanguage } from '@/contexts/language-context';
 import { collection, query, where, documentId, getDocs } from 'firebase/firestore'; // Import firestore functions
+import CoachMarkGuide from '@/components/coach-mark-guide';
+import { matchesGuide } from '@/lib/coachmark-steps';
 
 // This function can be moved to a utils file, but for now it's here.
 async function fetchUsersByIds(firestore: any, userIds: string[]): Promise<User[]> {
@@ -101,6 +103,7 @@ export default function MatchesPage() {
   
   return (
     <div className="flex flex-col min-h-screen">
+      <CoachMarkGuide guide={matchesGuide} />
       <Header />
       <main>
         <Tabs defaultValue="chats" className="w-full">

@@ -24,6 +24,7 @@ export type User = {
   phoneNumber?: string;
   pushSubscriptions?: any[];
   blockedUsers?: string[];
+  completedCoachMarks?: string[];
 };
 
 export type Match = {
