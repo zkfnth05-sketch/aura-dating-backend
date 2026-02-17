@@ -1,3 +1,4 @@
+
 export type CoachMarkStep = {
   target: string;
   title: string;
@@ -118,6 +119,11 @@ export const editProfileGuide: CoachMarkGuideData = {
 export const hotGuide: CoachMarkGuideData = {
   guideId: 'hot',
   steps: [
+    {
+      target: '[role="tabpanel"][data-state="active"] > div.grid',
+      title: '상세 프로필 보기',
+      content: '프로필 카드를 클릭 하면, 상세 프로필을 볼 수 있습니다.',
+    },
     {
       target: '[role="tabpanel"][data-state="active"]',
       title: '새로운 회원 목록',
