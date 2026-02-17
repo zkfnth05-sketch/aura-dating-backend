@@ -106,7 +106,7 @@ export const editProfileGuide: CoachMarkGuideData = {
     {
       target: 'main > section:nth-of-type(2)',
       title: '언어 설정',
-      content: '사용하실 언어를 선택하시고 저장하시면 변경된 언어로 이어서 앱을 사용하실 수 잇습니다.',
+      content: '사용하실 언어를 선택하시고 저장하시면 변경된 언어로 이어서 앱을 사용하실 수 있습니다.',
     },
     {
       target: 'footer',
@@ -158,7 +158,7 @@ export const chatGuide: CoachMarkGuideData = {
     {
       target: 'footer form button[type=button]:last-child',
       title: '음성 메시지',
-      content: '마이크 버튼을 눌러 당신의 목소리를 직접 전달할 수도 있습니다.',
+      content: '마이크 버튼을 눌러 당신의 목소리를 직접 전달할 수도 있습니다.음성 메세지도 실시간 번역됩니다.',
     },
     {
       target: 'header button:last-child',
