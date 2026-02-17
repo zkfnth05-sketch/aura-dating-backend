@@ -13,9 +13,9 @@
   "backgroundColor": "#121212",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://placehold.co/512x512/121212/FFD700.png?text=Aura",
-  "maskableIconUrl": "https://placehold.co/512x512/121212/FFD700.png?text=Aura",
-  "monochromeIconUrl": "https://placehold.co/512x512/000000/FFFFFF.png?text=Aura",
+  "iconUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/logo.svg",
+  "maskableIconUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/maskable_icon.svg",
+  "monochromeIconUrl": "https://studio--aura-ai-dating-38251551-64a99.us-central1.hosted.app/logo.svg",
   "splashScreenFadeOutDuration": 0,
   "signingKey": {
     "path": "android.keystore",
