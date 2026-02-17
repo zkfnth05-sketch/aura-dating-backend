@@ -104,6 +104,11 @@ export const editProfileGuide: CoachMarkGuideData = {
       content: '이 페이지에서 사진, 자기소개, 관심사 등 모든 프로필 정보를 자유롭게 수정할 수 있습니다. 사진은 AI 사진 보정 토글을 켜고 끌 수 있어, 원본 사진을 그대로 올리거나 AI가 직접 멋지게 보정해주는 기능을 사용할 수 있습니다.',
     },
     {
+      target: 'main.container > div.py-6:nth-of-type(2)',
+      title: '언어 설정',
+      content: '사용하실 언어를 선택하시고 저장하시면 변경된 언어로 이어서 앱을 사용하실 수 있습니다.',
+    },
+    {
       target: 'footer',
       title: '저장하기',
       content: '수정이 완료되면 화면 하단의 저장 버튼을 눌러 변경사항을 프로필에 반영하는 것을 잊지 마세요!',
