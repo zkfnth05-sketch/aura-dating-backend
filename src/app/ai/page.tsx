@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -14,6 +15,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { calculateCompatibility } from '@/lib/utils';
 import { useLanguage } from '@/contexts/language-context';
+import CoachMarkGuide from '@/components/coach-mark-guide';
+import { aiGuide } from '@/lib/coachmark-steps';
 
 
 const UserGridSkeleton = () => (
@@ -128,6 +131,7 @@ export default function AiPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <CoachMarkGuide guide={aiGuide} />
       <Header />
       <main className="container pt-8">
         <Tabs defaultValue="ideal-type" className="w-full">

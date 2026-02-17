@@ -1,3 +1,4 @@
+
 export type CoachMarkStep = {
   title: string;
   content: string;
@@ -13,11 +14,11 @@ export const homeGuide: CoachMarkGuideData = {
   steps: [
     {
       title: '프로필 카드',
-      content: '이곳에서 다른 사람의 프로필을 볼 수 있습니다. 카드를 스와이프하여 다음 프로필로 넘길 수 있습니다.',
+      content: '이곳에서 다른 사람의 프로필을 볼 수 있습니다. 카드를 좌우로 스와이프하여 다음 프로필을 볼 수 있습니다.',
     },
     {
       title: '액션 버튼',
-      content: '하단의 버튼을 사용하여 좋아요, 싫어요, 또는 메시지를 보낼 수 있습니다. 이 버튼을 통해서만 상대방에게 마음을 표현할 수 있습니다.',
+      content: '하단의 버튼을 사용하여 좋아요, 싫어요, 또는 메시지를 보낼 수 있습니다. 상대방에게 마음을 표현하려면 이 버튼들을 이용하세요.',
     },
     {
       title: 'AI 추천',
@@ -66,4 +67,32 @@ export const profileGuide: CoachMarkGuideData = {
         content: '프로필 수정 버튼을 눌러 사진, 자기소개, 관심사 등 모든 정보를 자유롭게 변경해보세요.',
       },
     ],
-  };
+};
+
+export const aiGuide: CoachMarkGuideData = {
+  guideId: 'ai',
+  steps: [
+    {
+      title: 'AI 추천 기능',
+      content: 'AI가 회원님의 프로필을 분석하여 꼭 맞는 이상형을 추천해 드립니다. 새로운 추천을 보고 싶으면 하단의 버튼을 누르세요.',
+    },
+    {
+      title: '데이트 코스 추천',
+      content: '상단의 "AI 추천 데이트 코스" 탭을 눌러 원하는 조건에 맞는 데이트 계획을 AI에게 추천받을 수 있습니다.',
+    },
+  ],
+};
+
+export const editProfileGuide: CoachMarkGuideData = {
+  guideId: 'edit-profile',
+  steps: [
+    {
+      title: '프로필 정보 수정',
+      content: '이 페이지에서 사진, 자기소개, 관심사 등 모든 프로필 정보를 자유롭게 수정할 수 있습니다.',
+    },
+    {
+      title: '저장하기',
+      content: '수정이 완료되면 화면 하단의 저장 버튼을 눌러 변경사항을 프로필에 반영하는 것을 잊지 마세요!',
+    },
+  ],
+};
