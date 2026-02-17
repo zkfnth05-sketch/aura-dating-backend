@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUser } from '@/contexts/user-context';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -27,11 +27,15 @@ export default function CoachMarkGuide({ guide }: { guide: CoachMarkGuideData | 
   const [spotlightStyle, setSpotlightStyle] = useState<React.CSSProperties>({});
   
   const stepWithKeys = guide?.steps[currentStepIndex];
-  const step = stepWithKeys ? {
-    ...stepWithKeys,
-    title: t(stepWithKeys.title),
-    content: t(stepWithKeys.content)
-  } : null;
+
+  const step = useMemo(() => {
+    if (!stepWithKeys) return null;
+    return {
+      ...stepWithKeys,
+      title: t(stepWithKeys.title),
+      content: t(stepWithKeys.content)
+    }
+  }, [stepWithKeys, t]);
 
   const updateSpotlight = useCallback(() => {
     if (!step) {
