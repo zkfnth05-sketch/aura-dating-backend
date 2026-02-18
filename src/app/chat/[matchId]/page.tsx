@@ -25,6 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import AudioMessagePlayer from '@/components/audio-message-player';
 import CoachMarkGuide from '@/components/coach-mark-guide';
 import { chatGuide } from '@/lib/coachmark-steps';
+import { useSelectedChat } from '@/contexts/selected-chat-context';
 
 
 const MicIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -80,6 +81,7 @@ export default function ChatPage() {
   const { user: currentUser, isLoaded: isUserLoaded, updateUser } = useUser();
   const { t, language, supportedLanguages } = useLanguage();
   const { toast } = useToast();
+  const { selectedChat } = useSelectedChat();
   
   const [newMessage, setNewMessage] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -99,24 +101,26 @@ export default function ChatPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // --- Data Fetching ---
   const matchRef = useMemoFirebase(() => {
     if (!matchId || !firestore) return null;
     return doc(firestore, 'matches', matchId);
   }, [firestore, matchId]);
-
-  const { data: match, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
-
+  
+  const { data: liveMatch, isLoading: isMatchLoading } = useDoc<Match>(matchRef);
+  
   const otherUserId = useMemo(() => {
-    if (!match || !currentUser?.id) return null;
-    return match.users.find(id => id !== currentUser.id);
-  }, [match, currentUser?.id]);
+    const m = liveMatch ?? (selectedChat?.match.id === matchId ? selectedChat.match : null);
+    if (!m || !currentUser?.id) return null;
+    return m.users.find(id => id !== currentUser.id);
+  }, [liveMatch, selectedChat, matchId, currentUser?.id]);
 
   const otherUserRef = useMemoFirebase(() => {
     if (!otherUserId || !firestore) return null;
     return doc(firestore, 'users', otherUserId);
   }, [firestore, otherUserId]);
-  const { data: otherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
-  
+  const { data: liveOtherUser, isLoading: isOtherUserLoading } = useDoc<User>(otherUserRef);
+
   const messagesColRef = useMemoFirebase(() => {
     if (!matchId || !firestore) return null;
     return collection(firestore, 'matches', matchId, 'messages') as CollectionReference;
@@ -124,13 +128,16 @@ export default function ChatPage() {
   
   const messagesQuery = useMemoFirebase(() => {
     if (!messagesColRef) return null;
-    // Fetch latest 30 messages in descending order
     return query(messagesColRef, orderBy('timestamp', 'desc'), limit(30));
   }, [messagesColRef]);
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
-  
-  // Reverse messages to display in chronological order
+  // --- End Data Fetching ---
+
+  // Combine pre-loaded and live data for rendering
+  const match = liveMatch ?? (selectedChat?.match.id === matchId ? selectedChat.match : null);
+  const otherUser = liveOtherUser ?? (selectedChat?.match.id === matchId ? selectedChat.otherUser : null);
+
   const orderedMessages = useMemo(() => {
     if (!messages) return [];
     return [...messages].reverse();
@@ -151,16 +158,11 @@ export default function ChatPage() {
         }
       }, 0);
     };
-  
-    // Scroll when messages are loaded
     scrollToEnd();
-  
   }, [orderedMessages.length, recordingState]);
 
   useEffect(() => {
     if (!firestore || !currentUser?.id || !matchRef) return;
-
-    // Reset unread count when user enters chat
     if (match && match.unreadCounts?.[currentUser.id] > 0) {
       updateDoc(matchRef, { [`unreadCounts.${currentUser.id}`]: 0 }).catch(e => {
         if (e.code === 'permission-denied') {
@@ -172,7 +174,6 @@ export default function ChatPage() {
       });
     }
 
-    // Listen for call status changes to show/hide the call UI
     const unsubscribe = onSnapshot(matchRef, (doc) => {
         const data = doc.data() as Match | undefined;
         if (data?.callStatus === 'active' || data?.callStatus === 'ringing') {
@@ -201,13 +202,13 @@ export default function ChatPage() {
       const lastSeenDate = new Date(otherUser.lastSeen);
       const diffInSeconds = (now.getTime() - lastSeenDate.getTime()) / 1000;
       
-      if (diffInSeconds < 300) { // 5분 이내
+      if (diffInSeconds < 300) {
         setLastSeenText(t('online_status'));
-      } else if (diffInSeconds < 3600) { // 1시간 이내
+      } else if (diffInSeconds < 3600) {
         setLastSeenText(t('last_seen_minutes_ago').replace('%s', Math.floor(diffInSeconds / 60).toString()));
-      } else if (diffInSeconds < 86400) { // 24시간 이내
+      } else if (diffInSeconds < 86400) {
         setLastSeenText(t('last_seen_hours_ago').replace('%s', Math.floor(diffInSeconds / 3600).toString()));
-      } else if (diffInSeconds < 604800) { // 7일 이내
+      } else if (diffInSeconds < 604800) {
         setLastSeenText(t('last_seen_days_ago').replace('%s', Math.floor(diffInSeconds / 86400).toString()));
       } else {
         setLastSeenText(lastSeenDate.toLocaleDateString(language));
@@ -241,7 +242,6 @@ export default function ChatPage() {
           }
         } catch (error) {
           console.error("Chat translation failed, sending without translation:", error);
-          // Proceed without translation
         }
       }
   
@@ -266,7 +266,7 @@ export default function ChatPage() {
   
       await batch.commit();
   
-      setSuggestions([]); // Clear suggestions on successful send
+      setSuggestions([]);
     } catch (error: any) {
       console.error("Failed to send message:", error);
       setNewMessage(messageToSend); // Restore message on failure
@@ -433,30 +433,25 @@ export default function ChatPage() {
   const handleEndCall = () => {
       setIsCallActive(false);
   }
-
-  const isLoading = !isUserLoaded || isMatchLoading || (match != null && otherUserId != null && isOtherUserLoading);
   
-  if (isLoading) {
+  if (!isUserLoaded) {
+    return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+  
+  const isDataLoading = (!match && isMatchLoading) || (!otherUser && isOtherUserLoading);
+
+  // When navigating from another page, `selectedChat` is available for instant UI render
+  // When reloading, we must wait for the data to be fetched.
+  if (isDataLoading && !selectedChat) {
     return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
-  if (!match || !currentUser || !otherUserId) {
+  if (!match || !currentUser || !otherUser) {
     return (
         <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
             <UserX className="h-16 w-16 text-muted-foreground mb-4" />
-            <h1 className="text-2xl font-bold">{t('chat_user_not_found_title')}</h1>
-            <p className="text-muted-foreground mt-2">{t('chat_user_not_found_subtitle')}</p>
-            <Button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
-        </div>
-    );
-  }
-  
-  if (!otherUser) {
-    return (
-        <div className="flex flex-col h-screen w-full items-center justify-center text-center p-4">
-            <UserX className="h-16 w-16 text-muted-foreground mb-4" />
-            <h1 className="text-2xl font-bold">{t('chat_user_withdrawn_title')}</h1>
-            <p className="text-muted-foreground mt-2">{t('chat_user_withdrawn_subtitle')}</p>
+            <h1 className="text-2xl font-bold">{otherUser ? t('chat_user_not_found_title') : t('chat_user_withdrawn_title')}</h1>
+            <p className="text-muted-foreground mt-2">{otherUser ? t('chat_user_not_found_subtitle') : t('chat_user_withdrawn_subtitle')}</p>
             <Button onClick={() => { if (window.history.length > 1) { router.back(); } else { router.push('/matches'); } }} className="mt-8"><ArrowLeft className="mr-2 h-4 w-4" /> {t('back_button')}</Button>
         </div>
     );

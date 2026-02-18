@@ -5,6 +5,7 @@ import { UserProvider } from '@/contexts/user-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import AppLayout from '@/components/layout/app-layout';
 import { LanguageProvider } from '@/contexts/language-context';
+import { SelectedChatProvider } from '@/contexts/selected-chat-context';
 import { useEffect } from 'react';
 
 
@@ -47,9 +48,11 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <UserProvider>
             <LanguageProvider>
-              <AppLayout>
-                {children}
-              </AppLayout>
+              <SelectedChatProvider>
+                <AppLayout>
+                  {children}
+                </AppLayout>
+              </SelectedChatProvider>
               <Toaster />
             </LanguageProvider>
           </UserProvider>
