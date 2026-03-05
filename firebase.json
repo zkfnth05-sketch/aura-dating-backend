@@ -10,7 +10,19 @@
       ".git",
       "firebase-debug.log",
       "firebase-debug.*.log",
-      "functions"
+      "functions",
+      ".vscode",
+      "android",
+      "build_android.sh",
+      "get_sha1.sh",
+      "get_sha1_from_android_folder.sh",
+      "password.txt",
+      "cors.json",
+      "firestore.rules",
+      "storage.rules",
+      "src/docs",
+      ".env",
+      "README.md"
     ]
   }
 }
