@@ -41,7 +41,7 @@ def twaManifest = [
     // - icon: Name of the resource in the drawable folder to use as an icon.
     shortcuts: [],
     // The duration of fade out animation in milliseconds to be played when removing splash screen.
-    splashScreenFadeOutDuration: 0,
+    splashScreenFadeOutDuration: 500,
     generatorApp: 'bubblewrap-cli', // Application that generated the Android Project
     // The fallback strategy for when Trusted Web Activity is not available. Possible values are
     // 'customtabs' and 'webview'.
@@ -50,15 +50,30 @@ def twaManifest = [
     orientation: 'default',
 ]
 
+// Read the password from the correct path
+def keystorePasswordFile = file('../password.txt')
+def keystorePassword = keystorePasswordFile.exists() ? keystorePasswordFile.text.trim() : ""
+
+
 android {
+    signingConfigs {
+        release {
+            storeFile file('../android.keystore')
+            storePassword keystorePassword
+            keyAlias 'android'
+            keyPassword keystorePassword
+        }
+    }
+
     compileSdkVersion 36
+    buildToolsVersion "36.0.0"
     namespace "app.web.aura"
     defaultConfig {
         applicationId "app.web.aura"
         minSdkVersion 21
         targetSdkVersion 35
-        versionCode 5
-        versionName "5"
+        versionCode 10
+        versionName "10"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -153,6 +168,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
+            signingConfig signingConfigs.release
         }
     }
     compileOptions {

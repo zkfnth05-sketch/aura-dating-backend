@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -264,7 +263,7 @@ export default function ProfilePage() {
 
             <div className="py-8">
               <Button asChild className="w-full h-12 bg-primary text-primary-foreground rounded-full font-bold text-base">
-                  <Link href="/profile/edit">{t('profile_edit_button')}</Link>
+                  <Link href="/profile/edit" prefetch={false}>{t('profile_edit_button')}</Link>
               </Button>
             </div>
           </div>
