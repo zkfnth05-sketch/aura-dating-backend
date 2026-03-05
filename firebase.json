@@ -12,17 +12,21 @@
       "firebase-debug.*.log",
       "functions",
       ".vscode",
+      ".env",
+      "README.md",
       "android",
+      "android.keystore",
       "build_android.sh",
       "get_sha1.sh",
       "get_sha1_from_android_folder.sh",
       "password.txt",
+      "manifest-checksum.txt",
       "cors.json",
       "firestore.rules",
       "storage.rules",
       "src/docs",
-      ".env",
-      "README.md"
+      "twa-manifest.json",
+      "android/build"
     ]
   }
 }
