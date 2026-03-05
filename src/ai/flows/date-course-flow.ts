@@ -62,7 +62,7 @@ const dateCourseTextFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await ai.generate({
-      model: googleAI.model('gemini-1.5-flash'),
+      model: googleAI.model('gemini-2.5-flash'),
       prompt: `Create a date course JSON based on these preferences. The response must be in ${input.targetLanguage}.
 - Destination: ${input.destination}
 - People: ${input.partySize}
@@ -90,7 +90,7 @@ const dateCourseImageFlow = ai.defineFlow(
     try {
       if (!prompt) return '';
       const { media } = await ai.generate({
-        model: 'googleai/imagen-3.0-generate-001',
+        model: 'googleai/imagen-4.0-fast-generate-001',
         prompt: prompt,
         retries: 3,
       });

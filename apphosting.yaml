@@ -19,3 +19,7 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  - variable: GOOGLE_GENAI_API_KEY
+    value: "AIzaSyDif-s30htM9_bWTE8FxOJD7wwDHkrcPg8"
+    availability:
+      - RUNTIME

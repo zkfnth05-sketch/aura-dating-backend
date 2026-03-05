@@ -60,7 +60,7 @@ const enhancePhotoFlow = ai.defineFlow(
     
     try {
         const { media } = await ai.generate({
-            model: googleAI.model('imagen-3.0-generate-001'),
+            model: googleAI.model('gemini-2.5-flash-image'),
             prompt: [
                 { text: enhancementPrompt },
                 { media: { url: input.photoDataUri } },
