@@ -11,7 +11,7 @@ export async function GET() {
         namespace: "android_app",
         package_name: "app.web.aura",
         "sha256_cert_fingerprints": [
-          "2C:7C:90:16:A9:5E:11:82:4B:43:FA:6F:32:C2:CB:C9:BC:96:00:11:1F:8C:EB:5E:E4:E3:D2:F9:84:60:E8:2C"
+          "95:8E:37:D3:25:7A:B6:76:B4:9F:75:D2:7A:EC:05:77:C9:B6:9E:AD:52:49:93:87:AD:26:CD:4C:0E:EE:6F:40"
         ]
       }
     }
